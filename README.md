@@ -53,7 +53,7 @@ After changing `.env`, restart the API. Existing unverified accounts can use
 the **Resend verification email** action on the login page.
 
 The local `.env` and all other dotfiles are intentionally ignored by Git. Set
-the values locally or through the deployment environment; do not copy real
+the values locally or through private runtime configuration; do not copy real
 provider keys into documentation or source files.
 
 ### Frontend
@@ -65,101 +65,6 @@ npm run dev
 ```
 
 App runs at `http://localhost:3001` with API proxy to backend.
-
-## Production deployment
-
-The recommended first deployment is one Fly.io app with one machine, one
-mounted persistent volume, and a single origin:
-
-- `https://cadence.kanishq.dev` serves the React application and `/api` from the
-  same process.
-- SQLite lives at `/data/cadence.db` on the mounted volume. Do not run multiple
-  app machines while SQLite is the source of truth.
-- The container runs `alembic upgrade head` before starting the API and exposes
-  `/healthz` for the platform health check.
-- Backups must be copied off the machine on a schedule. A volume is persistence,
-  not a complete backup strategy.
-
-The repository includes [Dockerfile](Dockerfile), [fly.toml](fly.toml), and a
-manual [production deployment workflow](.github/workflows/deploy-production.yml).
-The workflow is deliberately manual and targets the protected `production`
-GitHub environment.
-
-Create the Fly app and its volume once, after authenticating with `flyctl`:
-
-```sh
-fly auth login
-fly apps create cadence-kanishq
-fly volumes create cadence_data --region bom --size 10
-fly tokens create deploy --app cadence-kanishq
-```
-
-Save the deploy token directly in the GitHub `production` environment as
-`FLY_API_TOKEN`; do not paste it into the repository or this chat.
-
-If the app name is already taken, choose another globally unique Fly app name
-and update `fly.toml`; the public hostname remains `cadence.kanishq.dev`.
-After the first deploy, attach the custom hostname and follow Fly's certificate
-instructions:
-
-```sh
-fly certs add cadence.kanishq.dev --app cadence-kanishq
-fly certs show cadence.kanishq.dev --app cadence-kanishq
-```
-
-Add the DNS record requested by Fly at the DNS provider for `kanishq.dev`. Keep
-the DNS record and certificate managed by one provider path so TLS ownership is
-unambiguous.
-
-### GitHub production environment
-
-Create a protected environment named `production`, restrict deployment to
-`main`, and require your approval before the deployment job can read its
-secrets. GitHub environment variables are non-secret configuration; environment
-secrets are credentials only.
-
-Required production variables:
-
-| Type | Name | Value |
-| --- | --- | --- |
-| variable | `CADENCE_DATABASE_URL` | `sqlite+aiosqlite:////data/cadence.db` |
-| variable | `CADENCE_BACKUP_DIR` | `/data/backups` |
-| variable | `CADENCE_RUNTIME_LOCK_PATH` | `/data/cadence.lock` |
-| variable | `CADENCE_FRONTEND_BASE_URL` | `https://cadence.kanishq.dev` |
-| variable | `CADENCE_CORS_ORIGINS` | `https://cadence.kanishq.dev` |
-| variable | `CADENCE_SERVE_FRONTEND` | `true` |
-| variable | `CADENCE_TEST_MODE` | `false` |
-| variable | `CADENCE_DEV_MODE` | `false` |
-| variable | `CADENCE_AI_ENABLED` | `true` or `false`, according to the launch decision |
-| variable | `CADENCE_AI_PROVIDER` | `nvidia` |
-| variable | `CADENCE_AI_BASE_URL` | `https://integrate.api.nvidia.com/v1` |
-| variable | `CADENCE_AI_CATALOG_REFRESH_MINUTES` | `360` |
-| variable | `CADENCE_AI_REQUEST_TIMEOUT_SECONDS` | `45` |
-| variable | `CADENCE_FROM_EMAIL` | `no-reply@kanishq.dev` |
-| variable | `CADENCE_FROM_NAME` | `Cadence` |
-
-Required production secrets:
-
-| Name | Purpose |
-| --- | --- |
-| `FLY_API_TOKEN` | Deploy permission for the Fly app only |
-| `CADENCE_SECRET_KEY` | JWT signing key; generate a new long random value |
-| `CADENCE_BREVO_API_KEY` | Brevo transactional-email API key |
-| `CADENCE_AI_API_KEY` | NVIDIA Build API key; may be blank if AI is disabled |
-
-Never place these values in GitHub repository variables, commits, workflow YAML,
-`.env` files that are shared, screenshots, issue comments, or logs. Rotate any
-credential that has ever been pasted into a public or shared location.
-
-### Brevo for `@kanishq.dev`
-
-Use `no-reply@kanishq.dev` as the sender. In Brevo, add and authenticate the
-`kanishq.dev` sending domain, then publish the exact Brevo code, DKIM, and DMARC
-records that Brevo shows for the account. Do not invent or reuse values from
-another account. Add the sender only after domain authentication, then generate
-a transactional API key and store it as the `CADENCE_BREVO_API_KEY` production
-secret. Finally send a verification email to a real test mailbox and inspect
-the headers for SPF/DKIM/DMARC pass.
 
 ## API Endpoints
 
