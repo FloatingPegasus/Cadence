@@ -15,8 +15,6 @@ from ..persistence.models.user import User
 
 RANKING_VERSION = "2026-07-23"
 
-# Quality ordering is deliberately curated and dated. Catalog recency and API
-# health are useful signals, but neither is a reliable measure of model quality.
 CURATED_STRENGTH = {
     "nvidia/nemotron-3-ultra-550b-a55b": 100,
     "z-ai/glm-5.2": 98,
@@ -29,8 +27,6 @@ CURATED_STRENGTH = {
     "stepfun-ai/step-3.7-flash": 86,
     "google/gemma-4-31b-it": 84,
     "qwen/qwen3-next-80b-a3b-instruct": 82,
-    "openai/gpt-oss-120b": 80,
-    "openai/gpt-oss-20b": 68,
 }
 
 TASK_PREFERENCE = {

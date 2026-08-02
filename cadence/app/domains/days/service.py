@@ -33,9 +33,6 @@ async def get_or_create_day(
             await db.commit()
             await db.refresh(day)
         except IntegrityError:
-            # Multiple parts of the daily panel load in parallel. If another
-            # request created the same per-user Day after our initial SELECT,
-            # reuse that canonical row.
             await db.rollback()
             result = await db.execute(
                 select(Day).where(
