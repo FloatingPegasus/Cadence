@@ -91,7 +91,11 @@ Create the Fly app and its volume once, after authenticating with `flyctl`:
 fly auth login
 fly apps create cadence-kanishq
 fly volumes create cadence_data --region bom --size 10
+fly tokens create deploy --app cadence-kanishq
 ```
+
+Save the deploy token directly in the GitHub `production` environment as
+`FLY_API_TOKEN`; do not paste it into the repository or this chat.
 
 If the app name is already taken, choose another globally unique Fly app name
 and update `fly.toml`; the public hostname remains `cadence.kanishq.dev`.

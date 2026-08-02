@@ -47,6 +47,10 @@ jobs:
           test -n "$CADENCE_FRONTEND_BASE_URL"
           test -n "$CADENCE_CORS_ORIGINS"
           test -n "$CADENCE_FROM_EMAIL"
+          test -n "$CADENCE_BREVO_API_KEY"
+          if [ "$CADENCE_AI_ENABLED" = "true" ]; then
+            test -n "$CADENCE_AI_API_KEY"
+          fi
       - name: Configure runtime secrets and variables
         run: |
           flyctl secrets set \
