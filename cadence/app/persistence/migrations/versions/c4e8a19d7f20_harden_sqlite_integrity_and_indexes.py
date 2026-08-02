@@ -17,9 +17,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # SQLite must temporarily suspend enforcement while Alembic recreates
-    # parent tables to add constraints. Application connections always enable
-    # enforcement, and verification runs immediately after migration.
     op.execute("PRAGMA foreign_keys=OFF")
     with op.batch_alter_table("days") as batch_op:
         batch_op.create_foreign_key(

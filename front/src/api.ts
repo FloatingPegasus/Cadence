@@ -31,7 +31,6 @@ export async function request<T = unknown>(
       const data = await res.json();
       detail = data.detail ?? detail;
     } catch {
-      // body wasn't JSON
     }
     if (res.status === 401) {
       setToken(null);

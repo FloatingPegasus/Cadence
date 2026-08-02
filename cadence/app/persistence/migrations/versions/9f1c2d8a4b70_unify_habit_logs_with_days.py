@@ -23,8 +23,6 @@ NAMING_CONVENTION = {
 
 
 def upgrade() -> None:
-    # The initial schema accidentally made dates globally unique. A day is
-    # unique per user, so two users must be able to own the same calendar date.
     with op.batch_alter_table(
         "days",
         recreate="always",
@@ -32,8 +30,6 @@ def upgrade() -> None:
     ) as batch_op:
         batch_op.drop_constraint("uq_days_date", type_="unique")
 
-    # Every historical habit log gets a Day before its duplicate date/user
-    # columns are replaced with the canonical day_id relationship.
     op.execute(
         """
         INSERT OR IGNORE INTO days (user_id, date, status, daily_note)
