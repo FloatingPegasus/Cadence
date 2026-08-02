@@ -1,0 +1,1 @@
+"""Monthly continuity reconstruction domain."""

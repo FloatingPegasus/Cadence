@@ -1,0 +1,32 @@
+import { useAuth } from "../contexts/AuthContext";
+
+function Header() {
+  const { user, logout } = useAuth();
+
+  return (
+    <header className="mb-6 flex items-center justify-between">
+      <div>
+        <h1 className="text-xl font-semibold text-neutral-100 tracking-tight">
+          Cadence
+        </h1>
+        <p className="text-sm text-neutral-500 mt-1">
+          Daily continuity
+        </p>
+      </div>
+      {user && (
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-neutral-400">{user.username}</span>
+          <button
+            type="button"
+            onClick={logout}
+            className="px-3 py-1.5 text-sm rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+          >
+            Log out
+          </button>
+        </div>
+      )}
+    </header>
+  );
+}
+
+export default Header;

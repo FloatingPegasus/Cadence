@@ -1,0 +1,1 @@
+"""Discipline-focused continuity domain."""

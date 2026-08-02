@@ -1,3 +1,14 @@
+# Local/private dotfiles and tool state
+.*
+!.gitignore
+!.github/
+!.github/**
+
+# Project documents intentionally kept out of the public repository
+handshake_tutorial_ocr.md
+DIAGRAMS.md
+CADENCE_MASTER_PLAN.md
+
 # Virtual environments
 venv/
 env/
@@ -8,9 +19,22 @@ __pycache__/
 
 # SQLite database
 instance/
+cadence/data/*.db
+cadence/data/*.db-*
+cadence/data/backups/
+cadence/data/*.lock
+!cadence/data/.gitkeep
+
+# Frontend build and dependencies
+front/node_modules/
+front/dist/
+coverage/
 
 # VS Code settings
 .vscode/
 
 # macOS files
 .DS_Store
+
+# Environment files
+.env
