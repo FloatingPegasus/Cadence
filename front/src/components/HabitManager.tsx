@@ -65,18 +65,18 @@ export default function HabitManager({
   return (
     <details className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950/50">
       <summary className="cursor-pointer px-4 py-3 text-sm text-neutral-400 hover:text-neutral-200">
-        Manage disciplines
+        Manage daily practices
       </summary>
       <div className="border-t border-neutral-800 p-4">
         <form onSubmit={addHabit} className="flex gap-2">
-          <label className="sr-only" htmlFor="new-discipline-name">
-            New discipline name
+          <label className="sr-only" htmlFor="new-practice-name">
+            New practice name
           </label>
           <input
-            id="new-discipline-name"
+            id="new-practice-name"
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
-            placeholder="Add a discipline"
+            placeholder="Add a practice"
             maxLength={100}
             className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
           />
@@ -138,8 +138,8 @@ export default function HabitManager({
           )}
         </div>
         {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
-        <p className="mt-4 text-xs text-neutral-600">
-          Archiving removes a discipline from new tracking while preserving its
+      <p className="mt-4 text-xs text-neutral-600">
+          Archiving removes a practice from new tracking while preserving its
           history.
         </p>
       </div>

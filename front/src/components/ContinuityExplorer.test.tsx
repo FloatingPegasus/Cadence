@@ -45,7 +45,7 @@ describe("ContinuityExplorer", () => {
       />,
     );
 
-    const contextsTab = screen.getByRole("tab", { name: "Contexts" });
+    const contextsTab = screen.getByRole("tab", { name: "Areas" });
     contextsTab.focus();
     expect(screen.getByText("Context panel")).toBeTruthy();
 

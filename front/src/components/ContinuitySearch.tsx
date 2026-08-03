@@ -21,7 +21,7 @@ const sourceOptions: Array<{
   { value: "notes", label: "Daily notes" },
   { value: "conversation", label: "Conversation" },
   { value: "summaries", label: "Summaries" },
-  { value: "threads", label: "Threads" },
+  { value: "threads", label: "Follow-ups" },
   { value: "weekly_reflections", label: "Weekly reflections" },
 ];
 
@@ -80,11 +80,11 @@ export default function ContinuitySearch({
     >
       <div>
         <h2 className="text-sm font-medium text-neutral-200">
-          Find continuity
+          Search your history
         </h2>
         <p className="mt-1 text-xs text-neutral-500">
-          Search the last year of notes, conversations, summaries, threads,
-          and weekly reflections.
+          Search your notes, logged moments, summaries, follow-ups, and
+          weekly reflections.
         </p>
       </div>
 
@@ -165,7 +165,7 @@ export default function ContinuitySearch({
         <div className="mt-4 border-y border-neutral-800">
           {response.results.length === 0 ? (
             <p className="py-4 text-sm text-neutral-500">
-              No matching continuity found.
+              No matching history found.
             </p>
           ) : (
             response.results.map((result) => (

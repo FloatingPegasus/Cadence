@@ -183,7 +183,7 @@ export default function ContextMonthlyDetail({
           {data.open_threads.length > 0 && (
             <div className="mt-5 border-t border-neutral-800 pt-4">
               <h4 className="text-xs font-medium text-neutral-400">
-                Open context threads
+                Open follow-ups
               </h4>
               <ul className="mt-2 space-y-1">
                 {data.open_threads.slice(0, 5).map((thread) => (
