@@ -46,6 +46,10 @@ export interface Habit {
   is_archived: boolean;
 }
 
+export interface DailyHabit extends Habit {
+  completed: boolean;
+}
+
 export type ContinuityContextKind = "project" | "learning" | "area";
 
 export interface ContinuityContext {
@@ -63,7 +67,7 @@ export interface MonthData {
 }
 
 export interface DayDetail {
-  id: number;
+  id: number | null;
   date: string;
   status: string;
   daily_note: string;
@@ -568,6 +572,10 @@ export async function toggleHabit(
 
 export function fetchDay(date: string): Promise<DayDetail> {
   return request<DayDetail>(`/api/days/${date}`);
+}
+
+export function fetchDayHabits(date: string): Promise<DailyHabit[]> {
+  return request<DailyHabit[]>(`/api/days/${date}/habits`);
 }
 
 export function fetchDayReentry(date: string): Promise<DailyReentry> {
