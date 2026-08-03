@@ -75,10 +75,10 @@ export default function DayClosureCard({
             id="day-closure-title"
             className="text-sm font-medium text-neutral-200"
           >
-            Close the day
+            Finish the day
           </h2>
           <p className="mt-1 text-xs text-neutral-500">
-            Review what exists. Nothing is required.
+            Review what you recorded. Nothing is required.
           </p>
         </div>
         {preview?.status === "closed" && (
@@ -95,7 +95,7 @@ export default function DayClosureCard({
 
       {isLoading ? (
         <p className="mt-4 text-sm text-neutral-600">
-          Loading closure review…
+          Loading review…
         </p>
       ) : error ? (
         <p role="alert" className="mt-4 text-xs text-red-400">
@@ -103,15 +103,15 @@ export default function DayClosureCard({
         </p>
       ) : preview?.status === "closed" ? (
         <p className="mt-4 text-sm text-neutral-400">
-          This day is closed. Its raw entries remain editable and the day can
-          be reopened at any time.
+          This day is finished. Its notes remain editable and the day can be
+          reopened at any time.
         </p>
       ) : preview ? (
         <>
           <dl className="mt-4 grid gap-4 sm:grid-cols-3">
             <div>
               <dt className="text-xs font-medium text-neutral-400">
-                Raw trace
+                Notes
               </dt>
               <dd className="mt-1 text-xs leading-5 text-neutral-500">
                 {preview.capture.has_daily_note
@@ -127,7 +127,7 @@ export default function DayClosureCard({
             </div>
             <div>
               <dt className="text-xs font-medium text-neutral-400">
-                Structured capture
+                Check-in
               </dt>
               <dd className="mt-1 text-xs leading-5 text-neutral-500">
                 {plural(preview.capture.checkin_fields, "check-in field")}
@@ -153,9 +153,9 @@ export default function DayClosureCard({
 
           <div className="mt-4 border-t border-neutral-800 pt-4">
             <p className="text-xs text-neutral-500">
-              {preview.open_thread_count === 0
-                ? "No unresolved threads."
-                : `${plural(preview.open_thread_count, "thread")} will remain visible after closing.`}
+                {preview.open_thread_count === 0
+                ? "No open follow-ups."
+                : `${plural(preview.open_thread_count, "follow-up")} will remain visible after closing.`}
             </p>
             {preview.open_threads.length > 0 && (
               <ul className="mt-2 space-y-1">
@@ -174,8 +174,8 @@ export default function DayClosureCard({
           {isReviewing ? (
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-800 pt-4">
               <p className="max-w-xl text-xs leading-5 text-neutral-500">
-                Closing does not lock this record or resolve its threads. You
-                can reopen it whenever more context returns.
+                Finishing does not lock this record or complete its follow-ups.
+                You can reopen it whenever you need to add more.
               </p>
               <div className="flex gap-2">
                 <button
@@ -191,7 +191,7 @@ export default function DayClosureCard({
                   onClick={() => setStatus("closed")}
                   className="rounded-lg bg-violet-500 px-3 py-1.5 text-xs text-white transition-colors duration-150 hover:bg-violet-400 disabled:opacity-50"
                 >
-                  {isUpdating ? "Closing" : "Close day"}
+                  {isUpdating ? "Finishing" : "Finish day"}
                 </button>
               </div>
             </div>
@@ -201,7 +201,7 @@ export default function DayClosureCard({
               onClick={() => setIsReviewing(true)}
               className="mt-5 rounded-lg border border-neutral-800 px-3 py-1.5 text-xs text-neutral-300 transition-colors duration-150 hover:bg-neutral-900"
             >
-              Review and close
+              Review and finish
             </button>
           )}
         </>

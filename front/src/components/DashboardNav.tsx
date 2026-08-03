@@ -10,7 +10,7 @@ interface DashboardNavProps {
 const views: Array<{ id: DashboardView; label: string }> = [
   { id: "today", label: "Today" },
   { id: "calendar", label: "Calendar" },
-  { id: "continuity", label: "Continuity" },
+  { id: "continuity", label: "History" },
   { id: "settings", label: "Settings" },
 ];
 

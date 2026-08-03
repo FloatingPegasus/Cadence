@@ -23,7 +23,7 @@ export default function RecentDays({
         setError(
           caught instanceof Error
             ? caught.message
-            : "Could not load recent continuity",
+            : "Could not load recent days",
         );
       });
   }, [refreshKey]);
@@ -33,9 +33,9 @@ export default function RecentDays({
   return (
     <section className="mt-8">
       <div className="mb-3">
-        <h2 className="text-sm font-medium text-neutral-200">Recent continuity</h2>
+        <h2 className="text-sm font-medium text-neutral-200">Recent days</h2>
         <p className="mt-1 text-xs text-neutral-500">
-          Pick up a previous thread without reconstructing it from memory.
+          Open a day you have recorded.
         </p>
       </div>
       {error && (
@@ -68,7 +68,7 @@ export default function RecentDays({
               )}
             </div>
             <p className="mt-2 line-clamp-2 min-h-8 text-xs leading-4 text-neutral-500">
-              {day.note_preview || "A trace exists for this day."}
+              {day.note_preview || "No written note."}
             </p>
           </button>
         ))}

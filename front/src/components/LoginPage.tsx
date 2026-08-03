@@ -41,7 +41,7 @@ function LoginPage() {
         Cadence
       </h1>
       <p className="text-sm text-neutral-500 text-center mb-8">
-        Daily continuity
+        Your daily record
       </p>
 
       {successMsg ? (

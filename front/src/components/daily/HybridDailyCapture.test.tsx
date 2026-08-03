@@ -57,11 +57,11 @@ describe("hybrid daily capture", () => {
       await screen.findByRole("combobox", { name: "Energy" }),
       "",
     );
-    await user.click(screen.getByText("Add optional detail"));
+    await user.click(screen.getByText("Add more detail"));
     await user.clear(
       screen.getByRole("textbox", { name: "Emotional state" }),
     );
-    await user.click(screen.getByRole("button", { name: "Save day" }));
+    await user.click(screen.getByRole("button", { name: "Save note" }));
 
     await waitFor(() =>
       expect(api.updateCheckin).toHaveBeenCalledWith("2026-07-23", {
@@ -96,7 +96,7 @@ describe("hybrid daily capture", () => {
     });
     expect(document.activeElement).toBe(input);
     await user.type(input, "The migration is finally stable.");
-    await user.click(screen.getByRole("button", { name: "Add" }));
+    await user.click(screen.getByRole("button", { name: "Log" }));
 
     await waitFor(() =>
       expect(api.addConversationEntry).toHaveBeenCalledWith(
