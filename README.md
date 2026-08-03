@@ -1,20 +1,19 @@
 # Cadence
 
-A lightweight personal cognitive continuity system — habit tracking, daily reflection, structured check-ins, and conversational logging.
+Cadence is a personal daily record. It keeps practices, notes, check-ins,
+timed entries, summaries, and follow-ups in one small local app.
 
-## Tech Stack
+## Stack
 
-- **Backend:** FastAPI + SQLAlchemy + Alembic + SQLite
-- **Frontend:** Vite + React + TypeScript + Tailwind CSS v4
-- **API:** RESTful JSON
+- FastAPI, SQLAlchemy, Alembic, and SQLite
+- React, Vite, TypeScript, and Tailwind CSS
+- JSON API
 
-## Getting Started
+## Run locally
 
 ### Backend
 
-Cadence targets Python 3.14. The repository is a monorepo and `cadence/` is the
-backend Python package. The canonical commands run from the repository root so
-Python sees the package's parent directory:
+Cadence targets Python 3.14. Run these commands from the repository root:
 
 ```sh
 python3.14 -m venv venv
@@ -25,36 +24,14 @@ alembic -c cadence/alembic.ini upgrade head
 python -m cadence.main
 ```
 
-Server runs at `http://localhost:8000`.
+The API runs at `http://localhost:8000`.
 
-The `cadence` directory is a Python package. Starting `cadence/main.py` while
-the shell is already inside that directory changes Python's import root. The
-entry point also supports that workflow explicitly:
+If the shell is already inside `cadence`, use:
 
 ```sh
 cd cadence
 ../venv/bin/python main.py
 ```
-
-### Email verification
-
-Normal local development must use `CADENCE_TEST_MODE=false`. Test mode only
-suppresses outbound verification mail for automated tests; it does not bypass
-verification enforcement.
-
-Brevo delivery also requires:
-
-- a valid `CADENCE_BREVO_API_KEY`
-- an active Brevo sender matching `CADENCE_FROM_EMAIL`
-- the machine's current public IP allowed by the Brevo account when authorized
-  IP restrictions are enabled
-
-After changing `.env`, restart the API. Existing unverified accounts can use
-the **Resend verification email** action on the login page.
-
-The local `.env` and all other dotfiles are intentionally ignored by Git. Set
-the values locally or through private runtime configuration; do not copy real
-provider keys into documentation or source files.
 
 ### Frontend
 
@@ -64,41 +41,59 @@ npm install
 npm run dev
 ```
 
-App runs at `http://localhost:3001` with API proxy to backend.
+The app runs at `http://localhost:3001` and proxies API requests to the
+backend.
 
-## API Endpoints
+## Email verification
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/habits` | List habits |
-| POST | `/api/habits` | Create a discipline |
-| PATCH | `/api/habits/{id}` | Rename a discipline |
-| DELETE | `/api/habits/{id}` | Archive a discipline while preserving history |
-| GET | `/api/habits/month?month=YYYY-MM` | Month grid data |
-| POST | `/api/habits/toggle` | Toggle habit log |
-| GET/PUT | `/api/days/{date}` | Day detail + daily note |
-| GET/PUT | `/api/days/{date}/checkin` | Structured check-in (energy, focus, sleep, etc.) |
-| GET/POST | `/api/days/{date}/conversation` | Chat-style entries |
-| GET | `/api/days/{date}/context` | Previous day context |
-| GET/PUT | `/api/days/{date}/summary` | Read or manually edit the daily summary artifact |
-| POST | `/api/days/{date}/summary/generate` | Generate a source-traceable summary through AI fallback |
-| PATCH | `/api/days/{date}/status` | Close or reopen a day |
-| GET/POST | `/api/days/{date}/carry-forward` | List inherited threads or create one |
-| PATCH | `/api/days/{date}/carry-forward/{id}` | Complete, release, or reopen a thread |
-| GET | `/api/continuity/weeks/{date}` | Reconstruct the date's Monday–Sunday week and open threads |
-| GET | `/api/continuity/search?q={term}` | Search one bounded year of user-owned continuity sources |
-| GET | `/api/continuity/patterns` | Read bounded, deterministic pattern observations and weekly trend buckets |
-| GET/POST | `/api/contexts` | List or create projects, learning contexts, and areas |
-| PATCH/DELETE | `/api/contexts/{id}` | Edit or archive a context while preserving history |
-| GET/PUT | `/api/days/{date}/contexts` | Read or replace a day's context links |
-| GET | `/api/contexts/{id}/continuity` | Read recent days and open threads for one context |
-| GET | `/api/account/export` | Download a versioned JSON export of the authenticated user's data |
-| GET/PUT | `/api/account/ai-preferences` | Read or update external-AI consent and outbound redaction |
-| POST | `/api/auth/verification/resend` | Request a fresh verification message without exposing account existence |
+Normal development uses `CADENCE_TEST_MODE=false`. Test mode only suppresses
+email delivery during automated tests. It does not grant access to an
+unverified account.
 
-## Database Migrations
+Brevo delivery needs:
 
-From the repository root:
+- `CADENCE_BREVO_API_KEY`
+- an active sender matching `CADENCE_FROM_EMAIL`
+- the current public IP allowed by the Brevo account when IP restrictions are
+  enabled
+
+Restart the API after changing `.env`. An unverified account can request a new
+message from the login page.
+
+All local dotfiles, including `.env`, are ignored by Git. Keep real keys in
+local or private runtime configuration.
+
+## Common API routes
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/habits` | List practices |
+| POST | `/api/habits` | Add a practice |
+| PATCH | `/api/habits/{id}` | Rename a practice |
+| DELETE | `/api/habits/{id}` | Archive a practice and keep its history |
+| GET | `/api/habits/month?month=YYYY-MM` | Read the month grid |
+| POST | `/api/habits/toggle` | Mark a practice for a day |
+| GET/PUT | `/api/days/{date}` | Read or save the day note |
+| GET/PUT | `/api/days/{date}/checkin` | Read or save check-in fields |
+| GET/POST | `/api/days/{date}/conversation` | Read or add timed entries |
+| GET/PUT | `/api/days/{date}/summary` | Read or edit a summary |
+| POST | `/api/days/{date}/summary/generate` | Create a summary |
+| PATCH | `/api/days/{date}/status` | Finish or reopen a day |
+| GET/POST | `/api/days/{date}/carry-forward` | Read or add follow-ups |
+| PATCH | `/api/days/{date}/carry-forward/{id}` | Complete or reopen a follow-up |
+| GET | `/api/continuity/weeks/{date}` | Read a week of recorded days |
+| GET | `/api/continuity/search?q={term}` | Search recorded history |
+| GET | `/api/continuity/patterns` | Read local activity patterns |
+| GET/POST | `/api/contexts` | Read or add areas |
+| PATCH/DELETE | `/api/contexts/{id}` | Edit or archive an area |
+| GET/PUT | `/api/days/{date}/contexts` | Read or set day areas |
+| GET | `/api/account/export` | Download account data |
+| GET/PUT | `/api/account/ai-preferences` | Read or save summary settings |
+| POST | `/api/auth/verification/resend` | Request a new verification message |
+
+## Database and backups
+
+Run migrations from the repository root:
 
 ```sh
 source venv/bin/activate
@@ -106,36 +101,22 @@ alembic -c cadence/alembic.ini revision --autogenerate -m "description"
 alembic -c cadence/alembic.ini upgrade head
 ```
 
-## Local database backups
-
-Backups use SQLite's online backup API, so committed WAL data is included in a
-consistent snapshot. Each snapshot is integrity-checked before it receives its
-final filename. The default retention policy keeps the ten newest
-Cadence-managed backups and does not touch unrelated files.
+Backups use SQLite's online backup API and keep the ten newest Cadence-managed
+copies by default:
 
 ```sh
 python -m cadence.maintenance backup
 python -m cadence.maintenance verify cadence/data/backups/<backup-file>.db
 ```
 
-Configure the directory and retention count with
-`CADENCE_BACKUP_DIR` and `CADENCE_BACKUP_RETENTION_COUNT`.
-
-Restore requires an exact schema-version match. Stop the API first, verify the
-chosen snapshot, and provide the explicit confirmation:
+Restore requires the API to be stopped, a verified backup, and explicit
+confirmation:
 
 ```sh
-python -m cadence.maintenance verify cadence/data/backups/<backup-file>.db
 python -m cadence.maintenance restore \
   cadence/data/backups/<backup-file>.db \
   --confirm RESTORE
 ```
-
-The API holds a runtime lock while serving, so restore refuses to run against a
-live process. Before replacement, Cadence creates and verifies a fresh safety
-backup of the live database. If post-install verification fails, that safety
-backup is restored automatically. Restart the API only after the command
-completes.
 
 ## Tests
 
@@ -144,62 +125,37 @@ venv/bin/python -m unittest discover -s cadence/tests -v
 cd front && npm run check
 ```
 
-## NVIDIA AI development
+## Developer model checks
 
-Cadence keeps a persisted, timed model registry and a dated quality ranking.
-Copy the relevant values from `.env.example` into `.env`. Developer endpoints
-require both a normal authenticated login and `CADENCE_DEV_MODE=true`. If
-`CADENCE_DEV_USERNAMES` is set, only those comma-separated usernames may use
-them.
+Developer routes require a normal verified login, `CADENCE_DEV_MODE=true`, and
+an optional username allowlist in `CADENCE_DEV_USERNAMES`.
 
-External AI is off for each user until they explicitly enable it in
-**Settings → AI privacy**. Manual daily summaries and weekly reflections remain
-available without AI. When redaction is enabled, Cadence replaces email
-addresses and phone-like values in the bounded outbound prompt; the local source
-data is unchanged. The settings screen identifies NVIDIA Build API as the
-external provider, and no recorded data is sent automatically.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/dev/ai/models` | Return the registry; refresh when stale |
-| GET | `/api/dev/ai/models?refresh=true` | Force NVIDIA catalog discovery |
-| POST | `/api/dev/ai/models/test` | Probe selected models or every model |
-| GET | `/api/dev/ai/fallback/{task}` | Inspect summary/context/extraction fallback order |
-
-Probe selected models:
-
-```json
-{"model_ids": ["nvidia/nemotron-3-ultra-550b-a55b", "z-ai/glm-5.2"]}
+```text
+GET  /api/dev/ai/models
+GET  /api/dev/ai/models?refresh=true
+POST /api/dev/ai/models/test
+GET  /api/dev/ai/fallback/{task}
 ```
 
-Probe the complete discovered chat catalog explicitly:
+The test route accepts a list of model IDs or `{ "test_all": true }`. Testing
+all discovered models is sequential and may use one request per model.
 
-```json
-{"test_all": true}
-```
+## Project layout
 
-Bulk probes are sequential but still consume free-tier requests. A `429`
-marks a model as rate-limited and the runtime proceeds to the next eligible
-model. The dev console's **Test all** action asks for confirmation before
-issuing one probe per discovered chat model.
-
-## Project Structure
-
-```
-cadence/           # FastAPI backend
+```text
+cadence/                 FastAPI application and database migrations
   app/
-    config.py            # Settings
-    extensions.py        # SQLAlchemy engine, session, Base
-    persistence/models/  # Habit, HabitLog, Day, DailyCheckin, ConversationEntry
-    persistence/migrations/  # Alembic migrations
-    web/routes/          # habits.py, days.py
-  domains/habits/service.py
-  main.py
+    config.py            Settings
+    extensions.py        Database engine and sessions
+    persistence/models/  Database models
+    web/routes/          JSON routes
+    domains/             Application services
+  main.py                Backend entry point
 
-front/             # React frontend
+front/                   React application
   src/
     App.tsx
-    components/    # Dashboard navigation and focused continuity components
-    contexts/      # Auth state and session lifecycle
-    styles/        # base.css
+    components/          Dashboard and daily record components
+    contexts/             Login state and session lifecycle
+    styles/               Base styles
 ```
