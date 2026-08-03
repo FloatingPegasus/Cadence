@@ -288,7 +288,7 @@ export default function MonthlyContinuity({
 
             <div>
               <h3 className="text-xs font-medium text-neutral-400">
-                Open threads
+                Open follow-ups
               </h3>
               {data.open_threads.length === 0 ? (
                 <p className="mt-3 text-xs text-neutral-600">

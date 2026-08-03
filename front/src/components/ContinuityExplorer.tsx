@@ -18,7 +18,7 @@ interface ContinuityExplorerProps {
 }
 
 const views: Array<{ id: ExplorerView; label: string }> = [
-  { id: "contexts", label: "Contexts" },
+  { id: "contexts", label: "Areas" },
   { id: "search", label: "Search" },
   { id: "week", label: "Week" },
   { id: "month", label: "Month" },
@@ -62,24 +62,24 @@ export default function ContinuityExplorer({
 
   return (
     <section
-      aria-labelledby="continuity-explorer-title"
+      aria-labelledby="history-explorer-title"
       className="mt-8 border-t border-neutral-800 pt-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2
-            id="continuity-explorer-title"
+            id="history-explorer-title"
             className="text-sm font-medium text-neutral-200"
           >
-            Explore continuity
+            History
           </h2>
           <p className="mt-1 text-xs text-neutral-500">
-            Re-enter by context, search your record, or review the week.
+            Browse your notes, review the week, or see patterns.
           </p>
         </div>
         <div
           role="tablist"
-          aria-label="Continuity views"
+          aria-label="History views"
           className="flex rounded-lg border border-neutral-800 p-0.5"
         >
           {views.map((item) => (

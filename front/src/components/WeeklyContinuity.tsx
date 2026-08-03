@@ -182,11 +182,11 @@ export default function WeeklyContinuity({
 
         <div>
           <h3 className="text-xs font-medium text-neutral-400">
-            Open threads
+            Open follow-ups
           </h3>
           {week.open_threads.length === 0 ? (
             <p className="mt-3 text-xs leading-5 text-neutral-600">
-              Nothing is waiting to be carried forward.
+              Nothing is waiting for your attention.
             </p>
           ) : (
             <ul className="mt-3 space-y-3">

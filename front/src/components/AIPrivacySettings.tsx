@@ -38,12 +38,12 @@ export default function AIPrivacySettings() {
   return (
     <section aria-labelledby="ai-privacy-title" className="border-t border-neutral-800 pt-6">
       <h2 id="ai-privacy-title" className="text-sm font-medium text-neutral-200">
-        External AI
+        Automatic summaries
       </h2>
       <p className="mt-1 max-w-2xl text-xs leading-5 text-neutral-500">
-        Optional summaries use NVIDIA Build API. Only the source snapshot for
-        the action you request is sent. Manual summaries and all local
-        continuity features work without consent.
+        Optional summaries use the configured AI service. Only the source
+        material needed for a summary is sent. Manual summaries and all local
+        features work without consent.
       </p>
       <div className="mt-4 space-y-4">
         <label className="flex items-start gap-3 text-sm text-neutral-300">
@@ -54,9 +54,10 @@ export default function AIPrivacySettings() {
             className="mt-0.5 accent-violet-400"
           />
           <span>
-            Allow requested text to be processed by NVIDIA
+            Allow automatic summaries to use today’s notes
             <span className="mt-1 block text-xs leading-5 text-neutral-600">
-              Nothing is sent automatically.
+              When enabled, Cadence updates the summary after you save new
+              notes or log a moment.
             </span>
           </span>
         </label>

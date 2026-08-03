@@ -69,7 +69,7 @@ export default function ContextHub({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-sm font-medium text-neutral-200">
-            Context continuity
+            Context history
           </h2>
           <p className="mt-1 text-xs text-neutral-500">
             Return to a project or area without rebuilding its recent history.
@@ -141,11 +141,11 @@ export default function ContextHub({
 
           <div>
             <h3 className="text-xs font-medium text-neutral-400">
-              Open threads
+              Open follow-ups
             </h3>
             {continuity.open_threads.length === 0 ? (
               <p className="mt-3 text-xs leading-5 text-neutral-600">
-                No open threads originated in this context.
+                No open follow-ups from this area.
               </p>
             ) : (
               <ul className="mt-3 space-y-3">

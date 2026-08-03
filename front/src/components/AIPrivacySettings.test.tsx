@@ -8,7 +8,7 @@ import AIPrivacySettings from "./AIPrivacySettings";
 vi.mock("../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
 
 describe("AIPrivacySettings", () => {
-  it("requires an explicit save before external AI consent changes", async () => {
+  it("requires an explicit save before automatic summary settings change", async () => {
     const user = userEvent.setup();
     const updateAIPrivacy = vi.fn().mockResolvedValue({});
     vi.mocked(useAuth).mockReturnValue({
@@ -33,7 +33,7 @@ describe("AIPrivacySettings", () => {
     render(<AIPrivacySettings />);
     await user.click(
       screen.getByRole("checkbox", {
-        name: /Allow requested text/,
+        name: /Allow automatic summaries/,
       }),
     );
     expect(updateAIPrivacy).not.toHaveBeenCalled();
