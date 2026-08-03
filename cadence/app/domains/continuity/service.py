@@ -484,7 +484,7 @@ async def search(
                 "source": "threads",
                 "source_id": item.id,
                 "date": origin_date.isoformat(),
-                "title": "Carry-forward thread",
+                "title": "Follow-up",
                 "excerpt": _excerpt(item.content, term),
                 "status": item.status,
                 "_sort_at": item.created_at.isoformat(),

@@ -343,6 +343,10 @@ class CadenceApiTests(unittest.TestCase):
             "/api/auth/verify",
             json={"token": verification_token},
         )
+        habits_after_registration = self.client.get(
+            "/api/habits",
+            headers={"Authorization": f"Bearer {_create_token(user_id)}"},
+        )
         login_after = self.client.post(
             "/api/auth/login",
             json={"username": "pending", "password": "test-password"},
@@ -351,6 +355,8 @@ class CadenceApiTests(unittest.TestCase):
         self.assertEqual(login_before.status_code, 403)
         self.assertEqual(protected_before.status_code, 403)
         self.assertEqual(verified.status_code, 200)
+        self.assertEqual(habits_after_registration.status_code, 200)
+        self.assertEqual(habits_after_registration.json(), [])
         self.assertEqual(login_after.status_code, 200)
 
     def test_delivery_failure_is_visible_and_resend_recovers_account(
@@ -1772,27 +1778,33 @@ class CadenceApiTests(unittest.TestCase):
             reentry["contexts"][0]["last_activity"]["excerpt"],
         )
 
-    def test_parallel_daily_panel_load_creates_one_canonical_day(self) -> None:
+    def test_parallel_daily_panel_load_does_not_create_empty_day(self) -> None:
         paths = [
             "/api/days/2026-07-25",
+            "/api/days/2026-07-25/habits",
+            "/api/days/2026-07-25/closure",
+            "/api/days/2026-07-25/context",
+            "/api/days/2026-07-25/reentry",
             "/api/days/2026-07-25/checkin",
             "/api/days/2026-07-25/conversation",
+            "/api/days/2026-07-25/summary",
+            "/api/days/2026-07-25/carry-forward",
         ]
 
         def load(path: str):
             return self.client.get(path, headers=self.alpha_headers)
 
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=len(paths)) as executor:
             responses = list(executor.map(load, paths))
 
-        self.assertEqual([response.status_code for response in responses], [200] * 3)
+        self.assertEqual([response.status_code for response in responses], [200] * len(paths))
         recent = self.client.get(
             "/api/days?limit=7", headers=self.alpha_headers
         )
         matching_days = [
             day for day in recent.json() if day["date"] == "2026-07-25"
         ]
-        self.assertEqual(len(matching_days), 1)
+        self.assertEqual(matching_days, [])
 
     def test_sqlite_integrity_policy_and_hot_path_indexes(self) -> None:
         async def inspect_database() -> tuple[dict[str, object], set[str]]:

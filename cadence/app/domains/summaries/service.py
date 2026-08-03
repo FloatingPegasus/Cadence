@@ -10,6 +10,7 @@ from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.daily_checkin import DailyCheckin
 from ...persistence.models.habit import Habit
 from ...persistence.models.habit_log import HabitLog
+from ...persistence.models.day import Day
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...services import ai as ai_service
 
@@ -99,6 +100,11 @@ def serialize(
 async def get_daily_summary(
     db: AsyncSession, user_id: int, target_date: date
 ) -> dict | None:
+    day_exists = await db.scalar(
+        select(Day.id).where(Day.user_id == user_id, Day.date == target_date)
+    )
+    if day_exists is None:
+        return None
     day, snapshot = await build_source_snapshot(db, user_id, target_date)
     current_source_fingerprint, _ = fingerprint(snapshot)
     artifact = await db.scalar(

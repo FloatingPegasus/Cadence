@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...domains.days import service as days_service
+from ...domains.habits import service as habits_service
 from ...domains.summaries import service as summaries_service
 from ...domains.carry_forward import service as carry_forward_service
 from ...domains.continuity import service as continuity_service
@@ -64,6 +65,15 @@ async def list_recent_days(
     user: User = Depends(get_current_user),
 ):
     return await days_service.list_recent_days(db, user.id, limit)
+
+
+@router.get("/days/{target_date}/habits")
+async def get_day_habits(
+    target_date: date,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await habits_service.get_day_habits(db, user.id, target_date)
 
 
 @router.get("/days/{target_date}")

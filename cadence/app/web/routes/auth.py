@@ -13,7 +13,6 @@ from ...config import settings
 from ...extensions import get_db
 from ...persistence.models.user import User
 from ...services.email import EmailDeliveryError, send_verification_email
-from ...domains.habits.service import seed_default_habits
 
 router = APIRouter(tags=["auth"])
 security = HTTPBearer(auto_error=False)
@@ -148,7 +147,6 @@ async def register(body: RegisterBody, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    await seed_default_habits(db, user.id)
 
     try:
         await _send_user_verification(user)
