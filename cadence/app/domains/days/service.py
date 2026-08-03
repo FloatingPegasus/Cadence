@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,7 @@ from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.carry_forward_item import CarryForwardItem
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
+from ...persistence.models.day_context import DayContext
 
 
 def _coerce_date(value: date | str) -> date:
@@ -46,22 +47,63 @@ async def get_or_create_day(
 
 
 async def get_day(db: AsyncSession, user_id: int, target_date: date | str) -> dict:
-    day = await get_or_create_day(db, user_id, target_date)
+    day_date = _coerce_date(target_date)
+    day = await db.scalar(
+        select(Day).where(Day.user_id == user_id, Day.date == day_date)
+    )
     return {
-        "id": day.id,
-        "date": day.date.isoformat(),
-        "status": day.status,
-        "daily_note": day.daily_note or "",
+        "id": day.id if day else None,
+        "date": day_date.isoformat(),
+        "status": day.status if day else "open",
+        "daily_note": day.daily_note if day else "",
     }
 
 
 async def list_recent_days(
     db: AsyncSession, user_id: int, limit: int = 7
 ) -> list[dict]:
+    checkin_has_values = or_(
+        DailyCheckin.sleep_hours.is_not(None),
+        DailyCheckin.sleep_quality.is_not(None),
+        DailyCheckin.energy_level.is_not(None),
+        DailyCheckin.focus_quality.is_not(None),
+        DailyCheckin.emotional_state.is_not(None),
+        DailyCheckin.recovery_quality.is_not(None),
+        DailyCheckin.reentry_success.is_not(None),
+        DailyCheckin.drift_minutes.is_not(None),
+        DailyCheckin.notes.is_not(None),
+    )
+    has_activity = or_(
+        Day.status == "closed",
+        func.length(func.trim(func.coalesce(Day.daily_note, ""))) > 0,
+        checkin_has_values,
+        exists(
+            select(ConversationEntry.id).where(
+                ConversationEntry.day_id == Day.id,
+                func.length(func.trim(ConversationEntry.content)) > 0,
+            )
+        ),
+        exists(
+            select(HabitLog.id).where(HabitLog.day_id == Day.id)
+        ),
+        exists(
+            select(SummaryArtifact.id).where(
+                SummaryArtifact.day_id == Day.id,
+                SummaryArtifact.kind == "daily",
+                func.length(func.trim(SummaryArtifact.content)) > 0,
+            )
+        ),
+        exists(
+            select(CarryForwardItem.id).where(
+                CarryForwardItem.origin_day_id == Day.id
+            )
+        ),
+        exists(select(DayContext.day_id).where(DayContext.day_id == Day.id)),
+    )
     result = await db.execute(
         select(Day, DailyCheckin)
         .outerjoin(DailyCheckin, DailyCheckin.day_id == Day.id)
-        .where(Day.user_id == user_id)
+        .where(Day.user_id == user_id, has_activity)
         .order_by(Day.date.desc())
         .limit(limit)
     )
@@ -113,7 +155,28 @@ async def get_closure_preview(
     user_id: int,
     target_date: date | str,
 ) -> dict:
-    day = await get_or_create_day(db, user_id, target_date)
+    day_date = _coerce_date(target_date)
+    day = await db.scalar(
+        select(Day).where(Day.user_id == user_id, Day.date == day_date)
+    )
+    if day is None:
+        return {
+            "date": day_date.isoformat(),
+            "status": "open",
+            "capture": {
+                "has_daily_note": False,
+                "conversation_entries": 0,
+                "completed_habits": 0,
+                "checkin_fields": 0,
+            },
+            "summary": {
+                "exists": False,
+                "excerpt": "",
+                "is_user_edited": False,
+            },
+            "open_thread_count": 0,
+            "open_threads": [],
+        }
     counts_result = await db.execute(
         select(
             select(func.count(ConversationEntry.id))
@@ -242,7 +305,12 @@ async def get_day_context(
 async def get_checkin(
     db: AsyncSession, user_id: int, target_date: date | str
 ) -> dict:
-    day = await get_or_create_day(db, user_id, target_date)
+    day_date = _coerce_date(target_date)
+    day = await db.scalar(
+        select(Day).where(Day.user_id == user_id, Day.date == day_date)
+    )
+    if day is None:
+        return {}
     result = await db.execute(
         select(DailyCheckin).where(DailyCheckin.day_id == day.id)
     )
@@ -265,7 +333,14 @@ async def get_checkin(
 async def update_checkin(
     db: AsyncSession, user_id: int, target_date: date | str, data: dict
 ) -> dict:
-    day = await get_or_create_day(db, user_id, target_date)
+    day_date = _coerce_date(target_date)
+    day = await db.scalar(
+        select(Day).where(Day.user_id == user_id, Day.date == day_date)
+    )
+    if day is None and not data:
+        return {}
+    if day is None:
+        day = await get_or_create_day(db, user_id, target_date)
     result = await db.execute(
         select(DailyCheckin).where(DailyCheckin.day_id == day.id)
     )
@@ -293,7 +368,12 @@ async def update_checkin(
 async def list_conversation(
     db: AsyncSession, user_id: int, target_date: date | str
 ) -> list[dict]:
-    day = await get_or_create_day(db, user_id, target_date)
+    day_date = _coerce_date(target_date)
+    day = await db.scalar(
+        select(Day).where(Day.user_id == user_id, Day.date == day_date)
+    )
+    if day is None:
+        return []
     result = await db.execute(
         select(ConversationEntry)
         .where(ConversationEntry.day_id == day.id)

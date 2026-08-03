@@ -36,6 +36,30 @@ async def list_habits(
     return [_habit_dict(habit) for habit in result.scalars().all()]
 
 
+async def get_day_habits(
+    db: AsyncSession, user_id: int, target_date: date
+) -> list[dict]:
+    result = await db.execute(
+        select(Habit)
+        .where(Habit.user_id == user_id, Habit.is_archived.is_(False))
+        .order_by(Habit.id)
+    )
+    habits = list(result.scalars().all())
+    day_id = await db.scalar(
+        select(Day.id).where(Day.user_id == user_id, Day.date == target_date)
+    )
+    completed_ids: set[int] = set()
+    if day_id is not None:
+        logged = await db.execute(
+            select(HabitLog.habit_id).where(HabitLog.day_id == day_id)
+        )
+        completed_ids = set(logged.scalars().all())
+    return [
+        {**_habit_dict(habit), "completed": habit.id in completed_ids}
+        for habit in habits
+    ]
+
+
 async def create_habit(db: AsyncSession, user_id: int, name: str) -> dict:
     habit = Habit(user_id=user_id, name=name, is_archived=False)
     db.add(habit)
@@ -176,12 +200,3 @@ async def toggle_habit(
     elif value == "0" and existing:
         await db.delete(existing)
         await db.commit()
-
-
-async def seed_default_habits(db: AsyncSession, user_id: int) -> None:
-    result = await db.execute(select(Habit).where(Habit.user_id == user_id).limit(1))
-    if result.scalar_one_or_none():
-        return
-    for name in ["Coding", "Exercise", "Internship", "Reading"]:
-        db.add(Habit(name=name, user_id=user_id))
-    await db.commit()
