@@ -31,7 +31,7 @@ export default function CarryForwardCard({
         setError(
           caught instanceof Error
             ? caught.message
-            : "Could not load carry-forward threads",
+            : "Could not load follow-ups",
         );
       })
       .finally(() => setIsLoading(false));
@@ -50,7 +50,7 @@ export default function CarryForwardCard({
       onChanged();
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Could not add the thread",
+        caught instanceof Error ? caught.message : "Could not add the follow-up",
       );
     } finally {
       setIsSubmitting(false);
@@ -72,35 +72,35 @@ export default function CarryForwardCard({
       setError(
         caught instanceof Error
           ? caught.message
-          : "Could not update the thread",
+          : "Could not update the follow-up",
       );
     }
   }
 
   return (
     <section
-      aria-labelledby="carry-forward-title"
+      aria-labelledby="follow-ups-title"
       className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 lg:col-span-2"
     >
       <h2
-        id="carry-forward-title"
+        id="follow-ups-title"
         className="text-sm font-medium text-neutral-200"
       >
-        Carry forward
+        Follow-ups
       </h2>
       <p className="mt-1 text-xs text-neutral-500">
-        Threads stay visible until completed or released.
+        Keep an unfinished item visible until you finish or dismiss it.
       </p>
 
       <form onSubmit={addItem} className="mt-4 flex gap-2">
         <label className="sr-only" htmlFor="carry-forward-entry">
-          Add a carry-forward thread
+          Add a follow-up
         </label>
         <input
           id="carry-forward-entry"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="What should remain visible tomorrow?"
+          placeholder="What should stay on your list?"
           maxLength={2000}
           className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
         />
@@ -108,13 +108,13 @@ export default function CarryForwardCard({
           disabled={isSubmitting || draft.trim().length === 0}
           className="rounded-lg bg-neutral-800 px-3 py-2 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSubmitting ? "Adding" : "Carry"}
+          {isSubmitting ? "Adding" : "Add"}
         </button>
       </form>
 
       <div className="mt-4">
         {isLoading ? (
-          <p className="text-xs text-neutral-600">Loading threads…</p>
+          <p className="text-xs text-neutral-600">Loading follow-ups…</p>
         ) : items.length === 0 ? (
           <p className="text-xs text-neutral-600">
             Nothing is asking to be carried forward.
@@ -135,8 +135,9 @@ export default function CarryForwardCard({
                   <p className="mt-0.5 text-[11px] text-neutral-600">
                     {item.origin_date === date
                       ? "Added today"
-                      : `Carried from ${item.origin_date}`}
-                    {item.status !== "open" && ` · ${item.status}`}
+                      : `From ${item.origin_date}`}
+                    {item.status !== "open" &&
+                      ` · ${item.status === "completed" ? "Completed" : "Dismissed"}`}
                   </p>
                 </div>
                 {item.status === "open" && (
@@ -146,14 +147,14 @@ export default function CarryForwardCard({
                       onClick={() => resolve(item.id, "completed")}
                       className="text-xs text-neutral-400 hover:text-neutral-200"
                     >
-                      Done
+                      Complete
                     </button>
                     <button
                       type="button"
                       onClick={() => resolve(item.id, "released")}
                       className="text-xs text-neutral-600 hover:text-neutral-400"
                     >
-                      Release
+                      Dismiss
                     </button>
                   </div>
                 )}

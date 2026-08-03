@@ -10,7 +10,7 @@ function Header() {
           Cadence
         </h1>
         <p className="text-sm text-neutral-500 mt-1">
-          Daily continuity
+          Your daily record
         </p>
       </div>
       {user && (

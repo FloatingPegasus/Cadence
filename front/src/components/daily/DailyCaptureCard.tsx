@@ -14,7 +14,7 @@ import {
 interface DailyCaptureCardProps {
   date: string;
   contexts: ContinuityContext[];
-  onChanged: () => void;
+  onChanged: (hasSource?: boolean) => void;
 }
 
 const checkinFields: Array<{
@@ -110,7 +110,12 @@ export default function DailyCaptureCard({
       ]);
       setAttachedContexts(updatedContexts);
       setSaved(true);
-      onChanged();
+      const hasSource =
+        note.trim().length > 0 ||
+        Object.values(checkin).some(
+          (value) => value !== null && value !== undefined && value !== "",
+        );
+      onChanged(hasSource);
       window.setTimeout(() => setSaved(false), 1800);
     } catch (caught) {
       setError(
@@ -162,10 +167,10 @@ export default function DailyCaptureCard({
             id="daily-capture-title"
             className="text-sm font-medium text-neutral-200"
           >
-            Daily continuity
+            Day note
           </h2>
           <p className="mt-1 text-xs text-neutral-500">
-            {date} · capture what should not be lost
+            One note is enough. Add detail only if it helps.
           </p>
         </div>
         <button
@@ -174,7 +179,7 @@ export default function DailyCaptureCard({
           disabled={isLoading || isSaving}
           className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSaving ? "Saving" : saved ? "Saved" : "Save day"}
+          {isSaving ? "Saving" : saved ? "Saved" : "Save note"}
         </button>
       </div>
 
@@ -186,19 +191,19 @@ export default function DailyCaptureCard({
             htmlFor="daily-note"
             className="mb-1.5 block text-xs text-neutral-500"
           >
-            Daily note
+            What happened today?
           </label>
           <textarea
             id="daily-note"
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="What happened, what moved, or what are you returning to?"
+            placeholder="Write down what you want to remember."
             className="min-h-28 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
           />
 
           {contextOptions.length > 0 && (
             <fieldset className="mt-4">
-              <legend className="text-xs text-neutral-500">Contexts</legend>
+              <legend className="text-xs text-neutral-500">Areas</legend>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
                 {contextOptions.map((context) => (
                   <label
@@ -249,7 +254,7 @@ export default function DailyCaptureCard({
 
           <details className="mt-4 border-t border-neutral-800 pt-3">
             <summary className="cursor-pointer text-xs text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
-              Add optional detail
+              Add more detail
             </summary>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <label className="text-xs text-neutral-500">

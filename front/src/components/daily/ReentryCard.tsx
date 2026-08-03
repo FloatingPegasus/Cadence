@@ -55,14 +55,11 @@ export default function ReentryCard({
       className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 lg:col-span-2"
     >
       <div>
-        <h2
-          id="reentry-title"
-          className="text-sm font-medium text-neutral-200"
-        >
-          Resume context
+        <h2 id="reentry-title" className="text-sm font-medium text-neutral-200">
+          Pick up where you left off
         </h2>
         <p className="mt-1 text-xs text-neutral-500">
-          A bounded view of what may still matter today.
+          A short look at earlier notes that may help today.
         </p>
       </div>
 
@@ -78,7 +75,7 @@ export default function ReentryCard({
         <div className="mt-4 grid gap-5 md:grid-cols-3">
           <div>
             <h3 className="text-xs font-medium text-neutral-400">
-              Last meaningful trace
+              Earlier note
             </h3>
             {reentry?.previous_trace ? (
               <button
@@ -105,7 +102,7 @@ export default function ReentryCard({
 
           <div className="border-neutral-800 md:border-l md:pl-5">
             <h3 className="text-xs font-medium text-neutral-400">
-              Open threads
+              Open follow-ups
             </h3>
             {reentry?.open_threads.length ? (
               <ul className="mt-2 space-y-2">
@@ -127,7 +124,7 @@ export default function ReentryCard({
 
           <div className="border-neutral-800 md:border-l md:pl-5">
             <h3 className="text-xs font-medium text-neutral-400">
-              Linked contexts
+              Related areas
             </h3>
             {reentry?.contexts.some((context) => context.last_activity) ? (
               <ul className="mt-2 space-y-3">

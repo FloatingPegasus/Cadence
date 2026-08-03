@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   fetchSummary,
@@ -41,6 +41,10 @@ describe("DailySummaryCard", () => {
     vi.resetAllMocks();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it("marks changed source material and clears the warning after save", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchSummary).mockResolvedValue(summary(true));
@@ -57,7 +61,7 @@ describe("DailySummaryCard", () => {
     expect(
       await screen.findByText(/Source entries changed/),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Save edits" }));
+    await user.click(screen.getByRole("button", { name: "Save summary" }));
 
     await waitFor(() =>
       expect(updateSummary).toHaveBeenCalledWith(
@@ -94,5 +98,30 @@ describe("DailySummaryCard", () => {
       await screen.findByText(/Source entries changed/),
     ).toBeTruthy();
     expect(fetchSummary).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps provider details out of the daily summary UI", async () => {
+    vi.mocked(fetchSummary).mockResolvedValue({
+      ...summary(false),
+      provider: "NVIDIA Build API",
+      model: "nvidia/example-model",
+      is_user_edited: false,
+    });
+
+    render(
+      <DailySummaryCard
+        date="2026-07-23"
+        refreshKey={0}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText("Generated automatically"),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Generate summary" }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/NVIDIA|nvidia/)).toBeNull();
   });
 });
