@@ -140,14 +140,14 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h1 className="text-base font-medium text-neutral-100">
-                Daily record
+                Today
               </h1>
               <p className="mt-1 text-sm text-neutral-500">
-                Capture what matters, then leave.
+                Keep a simple record of what happened.
               </p>
             </div>
             <label className="text-xs text-neutral-500">
-              Date
+              Day
               <input
                 type="date"
                 value={selectedDate}
@@ -158,11 +158,15 @@ export default function DashboardPage() {
           </div>
           <DailyPanel
             date={selectedDate}
+            habits={habits}
             contexts={contexts}
             refreshKey={continuityVersion}
             onSelectDate={setSelectedDate}
             onChanged={() =>
               setContinuityVersion((version) => version + 1)
+            }
+            onHabitsChanged={() =>
+              setHabitVersion((version) => version + 1)
             }
           />
           <RecentDays
@@ -220,10 +224,10 @@ export default function DashboardPage() {
         <>
           <div>
             <h1 className="text-base font-medium text-neutral-100">
-              Continuity
+              History
             </h1>
             <p className="mt-1 text-sm text-neutral-500">
-              Find context and resume without reconstructing everything.
+              Look back at the days and notes you have recorded.
             </p>
           </div>
           <ContinuityExplorer
