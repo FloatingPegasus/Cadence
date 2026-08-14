@@ -68,7 +68,7 @@ function LoginPage() {
                   htmlFor="auth-username"
                   className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5"
                 >
-                  Username
+                  {mode === "login" ? "Username or email" : "Username"}
                 </label>
                 <input
                   id="auth-username"
@@ -77,7 +77,9 @@ function LoginPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
                   className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
-                  placeholder="your name"
+                  placeholder={
+                    mode === "login" ? "you@example.com" : "your name"
+                  }
                   required
                 />
               </div>

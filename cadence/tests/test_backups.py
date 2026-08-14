@@ -4,6 +4,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+if __package__:
+    from .bootstrap import configure_test_environment
+else:
+    from bootstrap import configure_test_environment
+
+configure_test_environment()
+
 from cadence.app.services import backups as backup_service
 from cadence.app.services.backups import (
     BackupError,

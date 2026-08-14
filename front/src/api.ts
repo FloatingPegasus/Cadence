@@ -1,39 +1,56 @@
-const TOKEN_KEY = "cadence_token";
+const LEGACY_TOKEN_KEY = "cadence_token";
+const CSRF_COOKIE_NAME = "cadence_csrf";
+const CSRF_HEADER_NAME = "X-CSRF-Token";
+const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+if (typeof window !== "undefined") {
+  try {
+    window.localStorage.removeItem(LEGACY_TOKEN_KEY);
+  } catch {
+    // Storage can be unavailable in privacy-restricted browser contexts.
+  }
 }
 
-export function setToken(token: string | null): void {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
+function getCsrfCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const prefix = `${CSRF_COOKIE_NAME}=`;
+  for (const part of document.cookie.split(";")) {
+    const cookie = part.trim();
+    if (cookie.startsWith(prefix)) {
+      return decodeURIComponent(cookie.slice(prefix.length));
+    }
   }
+  return null;
 }
 
 export async function request<T = unknown>(
   input: RequestInfo,
   init: RequestInit = {},
 ): Promise<T> {
-  const token = getToken();
   const headers = new Headers(init.headers);
+  headers.delete("Authorization");
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  const method = (init.method ?? "GET").toUpperCase();
+  if (UNSAFE_METHODS.has(method)) {
+    headers.delete(CSRF_HEADER_NAME);
+    const csrfToken = getCsrfCookie();
+    if (csrfToken) {
+      headers.set(CSRF_HEADER_NAME, csrfToken);
+    }
   }
-  const res = await fetch(input, { ...init, headers });
+  const res = await fetch(input, {
+    ...init,
+    headers,
+    credentials: "include",
+  });
   if (!res.ok) {
     let detail = res.statusText;
     try {
       const data = await res.json();
       detail = data.detail ?? detail;
     } catch {
-    }
-    if (res.status === 401) {
-      setToken(null);
     }
     throw new Error(detail);
   }

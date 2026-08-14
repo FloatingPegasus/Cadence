@@ -7,9 +7,17 @@ from datetime import timedelta
 from unittest.mock import AsyncMock, patch
 from urllib.parse import parse_qs, urlparse
 
+if __package__:
+    from .bootstrap import configure_test_environment
+else:
+    from bootstrap import configure_test_environment
+
+configure_test_environment()
+
 import bcrypt
 import httpx
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -23,16 +31,24 @@ from cadence.app.persistence.models.user import User
 from cadence.app.config import settings
 from cadence.app.services import ai as ai_service
 from cadence.app.services.email import EmailDeliveryError
-from cadence.app.web.routes.auth import _create_token
+from cadence.app.web.routes.auth import (
+    CSRF_COOKIE_NAME,
+    CSRF_HEADER_NAME,
+    SESSION_COOKIE_NAME,
+    _create_token,
+    _decode_token,
+)
 
 
 class CadenceApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.original_dev_mode = settings.dev_mode
         self.original_test_mode = settings.test_mode
-        self.original_dev_usernames = settings.dev_usernames
+        self.original_dev_email = settings.dev_email
+        self.original_dev_password = settings.dev_password
         self.original_ai_api_key = settings.ai_api_key
         self.original_ai_enabled = settings.ai_enabled
+        self.original_frontend_base_url = settings.frontend_base_url
         temp_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         self.database_path = temp_file.name
         temp_file.close()
@@ -98,9 +114,11 @@ class CadenceApiTests(unittest.TestCase):
     def tearDown(self) -> None:
         settings.dev_mode = self.original_dev_mode
         settings.test_mode = self.original_test_mode
-        settings.dev_usernames = self.original_dev_usernames
+        settings.dev_email = self.original_dev_email
+        settings.dev_password = self.original_dev_password
         settings.ai_api_key = self.original_ai_api_key
         settings.ai_enabled = self.original_ai_enabled
+        settings.frontend_base_url = self.original_frontend_base_url
         self.client.close()
         app.dependency_overrides.clear()
         asyncio.run(self.engine.dispose())
@@ -159,23 +177,88 @@ class CadenceApiTests(unittest.TestCase):
             ],
         )
 
-    def test_dev_registry_uses_normal_login_plus_dev_mode(self) -> None:
+    def test_dev_login_uses_only_environment_credentials(self) -> None:
         settings.dev_mode = True
-        settings.dev_usernames = "alpha"
+        settings.dev_email = "dev@example.com"
+        settings.dev_password = SecretStr("local-dev-password")
         settings.ai_api_key = ""
-        alpha_me = self.client.get(
-            "/api/auth/me", headers=self.alpha_headers
+
+        wrong_password = self.client.post(
+            "/api/auth/login",
+            json={
+                "username": "dev@example.com",
+                "password": "wrong-password",
+            },
         )
-        beta_me = self.client.get(
-            "/api/auth/me", headers=self.beta_headers
+        login = self.client.post(
+            "/api/auth/login",
+            json={
+                "username": "DEV@example.com",
+                "password": "local-dev-password",
+            },
         )
-        response = self.client.get(
-            "/api/dev/ai/models", headers=self.alpha_headers
+        me = self.client.get("/api/auth/me")
+        response = self.client.get("/api/dev/ai/models")
+        username_login = self.client.post(
+            "/api/auth/login",
+            json={
+                "username": me.json()["username"],
+                "password": "local-dev-password",
+            },
         )
-        self.assertTrue(alpha_me.json()["is_developer"])
-        self.assertFalse(beta_me.json()["is_developer"])
+        bearer_without_dev_claim = self.client.get(
+            "/api/auth/me",
+            headers={
+                "Authorization": (
+                    f"Bearer {_create_token(login.json()['user_id'])}"
+                )
+            },
+        )
+
+        self.assertEqual(wrong_password.status_code, 401)
+        self.assertEqual(login.status_code, 200)
+        self.assertTrue(login.json()["is_developer"])
+        self.assertEqual(me.status_code, 200)
+        self.assertEqual(me.json()["email"], "dev@example.com")
+        self.assertTrue(me.json()["is_verified"])
+        self.assertTrue(me.json()["is_developer"])
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["configured"])
+        self.assertEqual(username_login.status_code, 401)
+        self.assertFalse(bearer_without_dev_claim.json()["is_developer"])
+
+    def test_normal_login_accepts_username_or_email(self) -> None:
+        async def add_ambiguous_username() -> None:
+            async with self.session_factory() as db:
+                password = bcrypt.hashpw(
+                    b"different-password", bcrypt.gensalt()
+                ).decode()
+                db.add(
+                    User(
+                        username="alpha@example.com",
+                        email="collision@example.com",
+                        hashed_password=password,
+                        is_verified=True,
+                    )
+                )
+                await db.commit()
+
+        asyncio.run(add_ambiguous_username())
+        by_username = self.client.post(
+            "/api/auth/login",
+            json={"username": "alpha", "password": "test-password"},
+        )
+        by_email = self.client.post(
+            "/api/auth/login",
+            json={
+                "username": "ALPHA@example.com",
+                "password": "test-password",
+            },
+        )
+
+        self.assertEqual(by_username.status_code, 200)
+        self.assertEqual(by_email.status_code, 200)
+        self.assertEqual(by_email.json()["user_id"], 1)
 
     def test_ai_completion_falls_back_after_rate_limit(self) -> None:
         settings.ai_enabled = True
@@ -359,6 +442,163 @@ class CadenceApiTests(unittest.TestCase):
         self.assertEqual(habits_after_registration.json(), [])
         self.assertEqual(login_after.status_code, 200)
 
+    def test_login_uses_secure_cookie_session_and_signed_csrf(self) -> None:
+        settings.frontend_base_url = "https://app.example.test"
+        client = TestClient(app, base_url="https://testserver")
+        try:
+            login = client.post(
+                "/api/auth/login",
+                json={"username": "alpha", "password": "test-password"},
+            )
+            self.assertEqual(login.status_code, 200)
+            self.assertNotIn("access_token", login.json())
+
+            cookie_headers = login.headers.get_list("set-cookie")
+            session_header = next(
+                header
+                for header in cookie_headers
+                if header.startswith(f"{SESSION_COOKIE_NAME}=")
+            )
+            csrf_header = next(
+                header
+                for header in cookie_headers
+                if header.startswith(f"{CSRF_COOKIE_NAME}=")
+            )
+            for header in (session_header, csrf_header):
+                self.assertIn("Max-Age=604800", header)
+                self.assertIn("Path=/", header)
+                self.assertIn("SameSite=lax", header)
+                self.assertIn("Secure", header)
+                self.assertNotIn("Domain=", header)
+            self.assertIn("HttpOnly", session_header)
+            self.assertNotIn("HttpOnly", csrf_header)
+
+            session_token = client.cookies.get(SESSION_COOKIE_NAME)
+            csrf_token = client.cookies.get(CSRF_COOKIE_NAME)
+            self.assertIsNotNone(session_token)
+            self.assertIsNotNone(csrf_token)
+            self.assertEqual(
+                _decode_token(session_token, purpose="access")["csrf"],
+                csrf_token,
+            )
+            self.assertNotIn(session_token, login.text)
+
+            self.assertEqual(client.get("/api/auth/me").status_code, 200)
+            missing_csrf = client.put(
+                "/api/days/2026-07-24",
+                json={"daily_note": "cookie session"},
+            )
+            self.assertEqual(missing_csrf.status_code, 403)
+            mismatched_csrf = client.put(
+                "/api/days/2026-07-24",
+                headers={CSRF_HEADER_NAME: "wrong-token"},
+                json={"daily_note": "cookie session"},
+            )
+            self.assertEqual(mismatched_csrf.status_code, 403)
+            valid_csrf = client.put(
+                "/api/days/2026-07-24",
+                headers={CSRF_HEADER_NAME: csrf_token},
+                json={"daily_note": "cookie session"},
+            )
+            self.assertEqual(valid_csrf.status_code, 200)
+
+            logout = client.post(
+                "/api/auth/logout",
+                headers={CSRF_HEADER_NAME: csrf_token},
+            )
+            self.assertEqual(logout.status_code, 200)
+            clear_headers = logout.headers.get_list("set-cookie")
+            self.assertTrue(
+                any(
+                    header.startswith(f'{SESSION_COOKIE_NAME}="";')
+                    and "Max-Age=0" in header
+                    and "HttpOnly" in header
+                    for header in clear_headers
+                )
+            )
+            self.assertTrue(
+                any(
+                    header.startswith(f'{CSRF_COOKIE_NAME}="";')
+                    and "Max-Age=0" in header
+                    and "HttpOnly" not in header
+                    for header in clear_headers
+                )
+            )
+            self.assertEqual(client.get("/api/auth/me").status_code, 401)
+        finally:
+            client.close()
+
+    def test_http_loopback_session_cookie_does_not_require_secure_transport(self) -> None:
+        settings.frontend_base_url = "http://localhost:3001"
+        client = TestClient(app, base_url="http://localhost")
+        try:
+            login = client.post(
+                "/api/auth/login",
+                json={"username": "alpha", "password": "test-password"},
+            )
+            self.assertEqual(login.status_code, 200)
+            for header in login.headers.get_list("set-cookie"):
+                self.assertNotIn("; Secure", header)
+        finally:
+            client.close()
+
+    def test_cookie_security_follows_deployment_not_request_scheme(self) -> None:
+        settings.frontend_base_url = "https://app.example.test"
+        https_deployment = TestClient(app, base_url="http://testserver")
+        try:
+            response = https_deployment.post(
+                "/api/auth/login",
+                json={"username": "alpha", "password": "test-password"},
+            )
+            self.assertTrue(
+                all("; Secure" in header for header in response.headers.get_list("set-cookie"))
+            )
+        finally:
+            https_deployment.close()
+
+        settings.frontend_base_url = "http://localhost:3001"
+        loopback_deployment = TestClient(app, base_url="https://testserver")
+        try:
+            response = loopback_deployment.post(
+                "/api/auth/login",
+                json={"username": "alpha", "password": "test-password"},
+            )
+            self.assertTrue(
+                all("; Secure" not in header for header in response.headers.get_list("set-cookie"))
+            )
+        finally:
+            loopback_deployment.close()
+
+    def test_bearer_auth_remains_exempt_from_csrf_header(self) -> None:
+        response = self.client.put(
+            "/api/days/2026-07-24",
+            headers=self.alpha_headers,
+            json={"daily_note": "bearer compatibility"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_invalid_cookie_auth_is_cleared_without_detail_leak(self) -> None:
+        client = TestClient(app, base_url="https://testserver")
+        try:
+            response = client.get(
+                "/api/auth/me",
+                headers={
+                    "Cookie": (
+                        f"{SESSION_COOKIE_NAME}=not-a-token; "
+                        f"{CSRF_COOKIE_NAME}=stale-csrf"
+                    )
+                },
+            )
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(response.json(), {"detail": "Invalid token"})
+            clear_headers = response.headers.get_list("set-cookie")
+            self.assertEqual(len(clear_headers), 2)
+            self.assertTrue(
+                all("Max-Age=0" in header for header in clear_headers)
+            )
+        finally:
+            client.close()
+
     def test_delivery_failure_is_visible_and_resend_recovers_account(
         self,
     ) -> None:
@@ -390,6 +630,33 @@ class CadenceApiTests(unittest.TestCase):
             registered.json()["detail"],
         )
         self.assertEqual(resent.status_code, 200)
+        send_email.assert_called_once()
+
+    def test_resend_matches_legacy_mixed_case_email(self) -> None:
+        async def add_legacy_user() -> None:
+            async with self.session_factory() as db:
+                db.add(
+                    User(
+                        username="legacy-email",
+                        email="Legacy.Email@Example.com",
+                        hashed_password=bcrypt.hashpw(
+                            b"test-password", bcrypt.gensalt()
+                        ).decode(),
+                        is_verified=False,
+                    )
+                )
+                await db.commit()
+
+        asyncio.run(add_legacy_user())
+        with patch(
+            "cadence.app.web.routes.auth.send_verification_email"
+        ) as send_email:
+            response = self.client.post(
+                "/api/auth/verification/resend",
+                json={"email": "LEGACY.EMAIL@EXAMPLE.COM"},
+            )
+
+        self.assertEqual(response.status_code, 200)
         send_email.assert_called_once()
 
     def test_two_users_can_own_the_same_calendar_day(self) -> None:

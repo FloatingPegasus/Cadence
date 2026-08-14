@@ -30,7 +30,6 @@ describe("DashboardPage progressive disclosure", () => {
   it("loads one workspace at a time and defers calendar data", async () => {
     const user = userEvent.setup();
     vi.mocked(useAuth).mockReturnValue({
-      token: "token",
       user: {
         id: 1,
         username: "alpha",
@@ -40,6 +39,7 @@ describe("DashboardPage progressive disclosure", () => {
         ai_processing_consent: false,
         ai_redaction_enabled: true,
       },
+      isLoading: false,
       login: vi.fn(),
       register: vi.fn(),
       resendVerification: vi.fn(),

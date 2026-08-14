@@ -4,7 +4,7 @@ import VerifyPage from "./components/VerifyPage";
 import { useAuth } from "./contexts/AuthContext";
 
 function App() {
-  const { token } = useAuth();
+  const { user, isLoading } = useAuth();
 
   const isVerifyPage = window.location.pathname === "/verify" || !!new URLSearchParams(window.location.search).get("token");
 
@@ -12,7 +12,15 @@ function App() {
     return <VerifyPage />;
   }
 
-  if (!token) {
+  if (isLoading) {
+    return (
+      <div className="max-w-sm mx-auto px-6 py-20 text-center text-sm text-neutral-500">
+        Loading your session...
+      </div>
+    );
+  }
+
+  if (!user) {
     return <LoginPage />;
   }
 

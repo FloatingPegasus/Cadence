@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+import logging
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,7 @@ from .auth import get_current_user, is_developer
 
 
 router = APIRouter(tags=["dev-ai"])
+logger = logging.getLogger("cadence.dev_ai")
 
 
 async def require_developer(
@@ -41,12 +43,13 @@ async def models(
                 "ranking_version": ai_service.RANKING_VERSION,
                 **result,
             }
-        except Exception as error:
+        except Exception:
+            logger.exception("AI catalog refresh failed")
             return {
                 "configured": True,
                 "refreshed": False,
                 "ranking_version": ai_service.RANKING_VERSION,
-                "sync_error": str(error),
+                "sync_error": "AI model catalog refresh failed",
                 "models": await ai_service.list_models(db),
             }
     return {

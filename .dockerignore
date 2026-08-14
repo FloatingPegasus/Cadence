@@ -1,0 +1,33 @@
+# Version control and local-only configuration
+.git/
+.github/
+.agents/
+.playwright-mcp/
+.vscode/
+.DS_Store
+
+# Environment files. The example contains placeholders only.
+.env
+.env.*
+!.env.example
+
+# Local development files
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime data and build output
+cadence/data/*
+!cadence/data/.gitkeep
+front/node_modules/
+front/dist/
+coverage/
+handshake_tutorial_ocr.md
+DIAGRAMS.md
+CADENCE_MASTER_PLAN.md

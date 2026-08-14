@@ -12,7 +12,6 @@ describe("AIPrivacySettings", () => {
     const user = userEvent.setup();
     const updateAIPrivacy = vi.fn().mockResolvedValue({});
     vi.mocked(useAuth).mockReturnValue({
-      token: "token",
       user: {
         id: 1,
         username: "alpha",
@@ -22,6 +21,7 @@ describe("AIPrivacySettings", () => {
         ai_processing_consent: false,
         ai_redaction_enabled: true,
       },
+      isLoading: false,
       login: vi.fn(),
       register: vi.fn(),
       resendVerification: vi.fn(),

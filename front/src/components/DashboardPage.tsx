@@ -26,7 +26,7 @@ function todayAsLocalDate() {
 }
 
 export default function DashboardPage() {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const [month, setMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -45,7 +45,7 @@ export default function DashboardPage() {
   const [contextVersion, setContextVersion] = useState(0);
 
   useEffect(() => {
-    if (!token) {
+    if (!user) {
       setHabits([]);
       setData(null);
       setSelectedDate(null);
@@ -59,10 +59,10 @@ export default function DashboardPage() {
           caught instanceof Error ? caught.message : "Could not load disciplines",
         );
       });
-  }, [token, habitVersion]);
+  }, [user, habitVersion]);
 
   useEffect(() => {
-    if (!token) {
+    if (!user) {
       setContexts([]);
       return;
     }
@@ -73,10 +73,10 @@ export default function DashboardPage() {
           caught instanceof Error ? caught.message : "Could not load contexts",
         );
       });
-  }, [token, contextVersion]);
+  }, [user, contextVersion]);
 
   useEffect(() => {
-    if (!token || view !== "calendar") return;
+    if (!user || view !== "calendar") return;
     fetchMonthData(month)
       .then(setData)
       .catch((caught) => {
@@ -84,7 +84,7 @@ export default function DashboardPage() {
           caught instanceof Error ? caught.message : "Could not load the month",
         );
       });
-  }, [token, month, habitVersion, view]);
+  }, [user, month, habitVersion, view]);
 
   function handleToggle(habitId: number, dateStr: string, newVal: string) {
     const key = `${habitId}-${dateStr}`;

@@ -8,8 +8,6 @@ import {
 } from "react";
 import {
   request,
-  setToken,
-  getToken,
   updateAIPreferences,
   type AIPreferences,
 } from "../api";
@@ -33,9 +31,9 @@ interface RegisterResult {
 }
 
 interface AuthContextValue {
-  token: string | null;
   user: AuthUser | null;
-  login: (username: string, password: string) => Promise<void>;
+  isLoading: boolean;
+  login: (identifier: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<RegisterResult>;
   resendVerification: (email: string) => Promise<string>;
   updateAIPrivacy: (
@@ -43,20 +41,16 @@ interface AuthContextValue {
     redactionEnabled: boolean,
   ) => Promise<AIPreferences>;
   verifyEmail: (token: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setTokenState] = useState<string | null>(() => getToken());
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) {
-      setUser(null);
-      return;
-    }
     let cancelled = false;
     request<AuthUser>("/api/auth/me", {
       method: "GET",
@@ -66,38 +60,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         if (!cancelled) {
-          setToken(null);
-          setTokenState(null);
+          setUser(null);
         }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, []);
 
-  async function login(username: string, password: string) {
-    const res = await request<{
-      access_token: string;
-      user_id: number;
-      is_verified: boolean;
-      is_developer: boolean;
-      ai_processing_consent: boolean;
-      ai_redaction_enabled: boolean;
-    }>("/api/auth/login", {
+  async function login(identifier: string, password: string) {
+    await request("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username: identifier, password }),
     });
-    setToken(res.access_token);
-    setTokenState(res.access_token);
-    setUser({
-      id: res.user_id,
-      username,
-      email: "",
-      is_verified: res.is_verified,
-      is_developer: res.is_developer,
-      ai_processing_consent: res.ai_processing_consent,
-      ai_redaction_enabled: res.ai_redaction_enabled,
-    });
+    setUser(await request<AuthUser>("/api/auth/me"));
+    setIsLoading(false);
   }
 
   async function register(
@@ -158,16 +138,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return preferences;
   }
 
-  function logout() {
-    setToken(null);
-    setTokenState(null);
+  async function logout() {
+    await request("/api/auth/logout", { method: "POST" });
     setUser(null);
+    setIsLoading(false);
   }
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      token,
       user,
+      isLoading,
       login,
       register,
       resendVerification,
@@ -175,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyEmail,
       logout,
     }),
-    [token, user],
+    [user, isLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -23,8 +23,8 @@ describe("LoginPage verification recovery", () => {
       "If an unverified account uses that email, a new verification message has been sent.",
     );
     mockedUseAuth.mockReturnValue({
-      token: null,
       user: null,
+      isLoading: false,
       login: vi.fn(),
       register: vi.fn(),
       resendVerification,
@@ -53,5 +53,33 @@ describe("LoginPage verification recovery", () => {
     expect(
       await screen.findByText(/new verification message has been sent/),
     ).toBeTruthy();
+  });
+
+  it("accepts an email address for login", async () => {
+    const user = userEvent.setup();
+    const login = vi.fn().mockResolvedValue(undefined);
+    mockedUseAuth.mockReturnValue({
+      user: null,
+      isLoading: false,
+      login,
+      register: vi.fn(),
+      resendVerification: vi.fn(),
+      updateAIPrivacy: vi.fn(),
+      verifyEmail: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    render(<LoginPage />);
+    await user.type(
+      screen.getByRole("textbox", { name: "Username or email" }),
+      "dev@example.com",
+    );
+    await user.type(screen.getByLabelText("Password"), "local-dev-password");
+    await user.click(screen.getByRole("button", { name: "Log in" }));
+
+    expect(login).toHaveBeenCalledWith(
+      "dev@example.com",
+      "local-dev-password",
+    );
   });
 });

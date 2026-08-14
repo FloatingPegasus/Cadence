@@ -13,6 +13,13 @@ function VerifyPage() {
       setMessage("No verification token found in the URL.");
       return;
     }
+    // Keep the one-time credential out of browser history and future referrer
+    // headers after capturing it for the API request.
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${window.location.hash}`,
+    );
 
     request<{ is_verified: boolean }>("/api/auth/verify", {
       method: "POST",

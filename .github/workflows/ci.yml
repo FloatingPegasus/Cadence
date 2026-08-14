@@ -12,13 +12,23 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       CADENCE_TEST_MODE: "true"
       CADENCE_DEV_MODE: "false"
-      CADENCE_SECRET_KEY: ci-only-secret-not-for-production
       CADENCE_DATABASE_URL: sqlite+aiosqlite:////tmp/cadence-ci.db
       CADENCE_RUNTIME_LOCK_PATH: /tmp/cadence-ci.lock
       CADENCE_BACKUP_DIR: /tmp/cadence-ci-backups
+      CADENCE_TEST_REDIS_URL: redis://localhost:6379/15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -50,3 +60,36 @@ jobs:
       - name: Typecheck, test, and build
         working-directory: front
         run: npm run check
+
+  security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: cadence/requirements.txt
+      - name: Audit Python dependencies and source
+        run: |
+          python -m pip install --disable-pip-version-check pip-audit==2.10.1 bandit==1.9.4
+          pip-audit -r cadence/requirements.txt
+          bandit -r cadence -x cadence/tests,cadence/app/persistence/migrations
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+      - name: Audit frontend dependencies
+        working-directory: front
+        run: |
+          npm ci --ignore-scripts
+          npm audit --audit-level=high
+      - name: Scan repository for leaked secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

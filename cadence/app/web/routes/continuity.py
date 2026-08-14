@@ -96,20 +96,20 @@ async def generate_weekly_reflection(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(error),
         )
-    except ai_service.AIConsentRequiredError as error:
+    except ai_service.AIConsentRequiredError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(error),
+            detail="External AI processing is not enabled for this account.",
         )
-    except ai_service.AIConfigurationError as error:
+    except ai_service.AIConfigurationError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(error),
+            detail="AI generation is not available.",
         )
-    except ai_service.AIProvidersExhaustedError as error:
+    except ai_service.AIProvidersExhaustedError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(error),
+            detail="AI provider is temporarily unavailable.",
         )
 
 

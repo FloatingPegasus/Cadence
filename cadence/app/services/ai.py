@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import logging
 import re
 from time import perf_counter
 
@@ -11,6 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import settings
 from ..persistence.models.ai_model import AIModel
 from ..persistence.models.user import User
+
+
+logger = logging.getLogger("cadence.ai")
 
 
 RANKING_VERSION = "2026-07-23"
@@ -72,6 +76,20 @@ class AIProvidersExhaustedError(RuntimeError):
 
 class AIConsentRequiredError(RuntimeError):
     pass
+
+
+def _safe_provider_error(error: Exception) -> str:
+    """Return a bounded diagnostic that cannot include provider response data."""
+
+    if isinstance(error, httpx.HTTPStatusError):
+        return f"provider returned HTTP {error.response.status_code}"
+    if isinstance(error, httpx.TimeoutException):
+        return "provider request timed out"
+    if isinstance(error, httpx.RequestError):
+        return "provider request failed"
+    if isinstance(error, (KeyError, IndexError, TypeError, ValueError)):
+        return "provider returned an invalid response"
+    return "provider request failed"
 
 
 EMAIL_PATTERN = re.compile(
@@ -199,6 +217,16 @@ async def list_models(db: AsyncSession) -> list[dict]:
 
 
 def serialize_model(model: AIModel) -> dict:
+    safe_last_error = model.last_error
+    if safe_last_error and not (
+        safe_last_error in {
+            "provider request failed",
+            "provider request timed out",
+            "provider returned an invalid response",
+        }
+        or re.fullmatch(r"provider returned HTTP \d{3}", safe_last_error)
+    ):
+        safe_last_error = "provider request failed"
     return {
         "id": model.id,
         "provider": model.provider,
@@ -208,7 +236,9 @@ def serialize_model(model: AIModel) -> dict:
         "enabled": model.enabled,
         "health_status": model.health_status,
         "latency_ms": model.latency_ms,
-        "last_error": model.last_error,
+        # Older rows may contain diagnostics written before errors were
+        # sanitized. Never return those values through the developer API.
+        "last_error": safe_last_error,
         "last_seen_at": model.last_seen_at.isoformat(),
         "last_tested_at": (
             model.last_tested_at.isoformat() if model.last_tested_at else None
@@ -258,7 +288,12 @@ async def probe_model(
         model.last_error = None
     except Exception as error:
         model.health_status = "unhealthy"
-        model.last_error = str(error)[:1000]
+        model.last_error = _safe_provider_error(error)
+        logger.warning(
+            "AI model probe failed model=%s reason=%s",
+            model_id,
+            model.last_error,
+        )
     finally:
         model.latency_ms = round((perf_counter() - started) * 1000, 2)
         model.last_tested_at = utcnow()
@@ -369,7 +404,7 @@ async def chat_with_fallback(
                     "attempted_models": [*failures, model_id],
                     "redaction_applied": redaction_applied,
                 }
-            except (httpx.HTTPError, KeyError, IndexError, TypeError) as error:
+            except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
                 status_code = (
                     error.response.status_code
                     if isinstance(error, httpx.HTTPStatusError)
@@ -378,13 +413,16 @@ async def chat_with_fallback(
                 model.health_status = (
                     "rate_limited" if status_code == 429 else "unhealthy"
                 )
-                model.last_error = str(error)[:1000]
+                model.last_error = _safe_provider_error(error)
+                logger.warning(
+                    "AI model request failed model=%s reason=%s",
+                    model_id,
+                    model.last_error,
+                )
                 model.last_tested_at = utcnow()
                 await db.commit()
                 failures.append(model_id)
-        raise AIProvidersExhaustedError(
-            f"All configured models failed: {', '.join(failures)}"
-        )
+        raise AIProvidersExhaustedError("AI providers are temporarily unavailable")
     finally:
         if owns_client:
             await client.aclose()
