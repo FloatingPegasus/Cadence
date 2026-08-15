@@ -9,4 +9,4 @@ PyJWT==2.13.0
 bcrypt==5.0.0
 brevo-python==5.0.1
 httpx==0.28.1
-redis==6.4.0
+redis==8.1.0
