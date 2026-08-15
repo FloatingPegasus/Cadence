@@ -90,6 +90,6 @@ jobs:
           npm ci --ignore-scripts
           npm audit --audit-level=high
       - name: Scan repository for leaked secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
