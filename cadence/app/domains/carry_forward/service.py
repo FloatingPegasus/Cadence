@@ -7,6 +7,8 @@ from ..days.service import get_or_create_day
 from ...persistence.models.carry_forward_item import CarryForwardItem
 from ...persistence.models.day import Day
 from ...services.ai import utcnow
+from ...services import embeddings as embedding_service
+from ...services.continuity_lock import acquire_continuity_lock
 
 
 class CarryForwardNotFoundError(LookupError):
@@ -55,6 +57,7 @@ async def list_for_day(
 async def create_item(
     db: AsyncSession, user_id: int, target_date: date, content: str
 ) -> dict:
+    await acquire_continuity_lock(db, user_id)
     day = await get_or_create_day(db, user_id, target_date)
     item = CarryForwardItem(
         origin_day_id=day.id, content=content.strip(), status="open"
@@ -62,12 +65,22 @@ async def create_item(
     db.add(item)
     await db.commit()
     await db.refresh(item)
+    await embedding_service.sync_source_embedding(
+        db,
+        user_id=user_id,
+        source_type="threads",
+        source_id=item.id,
+        day_id=day.id,
+        source_date=day.date,
+        content=item.content,
+    )
     return serialize(item, day.date)
 
 
 async def update_status(
     db: AsyncSession, user_id: int, item_id: int, status: str
 ) -> dict:
+    await acquire_continuity_lock(db, user_id)
     result = await db.execute(
         select(CarryForwardItem, Day.date)
         .join(Day, Day.id == CarryForwardItem.origin_day_id)

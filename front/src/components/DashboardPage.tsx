@@ -56,7 +56,7 @@ export default function DashboardPage() {
       .then(setHabits)
       .catch((caught) => {
         setActionError(
-          caught instanceof Error ? caught.message : "Could not load disciplines",
+          caught instanceof Error ? caught.message : "Could not load habits",
         );
       });
   }, [user, habitVersion]);
@@ -70,7 +70,7 @@ export default function DashboardPage() {
       .then(setContexts)
       .catch((caught) => {
         setActionError(
-          caught instanceof Error ? caught.message : "Could not load contexts",
+          caught instanceof Error ? caught.message : "Could not load areas",
         );
       });
   }, [user, contextVersion]);
@@ -138,14 +138,9 @@ export default function DashboardPage() {
       {view === "today" && selectedDate && (
         <>
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="text-base font-medium text-neutral-100">
-                Today
-              </h1>
-              <p className="mt-1 text-sm text-neutral-500">
-                Keep a simple record of what happened.
-              </p>
-            </div>
+            <h1 className="text-base font-medium text-neutral-100">
+              Today
+            </h1>
             <label className="text-xs text-neutral-500">
               Day
               <input
@@ -178,14 +173,9 @@ export default function DashboardPage() {
       )}
       {view === "calendar" && (
         <>
-          <div className="mb-5">
-            <h1 className="text-base font-medium text-neutral-100">
-              Calendar
-            </h1>
-            <p className="mt-1 text-sm text-neutral-500">
-              A simple record of practice over time.
-            </p>
-          </div>
+          <h1 className="mb-5 text-base font-medium text-neutral-100">
+            Calendar
+          </h1>
           <MonthNav month={month} onChange={setMonth} />
           {data && (
             <HabitGrid
@@ -222,14 +212,9 @@ export default function DashboardPage() {
       )}
       {view === "continuity" && (
         <>
-          <div>
-            <h1 className="text-base font-medium text-neutral-100">
-              History
-            </h1>
-            <p className="mt-1 text-sm text-neutral-500">
-              Look back at the days and notes you have recorded.
-            </p>
-          </div>
+          <h1 className="text-base font-medium text-neutral-100">
+            History
+          </h1>
           <ContinuityExplorer
             contexts={contexts}
             anchorDate={selectedDate ?? todayAsLocalDate()}

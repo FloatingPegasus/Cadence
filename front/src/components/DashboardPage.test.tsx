@@ -57,18 +57,18 @@ describe("DashboardPage progressive disclosure", () => {
     });
 
     render(<DashboardPage />);
-    expect(screen.getByText("Daily workspace")).toBeTruthy();
+    screen.getByText("Daily workspace");
     expect(screen.queryByText("Continuity workspace")).toBeNull();
     expect(screen.queryByText("Settings workspace")).toBeNull();
     expect(fetchMonthData).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Calendar" }));
     await waitFor(() => expect(fetchMonthData).toHaveBeenCalledOnce());
-    expect(await screen.findByText("Habit calendar")).toBeTruthy();
+    await screen.findByText("Habit calendar");
     expect(screen.queryByText("Daily workspace")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Settings" }));
-    expect(screen.getByText("Settings workspace")).toBeTruthy();
+    screen.getByText("Settings workspace");
     expect(screen.queryByText("Habit calendar")).toBeNull();
   });
 });

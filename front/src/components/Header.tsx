@@ -22,9 +22,6 @@ function Header() {
         <h1 className="text-xl font-semibold text-neutral-100 tracking-tight">
           Cadence
         </h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          Your daily record
-        </p>
       </div>
       {user && (
         <div className="flex items-center gap-3">

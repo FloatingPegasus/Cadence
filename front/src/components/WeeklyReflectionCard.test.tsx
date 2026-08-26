@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   fetchWeeklyReflection,
@@ -38,10 +38,6 @@ function reflection(isStale: boolean): WeeklyReflection {
 }
 
 describe("WeeklyReflectionCard", () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
   it("supports manual refresh when the weekly source changes", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchWeeklyReflection).mockResolvedValue(reflection(true));
@@ -55,11 +51,9 @@ describe("WeeklyReflectionCard", () => {
       />,
     );
 
-    expect(
-      await screen.findByText(/The week changed after this reflection/),
-    ).toBeTruthy();
+    await screen.findByText(/The week changed after this review/);
     await user.click(
-      screen.getByRole("button", { name: "Save reflection" }),
+      screen.getByRole("button", { name: "Save review" }),
     );
 
     await waitFor(() =>
@@ -69,7 +63,7 @@ describe("WeeklyReflectionCard", () => {
       ),
     );
     expect(
-      screen.queryByText(/The week changed after this reflection/),
+      screen.queryByText(/The week changed after this review/),
     ).toBeNull();
   });
 });

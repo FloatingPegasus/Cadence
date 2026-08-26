@@ -12,6 +12,7 @@ from ...persistence.models.day import Day
 from ...persistence.models.day_context import DayContext
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
+from ...services.continuity_lock import acquire_continuity_lock
 
 
 class ContextNotFoundError(LookupError):
@@ -74,6 +75,7 @@ async def update_context(
     name: str,
     kind: str,
 ) -> dict:
+    await acquire_continuity_lock(db, user_id)
     context = await db.scalar(
         select(ContinuityContext).where(
             ContinuityContext.id == context_id,
@@ -139,12 +141,20 @@ async def set_for_day(
     target_date: date,
     context_ids: list[int],
 ) -> list[dict]:
-    day = await get_or_create_day(db, user_id, target_date)
+    await acquire_continuity_lock(db, user_id)
     unique_ids = list(dict.fromkeys(context_ids))
-    existing_result = await db.execute(
-        select(DayContext.context_id).where(DayContext.day_id == day.id)
+    day = await db.scalar(
+        select(Day).where(
+            Day.user_id == user_id,
+            Day.date == target_date,
+        )
     )
-    existing_ids = set(existing_result.scalars())
+    existing_ids: set[int] = set()
+    if day is not None:
+        existing_result = await db.execute(
+            select(DayContext.context_id).where(DayContext.day_id == day.id)
+        )
+        existing_ids = set(existing_result.scalars())
     contexts: list[ContinuityContext] = []
     if unique_ids:
         result = await db.execute(
@@ -160,6 +170,9 @@ async def set_for_day(
         )
         if unavailable:
             raise ContextNotFoundError("One or more contexts are unavailable")
+
+    if day is None:
+        day = await get_or_create_day(db, user_id, target_date)
 
     await db.execute(delete(DayContext).where(DayContext.day_id == day.id))
     db.add_all(

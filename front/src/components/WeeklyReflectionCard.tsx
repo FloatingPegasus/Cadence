@@ -38,7 +38,7 @@ export default function WeeklyReflectionCard({
         setError(
           caught instanceof Error
             ? caught.message
-            : "Could not load the weekly reflection",
+            : "Could not load the weekly review",
         );
       })
       .finally(() => setIsLoading(false));
@@ -55,7 +55,7 @@ export default function WeeklyReflectionCard({
       setError(
         caught instanceof Error
           ? caught.message
-          : "Could not save the weekly reflection",
+          : "Could not save the weekly review",
       );
     } finally {
       setIsBusy(false);
@@ -66,7 +66,7 @@ export default function WeeklyReflectionCard({
     const replaceEdited =
       reflection?.is_user_edited === true &&
       window.confirm(
-        "Replace your edited weekly reflection with a generated draft?",
+        "Replace your edited weekly review with a generated draft?",
       );
     if (reflection?.is_user_edited && !replaceEdited) return;
 
@@ -84,7 +84,7 @@ export default function WeeklyReflectionCard({
       setError(
         caught instanceof Error
           ? caught.message
-          : "Could not generate the weekly reflection",
+          : "Could not generate the weekly review",
       );
     } finally {
       setIsBusy(false);
@@ -102,11 +102,8 @@ export default function WeeklyReflectionCard({
             id="weekly-reflection-title"
             className="text-xs font-medium text-neutral-300"
           >
-            Weekly reflection
+            Weekly review
           </h3>
-          <p className="mt-1 text-xs text-neutral-500">
-            Your interpretation of the week. Generation is optional.
-          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -117,7 +114,7 @@ export default function WeeklyReflectionCard({
             }
             className="rounded-lg border border-violet-500/50 bg-violet-500/5 px-3 py-1.5 text-xs text-violet-300 transition-colors duration-150 hover:bg-violet-500/10 disabled:opacity-40"
           >
-            Generate reflection
+            Generate review
           </button>
           <button
             type="button"
@@ -125,7 +122,7 @@ export default function WeeklyReflectionCard({
             disabled={isLoading || isBusy}
             className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:opacity-40"
           >
-            Save reflection
+            Save review
           </button>
         </div>
       </div>
@@ -137,7 +134,7 @@ export default function WeeklyReflectionCard({
       )}
 
       <label className="sr-only" htmlFor="weekly-reflection-content">
-        Weekly reflection
+        Weekly review
       </label>
       <textarea
         id="weekly-reflection-content"
@@ -147,7 +144,7 @@ export default function WeeklyReflectionCard({
         onChange={(event) => setContent(event.target.value)}
         placeholder={
           isLoading
-            ? "Loading reflection…"
+            ? "Loading review..."
             : "What moved, what created friction, and what should remain visible next week?"
         }
         className="mt-4 min-h-32 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 disabled:opacity-60"
@@ -158,7 +155,7 @@ export default function WeeklyReflectionCard({
           role="status"
           className="mt-2 rounded-lg border border-amber-900 bg-amber-950/30 px-3 py-2 text-xs leading-5 text-amber-300"
         >
-          The week changed after this reflection was saved. Save your edits
+          The week changed after this review was saved. Save your edits
           to make it current, or generate a new draft.
         </p>
       )}

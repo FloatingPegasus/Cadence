@@ -92,17 +92,12 @@ export default function DailySummaryCard({
       className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 lg:col-span-2"
     >
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2
-            id="daily-summary-title"
-            className="text-sm font-medium text-neutral-200"
-          >
-            Summary
-          </h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            A short recap from what you logged today.
-          </p>
-        </div>
+        <h2
+          id="daily-summary-title"
+          className="text-sm font-medium text-neutral-200"
+        >
+          Summary
+        </h2>
         <div className="flex gap-2">
           <button
             type="button"

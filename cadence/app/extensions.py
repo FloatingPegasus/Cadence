@@ -1,18 +1,17 @@
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+from pgvector.psycopg import register_vector_async
 
 from .config import settings
 
 async_engine = create_async_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False},
     pool_pre_ping=True,
 )
 
 sync_engine = create_engine(
     settings.sync_database_url,
-    connect_args={"check_same_thread": False},
     pool_pre_ping=True,
 )
 
@@ -23,21 +22,13 @@ class Base(DeclarativeBase):
     pass
 
 
-def configure_sqlite_engine(engine) -> None:
-    if engine.dialect.name != "sqlite":
-        return
-
-    @event.listens_for(engine, "connect")
-    def _configure_sqlite(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.execute("PRAGMA busy_timeout=5000")
-        cursor.close()
+def configure_pgvector_async_engine(engine) -> None:
+    @event.listens_for(engine.sync_engine, "connect")
+    def _register_vector_async(dbapi_connection, _connection_record) -> None:
+        dbapi_connection.run_async(register_vector_async)
 
 
-configure_sqlite_engine(sync_engine)
-configure_sqlite_engine(async_engine.sync_engine)
+configure_pgvector_async_engine(async_engine)
 
 
 async def get_db():

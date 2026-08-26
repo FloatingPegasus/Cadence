@@ -34,8 +34,8 @@ describe("ContinuityPatterns", () => {
       <ContinuityPatterns anchorDate="2026-07-24" refreshKey={0} />,
     );
 
-    expect(await screen.findByText("Recorded rhythm")).toBeTruthy();
-    expect(screen.getByText(/not scores/)).toBeTruthy();
-    expect(screen.getByRole("table")).toBeTruthy();
+    await screen.findByText("Recorded rhythm");
+    screen.getByText(/not scores/);
+    screen.getByRole("table");
   });
 });

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import ContinuityExplorer from "./ContinuityExplorer";
 
@@ -21,10 +21,6 @@ vi.mock("./ContinuityPatterns", () => ({
 }));
 
 describe("ContinuityExplorer", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("moves between views with arrow, Home, and End keys", async () => {
     const user = userEvent.setup();
 
@@ -47,21 +43,21 @@ describe("ContinuityExplorer", () => {
 
     const contextsTab = screen.getByRole("tab", { name: "Areas" });
     contextsTab.focus();
-    expect(screen.getByText("Context panel")).toBeTruthy();
+    screen.getByText("Context panel");
 
     await user.keyboard("{ArrowRight}");
     const searchTab = screen.getByRole("tab", { name: "Search" });
     expect(document.activeElement).toBe(searchTab);
     expect(searchTab.getAttribute("aria-selected")).toBe("true");
-    expect(screen.getByText("Search panel")).toBeTruthy();
+    screen.getByText("Search panel");
 
     await user.keyboard("{End}");
-    expect(screen.getByText("Patterns panel")).toBeTruthy();
+    screen.getByText("Patterns panel");
 
     await user.keyboard("{ArrowLeft}");
-    expect(screen.getByText("Month panel")).toBeTruthy();
+    screen.getByText("Month panel");
 
     await user.keyboard("{Home}");
-    expect(screen.getByText("Context panel")).toBeTruthy();
+    screen.getByText("Context panel");
   });
 });

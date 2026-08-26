@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from .config import settings
 from .web.routes.habits import router as habit_router
@@ -18,21 +19,35 @@ from .web.routes.continuity import router as continuity_router
 from .web.routes.contexts import router as context_router
 from .web.routes.dev_ai import router as dev_ai_router
 from .web.routes.data_portability import router as data_portability_router
-from .services.runtime_lock import RuntimeLock
 from .services.rate_limit import auth_rate_limiter
+from .extensions import async_engine, sync_engine
 
 
 logger = logging.getLogger("cadence.app")
+
+
+async def _database_readiness_probe() -> None:
+    async with async_engine.connect() as connection:
+        await connection.execute(text("SELECT 1"))
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await auth_rate_limiter.startup()
     try:
-        with RuntimeLock(settings.resolved_runtime_lock_path):
-            yield
+        yield
     finally:
-        await auth_rate_limiter.shutdown()
+        try:
+            await auth_rate_limiter.shutdown()
+        finally:
+            try:
+                await async_engine.dispose()
+            except Exception:
+                logger.warning("Async database engine cleanup failed")
+            try:
+                sync_engine.dispose()
+            except Exception:
+                logger.warning("Sync database engine cleanup failed")
 
 
 def create_app() -> FastAPI:
@@ -107,8 +122,16 @@ def create_app() -> FastAPI:
     app.include_router(dev_ai_router, prefix="/api")
     app.include_router(data_portability_router, prefix="/api")
 
-    @app.get("/healthz", include_in_schema=False)
-    async def health_check() -> dict[str, str]:
+    @app.get("/healthz", response_model=None, include_in_schema=False)
+    async def health_check():
+        try:
+            await _database_readiness_probe()
+        except Exception:
+            logger.warning("Database readiness probe failed")
+            return JSONResponse(
+                status_code=503,
+                content={"status": "unavailable"},
+            )
         return {"status": "ok"}
 
     if settings.serve_frontend:

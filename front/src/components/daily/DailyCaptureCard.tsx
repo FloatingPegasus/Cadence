@@ -43,7 +43,7 @@ const checkinFields: Array<{
   },
   {
     key: "reentry_success",
-    label: "Re-entry",
+    label: "Restarting",
     low: "Difficult",
     high: "Easy",
   },
@@ -93,7 +93,7 @@ export default function DailyCaptureCard({
         setError(
           caught instanceof Error
             ? caught.message
-            : "Could not load contexts",
+            : "Could not load areas",
         );
       });
   }, [date, contexts]);
@@ -162,17 +162,12 @@ export default function DailyCaptureCard({
       className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5"
     >
       <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h2
-            id="daily-capture-title"
-            className="text-sm font-medium text-neutral-200"
-          >
-            Day note
-          </h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            One note is enough. Add detail only if it helps.
-          </p>
-        </div>
+        <h2
+          id="daily-capture-title"
+          className="text-sm font-medium text-neutral-200"
+        >
+          Day note
+        </h2>
         <button
           type="button"
           onClick={save}
@@ -302,7 +297,7 @@ export default function DailyCaptureCard({
                 />
               </label>
               <label className="text-xs text-neutral-500">
-                Drift minutes
+                Off-track minutes
                 <input
                   type="number"
                   min="0"
@@ -319,7 +314,7 @@ export default function DailyCaptureCard({
                 <textarea
                   value={checkin.notes ?? ""}
                   onChange={(event) => setText("notes", event.target.value)}
-                  placeholder="Anything that gives these numbers context"
+                  placeholder="Anything that explains these numbers"
                   className="mt-1 min-h-20 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
                 />
               </label>

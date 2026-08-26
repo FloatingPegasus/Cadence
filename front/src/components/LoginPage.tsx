@@ -37,12 +37,9 @@ function LoginPage() {
 
   return (
     <div className="max-w-sm mx-auto px-6 py-20">
-      <h1 className="text-xl font-semibold text-neutral-100 tracking-tight text-center mb-1">
+      <h1 className="mb-8 text-center text-xl font-semibold tracking-tight text-neutral-100">
         Cadence
       </h1>
-      <p className="text-sm text-neutral-500 text-center mb-8">
-        Your daily record
-      </p>
 
       {successMsg ? (
         <div className="text-center space-y-4">

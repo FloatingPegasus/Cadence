@@ -1,6 +1,6 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchDataExport } from "../api";
 import DataExportButton from "./DataExportButton";
@@ -13,17 +13,10 @@ const fetchExport = vi.mocked(fetchDataExport);
 
 describe("DataExportButton", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
-    fetchExport.mockReset();
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:cadence-export"),
       revokeObjectURL: vi.fn(),
     });
-  });
-
-  afterEach(() => {
-    cleanup();
-    vi.unstubAllGlobals();
   });
 
   it("downloads the authenticated account export", async () => {

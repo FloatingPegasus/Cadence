@@ -57,7 +57,7 @@ describe("WeeklyContinuity", () => {
       />,
     );
 
-    await screen.findByText("Jul 20 – Jul 26");
+    await screen.findByText("Jul 20 to Jul 26");
     await user.click(
       screen.getByRole("button", { name: "Open historical week" }),
     );
@@ -65,6 +65,6 @@ describe("WeeklyContinuity", () => {
     await waitFor(() =>
       expect(fetchWeeklyContinuity).toHaveBeenLastCalledWith("2026-07-13"),
     );
-    expect(await screen.findByText("Jul 13 – Jul 19")).toBeTruthy();
+    await screen.findByText("Jul 13 to Jul 19");
   });
 });

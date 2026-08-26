@@ -50,7 +50,7 @@ function HabitGrid({ habits, days, month, lookup, onToggle, selectedDate, onSele
                   <button
                     type="button"
                     className="text-left transition-colors duration-150 hover:text-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
-                    aria-label={`Open ${h.name} continuity`}
+                    aria-label={`Open ${h.name} history`}
                     onClick={() => onSelectHabit(h.id)}
                   >
                     {h.name}
@@ -92,7 +92,7 @@ function HabitGrid({ habits, days, month, lookup, onToggle, selectedDate, onSele
                       }}
                       className="w-full px-2 py-2.5 transition-colors duration-150 hover:bg-neutral-700/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
                     >
-                      {active ? "1" : "0"}
+                      {active ? "✓" : "·"}
                     </button>
                   </td>
                 );

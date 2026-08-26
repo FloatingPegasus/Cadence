@@ -68,7 +68,7 @@ export default function MonthlyContinuity({
   if (isLoading && !data) {
     return (
       <div className={embedded ? "pt-4" : "mt-8 border-t border-neutral-800 pt-6"}>
-        <p className="text-sm text-neutral-600">Loading month…</p>
+        <p className="text-sm text-neutral-600">Loading month...</p>
       </div>
     );
   }
@@ -122,7 +122,7 @@ export default function MonthlyContinuity({
               </dd>
             </div>
             <div>
-              <dt className="text-neutral-600">Reflections</dt>
+              <dt className="text-neutral-600">Reviews</dt>
               <dd className="mt-1 font-medium text-neutral-300">
                 {data.totals.weekly_reflections}
               </dd>
@@ -148,19 +148,19 @@ export default function MonthlyContinuity({
           <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1fr)_16rem]">
             <div>
               <h3 className="text-xs font-medium text-neutral-400">
-                Daily traces
+                Daily notes
               </h3>
               <div className="mt-3 border-y border-neutral-800">
                 {data.days.length === 0 ? (
                   <p className="py-4 text-sm text-neutral-500">
-                    No meaningful traces recorded this month.
+                    No activity recorded this month.
                   </p>
                 ) : (
                   data.days.map((day) => (
                     <button
                       key={day.date}
                       type="button"
-                      aria-label={`Open daily trace for ${formatDate(day.date, {
+                      aria-label={`Open day for ${formatDate(day.date, {
                         month: "short",
                         day: "numeric",
                       })}`}
@@ -184,7 +184,7 @@ export default function MonthlyContinuity({
                             .join(", ")} · `}
                         {day.trace_preview ||
                           (day.status === "closed"
-                            ? "Day closed without a written trace."
+                            ? "Day closed without a note."
                             : "Structured activity recorded.")}
                       </span>
                       <span className="text-xs tabular-nums text-neutral-600">
@@ -198,11 +198,11 @@ export default function MonthlyContinuity({
 
             <div>
               <h3 className="text-xs font-medium text-neutral-400">
-                Context movement
+                Area activity
               </h3>
               {data.contexts.length === 0 ? (
                 <p className="mt-3 text-xs leading-5 text-neutral-600">
-                  No linked context activity.
+                  No linked area activity.
                 </p>
               ) : (
                 <ul className="mt-3 space-y-3">
@@ -210,7 +210,7 @@ export default function MonthlyContinuity({
                     <li key={context.id}>
                       <button
                         type="button"
-                        aria-label={`Open ${context.name} monthly movement`}
+                        aria-label={`Open ${context.name} monthly activity`}
                         aria-controls="context-month-detail"
                         aria-expanded={selectedContextId === context.id}
                         onClick={() =>
@@ -256,11 +256,11 @@ export default function MonthlyContinuity({
           <div className="mt-6 grid gap-6 border-t border-neutral-800 pt-5 md:grid-cols-2">
             <div>
               <h3 className="text-xs font-medium text-neutral-400">
-                Weekly reflections
+                Weekly reviews
               </h3>
               {data.weekly_reflections.length === 0 ? (
                 <p className="mt-3 text-xs text-neutral-600">
-                  No weekly reflections overlap this month.
+                  No weekly reviews overlap this month.
                 </p>
               ) : (
                 <ul className="mt-3 space-y-3">
@@ -271,14 +271,14 @@ export default function MonthlyContinuity({
                           month: "short",
                           day: "numeric",
                         })}
-                        {" – "}
+                        {" to "}
                         {formatDate(reflection.week_end, {
                           month: "short",
                           day: "numeric",
                         })}
                       </p>
                       <p className="mt-1 line-clamp-3 text-xs leading-5 text-neutral-400">
-                        {reflection.excerpt || "Reflection saved without text"}
+                        {reflection.excerpt || "Review saved without text"}
                       </p>
                     </li>
                   ))}

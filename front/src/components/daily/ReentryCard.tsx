@@ -36,7 +36,7 @@ export default function ReentryCard({
         setError(
           caught instanceof Error
             ? caught.message
-            : "Could not load re-entry context",
+            : "Could not load earlier activity",
         );
       })
       .finally(() => setIsLoading(false));
@@ -46,6 +46,12 @@ export default function ReentryCard({
     reentry?.previous_trace ||
     reentry?.open_threads.length ||
     reentry?.contexts.some((context) => context.last_activity);
+  const relatedAreas =
+    reentry?.contexts.filter((context) => context.last_activity) ?? [];
+  const sectionCount =
+    Number(Boolean(reentry?.previous_trace)) +
+    Number(Boolean(reentry?.open_threads.length)) +
+    Number(relatedAreas.length > 0);
 
   if (!isLoading && !error && !hasContext) return null;
 
@@ -54,36 +60,37 @@ export default function ReentryCard({
       aria-labelledby="reentry-title"
       className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 lg:col-span-2"
     >
-      <div>
-        <h2 id="reentry-title" className="text-sm font-medium text-neutral-200">
-          Pick up where you left off
-        </h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          A short look at earlier notes that may help today.
-        </p>
-      </div>
+      <h2 id="reentry-title" className="text-sm font-medium text-neutral-200">
+        Pick up where you left off
+      </h2>
 
       {isLoading ? (
         <p className="mt-4 text-sm text-neutral-600">
-          Loading prior context…
+          Loading earlier activity...
         </p>
       ) : error ? (
         <p role="alert" className="mt-4 text-xs text-red-400">
           {error}
         </p>
       ) : (
-        <div className="mt-4 grid gap-5 md:grid-cols-3">
-          <div>
-            <h3 className="text-xs font-medium text-neutral-400">
-              Earlier note
-            </h3>
-            {reentry?.previous_trace ? (
+        <div
+          className={
+            sectionCount === 1
+              ? "mt-4 grid gap-5"
+              : sectionCount === 2
+                ? "mt-4 grid gap-5 md:grid-cols-2"
+                : "mt-4 grid gap-5 md:grid-cols-3"
+          }
+        >
+          {reentry?.previous_trace && (
+            <div>
+              <h3 className="text-xs font-medium text-neutral-400">
+                Earlier note
+              </h3>
               <button
                 type="button"
-                aria-label={`Open prior trace from ${shortDate(reentry.previous_trace.date)}`}
-                onClick={() =>
-                  onSelectDate(reentry.previous_trace!.date)
-                }
+                aria-label={`Open earlier note from ${shortDate(reentry.previous_trace.date)}`}
+                onClick={() => onSelectDate(reentry.previous_trace!.date)}
                 className="mt-2 w-full text-left"
               >
                 <span className="text-xs text-violet-300">
@@ -93,18 +100,14 @@ export default function ReentryCard({
                   {reentry.previous_trace.excerpt}
                 </span>
               </button>
-            ) : (
-              <p className="mt-2 text-xs text-neutral-600">
-                No earlier written trace.
-              </p>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="border-neutral-800 md:border-l md:pl-5">
-            <h3 className="text-xs font-medium text-neutral-400">
-              Open follow-ups
-            </h3>
-            {reentry?.open_threads.length ? (
+          {reentry && reentry.open_threads.length > 0 && (
+            <div>
+              <h3 className="text-xs font-medium text-neutral-400">
+                Open follow-ups
+              </h3>
               <ul className="mt-2 space-y-2">
                 {reentry.open_threads.map((thread) => (
                   <li
@@ -115,52 +118,41 @@ export default function ReentryCard({
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="mt-2 text-xs text-neutral-600">
-                Nothing unresolved.
-              </p>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="border-neutral-800 md:border-l md:pl-5">
-            <h3 className="text-xs font-medium text-neutral-400">
-              Related areas
-            </h3>
-            {reentry?.contexts.some((context) => context.last_activity) ? (
+          {relatedAreas.length > 0 && (
+            <div>
+              <h3 className="text-xs font-medium text-neutral-400">
+                Related areas
+              </h3>
               <ul className="mt-2 space-y-3">
-                {reentry.contexts.map(
-                  (context) =>
-                    context.last_activity && (
-                      <li key={context.id}>
-                        <button
-                          type="button"
-                          aria-label={`Open ${context.name} context from ${shortDate(context.last_activity.date)}`}
-                          onClick={() =>
-                            onSelectDate(context.last_activity!.date)
-                          }
-                          className="w-full text-left"
-                        >
-                          <span className="text-xs text-neutral-300">
-                            {context.name}
-                          </span>
-                          <span className="ml-2 text-[11px] text-neutral-600">
-                            {shortDate(context.last_activity.date)}
-                          </span>
-                          <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-neutral-500">
-                            {context.last_activity.excerpt ||
-                              "Last linked activity"}
-                          </span>
-                        </button>
-                      </li>
-                    ),
-                )}
+                {relatedAreas.map((context) => (
+                  <li key={context.id}>
+                    <button
+                      type="button"
+                      aria-label={`Open ${context.name} from ${shortDate(context.last_activity!.date)}`}
+                      onClick={() =>
+                        onSelectDate(context.last_activity!.date)
+                      }
+                      className="w-full text-left"
+                    >
+                      <span className="text-xs text-neutral-300">
+                        {context.name}
+                      </span>
+                      <span className="ml-2 text-[11px] text-neutral-600">
+                        {shortDate(context.last_activity!.date)}
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-neutral-500">
+                        {context.last_activity!.excerpt ||
+                          "Last linked activity"}
+                      </span>
+                    </button>
+                  </li>
+                ))}
               </ul>
-            ) : (
-              <p className="mt-2 text-xs text-neutral-600">
-                No prior linked activity.
-              </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </section>

@@ -32,12 +32,7 @@ export default function RecentDays({
 
   return (
     <section className="mt-8">
-      <div className="mb-3">
-        <h2 className="text-sm font-medium text-neutral-200">Recent days</h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          Open a day you have recorded.
-        </p>
-      </div>
+      <h2 className="mb-3 text-sm font-medium text-neutral-200">Recent days</h2>
       {error && (
         <p role="alert" className="text-xs text-red-400">
           {error}
@@ -63,7 +58,7 @@ export default function RecentDays({
               </span>
               {(day.energy_level || day.focus_quality) && (
                 <span className="text-[11px] text-neutral-600">
-                  E {day.energy_level ?? "–"} · F {day.focus_quality ?? "–"}
+                  E {day.energy_level ?? "-"} · F {day.focus_quality ?? "-"}
                 </span>
               )}
             </div>

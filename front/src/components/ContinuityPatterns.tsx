@@ -71,8 +71,8 @@ export default function ContinuityPatterns({
                 <td className="border-b border-neutral-800/60 py-2">{shortWeek(week.week_start)}</td>
                 <td className="border-b border-neutral-800/60 py-2">{week.active_days}</td>
                 <td className="border-b border-neutral-800/60 py-2">{week.habit_completions}</td>
-                <td className="border-b border-neutral-800/60 py-2">{week.average_energy ?? "–"}</td>
-                <td className="border-b border-neutral-800/60 py-2">{week.average_focus ?? "–"}</td>
+                <td className="border-b border-neutral-800/60 py-2">{week.average_energy ?? "-"}</td>
+                <td className="border-b border-neutral-800/60 py-2">{week.average_focus ?? "-"}</td>
               </tr>
             ))}
           </tbody>

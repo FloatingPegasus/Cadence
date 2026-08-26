@@ -79,7 +79,7 @@ describe("ContextMonthlyDetail", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Open Cadence trace for Jul 18",
+        name: "Open Cadence note for Jul 18",
       }),
     );
     expect(onSelectDate).toHaveBeenCalledWith("2026-07-18");

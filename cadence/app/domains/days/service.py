@@ -1,7 +1,7 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlalchemy import and_, exists, func, or_, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...persistence.models.day import Day
@@ -11,6 +11,8 @@ from ...persistence.models.carry_forward_item import CarryForwardItem
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...persistence.models.day_context import DayContext
+from ...services import embeddings as embedding_service
+from ...services.continuity_lock import acquire_continuity_lock
 
 
 def _coerce_date(value: date | str) -> date:
@@ -19,30 +21,36 @@ def _coerce_date(value: date | str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
 
 
+def _utc_iso(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 async def get_or_create_day(
     db: AsyncSession, user_id: int, target_date: date | str
 ) -> Day:
     day_date = _coerce_date(target_date)
-    result = await db.execute(
-        select(Day).where(Day.user_id == user_id, Day.date == day_date)
-    )
-    day = result.scalar_one_or_none()
-    if not day:
-        day = Day(user_id=user_id, date=day_date)
-        db.add(day)
-        try:
-            await db.commit()
-            await db.refresh(day)
-        except IntegrityError:
-            await db.rollback()
-            result = await db.execute(
-                select(Day).where(
-                    Day.user_id == user_id, Day.date == day_date
-                )
+    statement = pg_insert(Day).values(
+        user_id=user_id,
+        date=day_date,
+    ).on_conflict_do_nothing(
+        index_elements=[Day.user_id, Day.date]
+    ).returning(Day.id)
+    result = await db.execute(statement)
+    day_id = result.scalar_one_or_none()
+    if day_id is None:
+        day_id = await db.scalar(
+            select(Day.id).where(
+                Day.user_id == user_id,
+                Day.date == day_date,
             )
-            day = result.scalar_one_or_none()
-            if day is None:
-                raise
+        )
+    if day_id is None:
+        raise RuntimeError("day disappeared while being created")
+    day = await db.get(Day, day_id)
+    if day is None:
+        raise RuntimeError("day disappeared while being loaded")
     return day
 
 
@@ -123,10 +131,20 @@ async def list_recent_days(
 async def update_day(
     db: AsyncSession, user_id: int, target_date: date | str, daily_note: str
 ) -> dict:
+    await acquire_continuity_lock(db, user_id)
     day = await get_or_create_day(db, user_id, target_date)
     day.daily_note = daily_note
     await db.commit()
     await db.refresh(day)
+    await embedding_service.sync_source_embedding(
+        db,
+        user_id=user_id,
+        source_type="notes",
+        source_id=day.id,
+        day_id=day.id,
+        source_date=day.date,
+        content=day.daily_note or "",
+    )
     return {
         "id": day.id,
         "date": day.date.isoformat(),
@@ -138,6 +156,7 @@ async def update_day(
 async def update_day_status(
     db: AsyncSession, user_id: int, target_date: date | str, status: str
 ) -> dict:
+    await acquire_continuity_lock(db, user_id)
     day = await get_or_create_day(db, user_id, target_date)
     day.status = status
     await db.commit()
@@ -333,6 +352,7 @@ async def get_checkin(
 async def update_checkin(
     db: AsyncSession, user_id: int, target_date: date | str, data: dict
 ) -> dict:
+    await acquire_continuity_lock(db, user_id)
     day_date = _coerce_date(target_date)
     day = await db.scalar(
         select(Day).where(Day.user_id == user_id, Day.date == day_date)
@@ -384,7 +404,7 @@ async def list_conversation(
             "id": e.id,
             "role": e.role,
             "content": e.content,
-            "created_at": e.created_at.isoformat(),
+            "created_at": _utc_iso(e.created_at),
         }
         for e in result.scalars().all()
     ]
@@ -396,14 +416,24 @@ async def add_conversation_entry(
     target_date: date | str,
     content: str,
 ) -> dict:
+    await acquire_continuity_lock(db, user_id)
     day = await get_or_create_day(db, user_id, target_date)
     entry = ConversationEntry(day_id=day.id, role="user", content=content.strip())
     db.add(entry)
     await db.commit()
     await db.refresh(entry)
+    await embedding_service.sync_source_embedding(
+        db,
+        user_id=user_id,
+        source_type="conversation",
+        source_id=entry.id,
+        day_id=day.id,
+        source_date=day.date,
+        content=entry.content,
+    )
     return {
         "id": entry.id,
         "role": entry.role,
         "content": entry.content,
-        "created_at": entry.created_at.isoformat(),
+        "created_at": _utc_iso(entry.created_at),
     }

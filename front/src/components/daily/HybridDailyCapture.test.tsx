@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import * as api from "../../api";
 import DailyCaptureCard from "./DailyCaptureCard";
@@ -18,10 +18,6 @@ vi.mock("../../api", () => ({
 }));
 
 describe("hybrid daily capture", () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
   it("saves cleared check-in fields as explicit null values", async () => {
     const user = userEvent.setup();
     vi.mocked(api.fetchDay).mockResolvedValue({

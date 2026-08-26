@@ -3,6 +3,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -33,4 +34,10 @@ class SummaryArtifact(Base):
 
     __table_args__ = (
         UniqueConstraint("day_id", "kind", name="day_summary_kind_uc"),
+        Index(
+            "ix_summary_artifacts_content_trgm",
+            "content",
+            postgresql_using="gin",
+            postgresql_ops={"content": "gin_trgm_ops"},
+        ),
     )

@@ -90,16 +90,13 @@ export default function QuickThreadCard({
       >
         Today’s log
       </h2>
-      <p className="mt-1 text-xs text-neutral-500">
-        Add a moment as it happens. Each entry keeps its time.
-      </p>
 
       <div className="mt-4 max-h-64 overflow-y-auto">
         {isLoading ? (
           <p className="text-sm text-neutral-600">Loading today’s log…</p>
         ) : entries.length === 0 ? (
           <p className="text-sm text-neutral-600">
-            Nothing logged yet. A sentence is enough.
+            Nothing logged yet.
           </p>
         ) : (
           <ol className="space-y-2">

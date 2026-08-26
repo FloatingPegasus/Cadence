@@ -34,7 +34,7 @@ export default function WeeklyReflectionHistory({
         setError(
           caught instanceof Error
             ? caught.message
-            : "Could not load reflection history",
+            : "Could not load weekly reviews",
         );
       });
   }, [refreshKey]);
@@ -50,11 +50,8 @@ export default function WeeklyReflectionHistory({
         id="reflection-history-title"
         className="text-xs font-medium text-neutral-300"
       >
-        Reflection history
+        Earlier reviews
       </h3>
-      <p className="mt-1 text-xs text-neutral-500">
-        Open an earlier week without loading every source snapshot.
-      </p>
 
       {error ? (
         <p role="alert" className="mt-3 text-xs text-red-400">
@@ -78,10 +75,10 @@ export default function WeeklyReflectionHistory({
               }
             >
               <span className="text-xs text-neutral-300">
-                {shortDate(item.week_start)} – {shortDate(item.week_end)}
+                {shortDate(item.week_start)} to {shortDate(item.week_end)}
               </span>
               <span className="mt-1 line-clamp-2 block text-xs leading-5 text-neutral-500">
-                {item.excerpt || "Reflection saved without text"}
+                {item.excerpt || "Review saved without text"}
               </span>
             </button>
           ))}

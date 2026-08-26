@@ -8,6 +8,12 @@ class CarryForwardItem(Base):
     __table_args__ = (
         Index("ix_carry_forward_origin_status", "origin_day_id", "status"),
         Index("ix_carry_forward_status_origin", "status", "origin_day_id"),
+        Index(
+            "ix_carry_forward_items_content_trgm",
+            "content",
+            postgresql_using="gin",
+            postgresql_ops={"content": "gin_trgm_ops"},
+        ),
     )
 
     id = Column(Integer, primary_key=True)

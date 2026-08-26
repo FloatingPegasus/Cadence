@@ -45,6 +45,7 @@ async def models(
             }
         except Exception:
             logger.exception("AI catalog refresh failed")
+            await db.rollback()
             return {
                 "configured": True,
                 "refreshed": False,

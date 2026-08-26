@@ -4,6 +4,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -40,5 +41,11 @@ class WeeklyReflection(Base):
             "user_id",
             "week_start",
             name="user_weekly_reflection_uc",
+        ),
+        Index(
+            "ix_weekly_reflections_content_trgm",
+            "content",
+            postgresql_using="gin",
+            postgresql_ops={"content": "gin_trgm_ops"},
         ),
     )

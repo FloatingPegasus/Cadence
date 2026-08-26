@@ -17,7 +17,7 @@ class Habit(Base):
             "user_id",
             "name",
             unique=True,
-            sqlite_where=text("is_archived = 0"),
+            postgresql_where=text("is_archived = false"),
         ),
         Index(
             "ix_habits_user_archived_id",

@@ -43,9 +43,16 @@ def configure_test_environment() -> None:
             "CADENCE_REDIS_KEY_PREFIX": "cadence:rate-limit",
             "CADENCE_REDIS_CONNECT_TIMEOUT_SECONDS": "5",
             "CADENCE_REDIS_SOCKET_TIMEOUT_SECONDS": "5",
-            "CADENCE_DATABASE_URL": "sqlite+aiosqlite:///:memory:",
-            "CADENCE_RUNTIME_LOCK_PATH": (
-                f"/tmp/cadence-test-suite-{os.getpid()}.lock"
+            "CADENCE_AI_ENABLED": "false",
+            "CADENCE_AI_API_KEY": "",
+            "CADENCE_EMBEDDING_ENABLED": "false",
+            "CADENCE_EMBEDDING_MODEL": "nvidia/nv-embedqa-e5-v5",
+            "CADENCE_EMBEDDING_DIMENSIONS": "1024",
+            "CADENCE_EMBEDDING_INPUT_MAX_CHARS": "4000",
+            "CADENCE_EMBEDDING_REQUEST_TIMEOUT_SECONDS": "15",
+            "CADENCE_DATABASE_URL": os.getenv(
+                "CADENCE_TEST_DATABASE_URL",
+                "postgresql+psycopg://cadence:cadence-local-password@localhost:5432/cadence_test",
             ),
             "CADENCE_BACKUP_DIR": (
                 f"/tmp/cadence-test-suite-{os.getpid()}-backups"

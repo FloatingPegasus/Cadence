@@ -29,7 +29,7 @@ export async function request<T = unknown>(
 ): Promise<T> {
   const headers = new Headers(init.headers);
   headers.delete("Authorization");
-  if (init.body && !headers.has("Content-Type")) {
+  if (typeof init.body === "string" && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   const method = (init.method ?? "GET").toUpperCase();
@@ -49,7 +49,9 @@ export async function request<T = unknown>(
     let detail = res.statusText;
     try {
       const data = await res.json();
-      detail = data.detail ?? detail;
+      if (typeof data?.detail === "string") {
+        detail = data.detail;
+      }
     } catch {
     }
     throw new Error(detail);

@@ -88,9 +88,6 @@ export default function CarryForwardCard({
       >
         Follow-ups
       </h2>
-      <p className="mt-1 text-xs text-neutral-500">
-        Keep an unfinished item visible until you finish or dismiss it.
-      </p>
 
       <form onSubmit={addItem} className="mt-4 flex gap-2">
         <label className="sr-only" htmlFor="carry-forward-entry">
@@ -117,7 +114,7 @@ export default function CarryForwardCard({
           <p className="text-xs text-neutral-600">Loading follow-ups…</p>
         ) : items.length === 0 ? (
           <p className="text-xs text-neutral-600">
-            Nothing is asking to be carried forward.
+            No follow-ups yet.
           </p>
         ) : (
           <ul className="space-y-2">

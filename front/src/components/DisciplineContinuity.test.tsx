@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import DisciplineContinuity from "./DisciplineContinuity";
 import { fetchDisciplineMonthlyContinuity } from "../api";
@@ -12,10 +12,6 @@ vi.mock("../api", () => ({
 const fetchContinuity = vi.mocked(fetchDisciplineMonthlyContinuity);
 
 describe("DisciplineContinuity", () => {
-  beforeEach(() => {
-    fetchContinuity.mockReset();
-  });
-
   it("shows completion trace and opens its dates", async () => {
     const user = userEvent.setup();
     const onSelectDate = vi.fn();
@@ -48,7 +44,7 @@ describe("DisciplineContinuity", () => {
       />,
     );
 
-    expect(await screen.findByText("First reading trace")).toBeTruthy();
+    await screen.findByText("First reading trace");
     expect(screen.getAllByText("Cadence").length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole("button", { name: /Previous completion/ }));

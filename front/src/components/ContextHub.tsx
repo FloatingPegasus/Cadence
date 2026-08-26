@@ -54,7 +54,7 @@ export default function ContextHub({
         setError(
           caught instanceof Error
             ? caught.message
-            : "Could not load context continuity",
+            : "Could not load area history",
         );
       })
       .finally(() => setIsLoading(false));
@@ -67,17 +67,12 @@ export default function ContextHub({
       }
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-medium text-neutral-200">
-            Context history
-          </h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Return to a project or area without rebuilding its recent history.
-          </p>
-        </div>
+        <h2 className="text-sm font-medium text-neutral-200">
+          Area history
+        </h2>
         {contexts.length > 0 && (
           <label className="flex items-center gap-2 text-xs text-neutral-500">
-            Context
+            Area
             <select
               value={selectedId ?? ""}
               onChange={(event) => setSelectedId(Number(event.target.value))}
@@ -95,12 +90,12 @@ export default function ContextHub({
 
       {contexts.length === 0 && (
         <p className="mt-4 text-sm text-neutral-500">
-          Create a context to build project or area continuity.
+          Add an area in Settings to group related days.
         </p>
       )}
       {isLoading && (
         <p className="mt-4 text-sm text-neutral-600">
-          Loading context…
+          Loading area...
         </p>
       )}
       {error && (
@@ -113,7 +108,7 @@ export default function ContextHub({
           <div className="border-y border-neutral-800">
             {continuity.recent_days.length === 0 ? (
               <p className="py-4 text-sm text-neutral-500">
-                No days are linked to this context yet.
+                No days are linked to this area yet.
               </p>
             ) : (
               continuity.recent_days.map((day) => (
@@ -129,7 +124,7 @@ export default function ContextHub({
                   <span className="min-w-0 truncate text-xs text-neutral-500">
                     {day.summary_preview ||
                       day.note_preview ||
-                      "A trace exists for this day."}
+                      "Activity recorded for this day."}
                   </span>
                   <span className="text-xs tabular-nums text-neutral-600">
                     {day.habit_completions} done

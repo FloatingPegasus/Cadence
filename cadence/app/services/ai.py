@@ -6,8 +6,15 @@ import re
 from time import perf_counter
 
 import httpx
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import case, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from ..config import settings
 from ..persistence.models.ai_model import AIModel
@@ -141,29 +148,45 @@ def _headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {settings.ai_api_key}"}
 
 
+def _chat_content(payload: object) -> str:
+    if not isinstance(payload, dict):
+        raise ValueError("provider returned an invalid response")
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices:
+        raise ValueError("provider returned an invalid response")
+    first = choices[0]
+    message = first.get("message") if isinstance(first, dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("provider returned an invalid response")
+    return content
+
+
 async def sync_nvidia_catalog(
-    db: AsyncSession,
+    db: AsyncSession | AsyncConnection,
     *,
     force: bool = False,
     client: httpx.AsyncClient | None = None,
 ) -> dict:
-    latest_seen = await db.scalar(
-        select(AIModel.last_seen_at)
-        .where(AIModel.provider == "nvidia")
-        .order_by(AIModel.last_seen_at.desc())
-        .limit(1)
-    )
-    refresh_after = timedelta(minutes=settings.ai_catalog_refresh_minutes)
-    if not force and latest_seen and utcnow() - latest_seen < refresh_after:
-        models = await list_models(db)
-        return {"refreshed": False, "models": models}
-
-    owns_client = client is None
-    if client is None:
-        client = httpx.AsyncClient(
-            timeout=settings.ai_request_timeout_seconds
+    if not await release_read_transaction(db):
+        raise AIConfigurationError(
+            "AI provider calls require a caller session without pending work"
         )
+    engine, owns_engine = _caller_async_engine(db)
+    owns_client = client is None
     try:
+        latest_seen = await _latest_nvidia_seen_from_engine(engine)
+        refresh_after = timedelta(minutes=settings.ai_catalog_refresh_minutes)
+        if not force and latest_seen and utcnow() - latest_seen < refresh_after:
+            session_factory = _catalog_session_factory(engine)
+            async with session_factory() as catalog_db:
+                models = await list_models(catalog_db)
+            return {"refreshed": False, "models": models}
+
+        if client is None:
+            client = httpx.AsyncClient(
+                timeout=settings.ai_request_timeout_seconds
+            )
         response = await client.get(
             f"{settings.ai_base_url.rstrip('/')}/models", headers=_headers()
         )
@@ -176,38 +199,273 @@ async def sync_nvidia_catalog(
             }
         )
         now = utcnow()
-        existing_result = await db.execute(
-            select(AIModel).where(AIModel.provider == "nvidia")
-        )
-        existing = {
-            model.model_id: model
-            for model in existing_result.scalars().all()
-        }
-        for model_id, model in existing.items():
-            if model_id not in model_ids:
-                model.health_status = "missing"
-        for model_id in model_ids:
-            model = existing.get(model_id)
-            if model is None:
-                model = AIModel(
-                    provider="nvidia",
-                    model_id=model_id,
-                    ranking_version=RANKING_VERSION,
+        session_factory = _catalog_session_factory(engine)
+        async with session_factory() as catalog_db:
+            missing_filter = [AIModel.provider == "nvidia"]
+            if model_ids:
+                missing_filter.append(~AIModel.model_id.in_(model_ids))
+            await catalog_db.execute(
+                update(AIModel)
+                .where(*missing_filter)
+                .values(health_status="missing")
+            )
+            if model_ids:
+                catalog_rows = [
+                    {
+                        "provider": "nvidia",
+                        "model_id": model_id,
+                        "strength_score": strength_for(model_id),
+                        "ranking_version": RANKING_VERSION,
+                        "enabled": True,
+                        "health_status": "untested",
+                        "last_seen_at": now,
+                    }
+                    for model_id in model_ids
+                ]
+                statement = pg_insert(AIModel).values(catalog_rows)
+                excluded = statement.excluded
+                await catalog_db.execute(
+                    statement.on_conflict_do_update(
+                        index_elements=[
+                            AIModel.provider,
+                            AIModel.model_id,
+                        ],
+                        set_={
+                            "strength_score": excluded.strength_score,
+                            "ranking_version": excluded.ranking_version,
+                            "last_seen_at": excluded.last_seen_at,
+                            "health_status": case(
+                                (
+                                    AIModel.health_status == "missing",
+                                    "untested",
+                                ),
+                                else_=AIModel.health_status,
+                            ),
+                        },
+                    )
                 )
-                db.add(model)
-            model.strength_score = strength_for(model_id)
-            model.ranking_version = RANKING_VERSION
-            model.last_seen_at = now
-            if model.health_status == "missing":
-                model.health_status = "untested"
-        await db.commit()
-        return {"refreshed": True, "models": await list_models(db)}
+            await catalog_db.commit()
+            models = await list_models(catalog_db)
+        return {"refreshed": True, "models": models}
     finally:
-        if owns_client:
-            await client.aclose()
+        try:
+            await _close_owned_client(client, owns_client)
+        finally:
+            await _dispose_owned_engine(engine, owns_engine)
 
 
-async def list_models(db: AsyncSession) -> list[dict]:
+def _caller_async_engine(
+    caller: AsyncSession | AsyncConnection,
+) -> tuple[AsyncEngine, bool]:
+    """Resolve the caller's engine without borrowing its transaction."""
+
+    if isinstance(caller, AsyncConnection):
+        return caller.engine, False
+
+    bind = getattr(caller, "bind", None)
+    if isinstance(bind, AsyncEngine):
+        return bind, False
+    bound_engine = getattr(bind, "engine", None)
+    if isinstance(bound_engine, AsyncEngine):
+        return bound_engine, False
+    if isinstance(bind, AsyncConnection):
+        return bind.engine, False
+
+    sync_session = getattr(caller, "sync_session", None)
+    sync_bind = getattr(sync_session, "bind", None)
+    if sync_bind is None:
+        try:
+            sync_bind = caller.get_bind()
+        except Exception:
+            sync_bind = None
+    async_engine = getattr(sync_bind, "_async_engine", None)
+    if isinstance(async_engine, AsyncEngine):
+        return async_engine, False
+
+    url = getattr(sync_bind, "url", None) or getattr(bind, "url", None)
+    if url is None:
+        raise RuntimeError("AI catalog session has no usable database bind")
+    return (
+        create_async_engine(url, pool_pre_ping=True),
+        True,
+    )
+
+
+def _catalog_session_factory(engine: AsyncEngine):
+    return async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+async def release_read_transaction(
+    db: AsyncSession | AsyncConnection,
+) -> bool:
+    """Release a clean caller transaction without committing its work."""
+
+    if isinstance(db, AsyncSession):
+        if not db.in_transaction():
+            return True
+        sync_session = db.sync_session
+        transaction = getattr(sync_session, "_transaction", None)
+        has_flushed_work = any(
+            bool(getattr(transaction, attribute, ()))
+            for attribute in ("_new", "_dirty", "_deleted")
+        )
+        if db.new or db.dirty or db.deleted or has_flushed_work:
+            return False
+        if sync_session.expire_on_commit:
+            return False
+        await db.commit()
+        return True
+    if isinstance(db, AsyncConnection):
+        return False
+    return True
+
+
+async def _close_owned_client(
+    client: httpx.AsyncClient | None,
+    owns_client: bool,
+) -> None:
+    if not owns_client or client is None:
+        return
+    try:
+        await client.aclose()
+    except Exception:
+        logger.warning("AI provider client cleanup failed")
+
+
+async def _dispose_owned_engine(
+    engine: AsyncEngine,
+    owns_engine: bool,
+) -> None:
+    if not owns_engine:
+        return
+    try:
+        await engine.dispose()
+    except Exception:
+        logger.warning("AI database engine cleanup failed")
+
+
+async def _rollback_quietly(db: AsyncSession) -> None:
+    try:
+        await db.rollback()
+    except Exception:
+        logger.warning("AI database rollback failed")
+
+
+async def _model_snapshot(
+    engine: AsyncEngine,
+    model_id: str,
+) -> dict | None:
+    session_factory = _catalog_session_factory(engine)
+    async with session_factory() as model_db:
+        result = await model_db.execute(
+            select(AIModel).where(
+                AIModel.provider == "nvidia",
+                AIModel.model_id == model_id,
+            )
+        )
+        model = result.scalar_one_or_none()
+        if model is None:
+            await _rollback_quietly(model_db)
+            return None
+        snapshot = serialize_model(model)
+        await _rollback_quietly(model_db)
+        return snapshot
+
+
+async def _user_ai_snapshot(
+    engine: AsyncEngine,
+    user_id: int,
+) -> tuple[bool, bool] | None:
+    session_factory = _catalog_session_factory(engine)
+    async with session_factory() as user_db:
+        user = await user_db.get(User, user_id)
+        snapshot = (
+            None
+            if user is None
+            else (bool(user.ai_processing_consent), bool(user.ai_redaction_enabled))
+        )
+        await _rollback_quietly(user_db)
+        return snapshot
+
+
+async def _fallback_chain_from_engine(
+    engine: AsyncEngine,
+    task: str,
+) -> list[str]:
+    session_factory = _catalog_session_factory(engine)
+    async with session_factory() as model_db:
+        chain = await fallback_chain(model_db, task)
+        await _rollback_quietly(model_db)
+        return chain
+
+
+async def _record_model_state(
+    engine: AsyncEngine,
+    model_id: str,
+    *,
+    health_status: str,
+    last_error: str | None,
+    latency_ms: float,
+    tested_at: datetime,
+) -> None:
+    model_db: AsyncSession | None = None
+    try:
+        session_factory = _catalog_session_factory(engine)
+        async with session_factory() as session:
+            model_db = session
+            await model_db.execute(
+                update(AIModel)
+                .where(
+                    AIModel.provider == "nvidia",
+                    AIModel.model_id == model_id,
+                )
+                .values(
+                    health_status=health_status,
+                    last_error=last_error,
+                    latency_ms=latency_ms,
+                    last_tested_at=tested_at,
+                )
+            )
+            await model_db.commit()
+    except Exception:
+        if model_db is not None:
+            await _rollback_quietly(model_db)
+        logger.warning("AI model health write failed model=%s", model_id)
+
+
+async def _latest_nvidia_seen_from_engine(
+    engine: AsyncEngine,
+) -> datetime | None:
+    session_factory = _catalog_session_factory(engine)
+    async with session_factory() as freshness_db:
+        return await freshness_db.scalar(
+            select(AIModel.last_seen_at)
+            .where(AIModel.provider == "nvidia")
+            .order_by(AIModel.last_seen_at.desc())
+            .limit(1)
+        )
+
+
+async def _latest_nvidia_seen(
+    caller: AsyncSession | AsyncConnection,
+) -> datetime | None:
+    """Read catalog freshness without holding the caller during HTTP."""
+
+    engine, owns_engine = _caller_async_engine(caller)
+    try:
+        return await _latest_nvidia_seen_from_engine(engine)
+    finally:
+        await _dispose_owned_engine(engine, owns_engine)
+
+
+async def list_models(db: AsyncSession | AsyncConnection) -> list[dict]:
+    if isinstance(db, AsyncConnection):
+        async with AsyncSession(bind=db, expire_on_commit=False) as session:
+            return await list_models(session)
     result = await db.execute(
         select(AIModel)
         .where(AIModel.provider == "nvidia")
@@ -239,7 +497,9 @@ def serialize_model(model: AIModel) -> dict:
         # Older rows may contain diagnostics written before errors were
         # sanitized. Never return those values through the developer API.
         "last_error": safe_last_error,
-        "last_seen_at": model.last_seen_at.isoformat(),
+        "last_seen_at": (
+            model.last_seen_at.isoformat() if model.last_seen_at else None
+        ),
         "last_tested_at": (
             model.last_tested_at.isoformat() if model.last_tested_at else None
         ),
@@ -247,60 +507,79 @@ def serialize_model(model: AIModel) -> dict:
 
 
 async def probe_model(
-    db: AsyncSession,
+    db: AsyncSession | AsyncConnection,
     model_id: str,
     *,
     client: httpx.AsyncClient | None = None,
 ) -> dict:
-    result = await db.execute(
-        select(AIModel).where(
-            AIModel.provider == "nvidia", AIModel.model_id == model_id
+    if not await release_read_transaction(db):
+        raise AIConfigurationError(
+            "AI provider calls require a caller session without pending work"
         )
-    )
-    model = result.scalar_one_or_none()
-    if model is None:
-        raise LookupError(model_id)
-
+    engine, owns_engine = _caller_async_engine(db)
     owns_client = client is None
-    if client is None:
-        client = httpx.AsyncClient(
-            timeout=settings.ai_request_timeout_seconds
-        )
-    started = perf_counter()
+    response_state: dict | None = None
     try:
-        response = await client.post(
-            f"{settings.ai_base_url.rstrip('/')}/chat/completions",
-            headers=_headers(),
-            json={
-                "model": model_id,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": "Reply with exactly: CADENCE_OK",
-                    }
-                ],
-                "temperature": 0,
-                "max_tokens": 16,
-            },
-        )
-        response.raise_for_status()
-        model.health_status = "healthy"
-        model.last_error = None
-    except Exception as error:
-        model.health_status = "unhealthy"
-        model.last_error = _safe_provider_error(error)
-        logger.warning(
-            "AI model probe failed model=%s reason=%s",
+        response_state = await _model_snapshot(engine, model_id)
+        if response_state is None:
+            raise LookupError(model_id)
+        started = perf_counter()
+        health_status = "healthy"
+        last_error = None
+        try:
+            if client is None:
+                client = httpx.AsyncClient(
+                    timeout=settings.ai_request_timeout_seconds
+                )
+            response = await client.post(
+                f"{settings.ai_base_url.rstrip('/')}/chat/completions",
+                headers=_headers(),
+                json={
+                    "model": model_id,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "Reply with exactly: CADENCE_OK",
+                        }
+                    ],
+                    "temperature": 0,
+                    "max_tokens": 16,
+                },
+            )
+            response.raise_for_status()
+            _chat_content(response.json())
+        except Exception as error:
+            health_status = "unhealthy"
+            last_error = _safe_provider_error(error)
+            logger.warning(
+                "AI model probe failed model=%s reason=%s",
+                model_id,
+                last_error,
+            )
+        latency_ms = round((perf_counter() - started) * 1000, 2)
+        tested_at = utcnow()
+        await _record_model_state(
+            engine,
             model_id,
-            model.last_error,
+            health_status=health_status,
+            last_error=last_error,
+            latency_ms=latency_ms,
+            tested_at=tested_at,
         )
+        response_state.update(
+            {
+                "health_status": health_status,
+                "last_error": last_error,
+                "latency_ms": latency_ms,
+                "last_tested_at": tested_at.isoformat(),
+            }
+        )
+        return response_state
     finally:
-        model.latency_ms = round((perf_counter() - started) * 1000, 2)
-        model.last_tested_at = utcnow()
-        await db.commit()
-        if owns_client:
-            await client.aclose()
-    return serialize_model(model)
+        try:
+            await _close_owned_client(client, owns_client)
+        finally:
+            await _dispose_owned_engine(engine, owns_engine)
 
 
 async def fallback_chain(db: AsyncSession, task: str) -> list[str]:
@@ -326,7 +605,7 @@ async def fallback_chain(db: AsyncSession, task: str) -> list[str]:
 
 
 async def chat_with_fallback(
-    db: AsyncSession,
+    db: AsyncSession | AsyncConnection,
     *,
     task: str,
     messages: list[dict[str, str]],
@@ -337,45 +616,50 @@ async def chat_with_fallback(
 ) -> dict:
     if not settings.ai_enabled:
         raise AIConfigurationError("Cadence AI is disabled")
+    if not await release_read_transaction(db):
+        raise AIConfigurationError(
+            "AI provider calls require a caller session without pending work"
+        )
+    engine, owns_engine = _caller_async_engine(db)
+    owns_client = client is None
     redaction_applied = False
     outbound_messages = messages
-    if user_id is not None:
-        user = await db.get(User, user_id)
-        if user is None or not user.ai_processing_consent:
-            raise AIConsentRequiredError(
-                "External AI processing is off. Enable it in Settings "
-                "before generating."
-            )
-        if user.ai_redaction_enabled:
-            outbound_messages = [
-                {
-                    **message,
-                    "content": redact_sensitive_text(message["content"]),
-                }
-                for message in messages
-            ]
-            redaction_applied = True
-    chain = await fallback_chain(db, task)
-    if not chain:
-        await sync_nvidia_catalog(db)
-        chain = await fallback_chain(db, task)
-
-    owns_client = client is None
-    if client is None:
-        client = httpx.AsyncClient(
-            timeout=settings.ai_request_timeout_seconds
-        )
-    failures: list[str] = []
     try:
+        if user_id is not None:
+            consent_snapshot = await _user_ai_snapshot(engine, user_id)
+            if consent_snapshot is None or not consent_snapshot[0]:
+                raise AIConsentRequiredError(
+                    "External AI processing is off. Enable it in Settings "
+                    "before generating."
+                )
+            if consent_snapshot[1]:
+                outbound_messages = [
+                    {
+                        **message,
+                        "content": redact_sensitive_text(message["content"]),
+                    }
+                    for message in messages
+                ]
+                redaction_applied = True
+        chain = await _fallback_chain_from_engine(engine, task)
+        if not chain:
+            if client is None:
+                client = httpx.AsyncClient(
+                    timeout=settings.ai_request_timeout_seconds
+                )
+            await sync_nvidia_catalog(db, client=client)
+            chain = await _fallback_chain_from_engine(engine, task)
+        if client is None:
+            client = httpx.AsyncClient(
+                timeout=settings.ai_request_timeout_seconds
+            )
+        failures: list[str] = []
         for model_id in chain:
             started = perf_counter()
-            result = await db.execute(
-                select(AIModel).where(
-                    AIModel.provider == "nvidia",
-                    AIModel.model_id == model_id,
-                )
-            )
-            model = result.scalar_one()
+            model_state = await _model_snapshot(engine, model_id)
+            if model_state is None:
+                failures.append(model_id)
+                continue
             try:
                 response = await client.post(
                     f"{settings.ai_base_url.rstrip('/')}/chat/completions",
@@ -389,40 +673,60 @@ async def chat_with_fallback(
                 )
                 response.raise_for_status()
                 payload = response.json()
-                model.health_status = "healthy"
-                model.last_error = None
-                model.latency_ms = round(
-                    (perf_counter() - started) * 1000, 2
+                content = _chat_content(payload)
+                latency_ms = round((perf_counter() - started) * 1000, 2)
+                tested_at = utcnow()
+                await _record_model_state(
+                    engine,
+                    model_id,
+                    health_status="healthy",
+                    last_error=None,
+                    latency_ms=latency_ms,
+                    tested_at=tested_at,
                 )
-                model.last_tested_at = utcnow()
-                await db.commit()
                 return {
                     "provider": "nvidia",
                     "model": model_id,
-                    "content": payload["choices"][0]["message"]["content"],
+                    "content": content,
                     "usage": payload.get("usage"),
                     "attempted_models": [*failures, model_id],
                     "redaction_applied": redaction_applied,
                 }
-            except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
+            except (
+                httpx.HTTPError,
+                KeyError,
+                IndexError,
+                TypeError,
+                ValueError,
+            ) as error:
                 status_code = (
                     error.response.status_code
                     if isinstance(error, httpx.HTTPStatusError)
                     else None
                 )
-                model.health_status = (
+                health_status = (
                     "rate_limited" if status_code == 429 else "unhealthy"
                 )
-                model.last_error = _safe_provider_error(error)
+                last_error = _safe_provider_error(error)
                 logger.warning(
                     "AI model request failed model=%s reason=%s",
                     model_id,
-                    model.last_error,
+                    last_error,
                 )
-                model.last_tested_at = utcnow()
-                await db.commit()
+                await _record_model_state(
+                    engine,
+                    model_id,
+                    health_status=(
+                        "rate_limited" if status_code == 429 else "unhealthy"
+                    ),
+                    last_error=last_error,
+                    latency_ms=round((perf_counter() - started) * 1000, 2),
+                    tested_at=utcnow(),
+                )
                 failures.append(model_id)
         raise AIProvidersExhaustedError("AI providers are temporarily unavailable")
     finally:
-        if owns_client:
-            await client.aclose()
+        try:
+            await _close_owned_client(client, owns_client)
+        finally:
+            await _dispose_owned_engine(engine, owns_engine)

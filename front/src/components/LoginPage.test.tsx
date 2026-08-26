@@ -1,6 +1,6 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { useAuth } from "../contexts/AuthContext";
 import LoginPage from "./LoginPage";
@@ -12,11 +12,6 @@ vi.mock("../contexts/AuthContext", () => ({
 const mockedUseAuth = vi.mocked(useAuth);
 
 describe("LoginPage verification recovery", () => {
-  afterEach(() => {
-    cleanup();
-    vi.restoreAllMocks();
-  });
-
   it("requests a fresh verification message by email", async () => {
     const user = userEvent.setup();
     const resendVerification = vi.fn().mockResolvedValue(
@@ -50,9 +45,7 @@ describe("LoginPage verification recovery", () => {
     expect(resendVerification).toHaveBeenCalledWith(
       "pending@example.com",
     );
-    expect(
-      await screen.findByText(/new verification message has been sent/),
-    ).toBeTruthy();
+    await screen.findByText(/new verification message has been sent/);
   });
 
   it("accepts an email address for login", async () => {

@@ -22,12 +22,7 @@ export default function SettingsPanel({
 }: SettingsPanelProps) {
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-base font-medium text-neutral-100">Settings</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          Manage structure, privacy, and local data.
-        </p>
-      </div>
+      <h1 className="mb-6 text-base font-medium text-neutral-100">Settings</h1>
       <HabitManager habits={habits} onChanged={onHabitsChanged} />
       <ContextManager contexts={contexts} onChanged={onContextsChanged} />
       <AIPrivacySettings />
@@ -36,7 +31,7 @@ export default function SettingsPanel({
           Your data
         </h2>
         <p className="mt-1 mb-3 text-xs leading-5 text-neutral-500">
-          Download a versioned JSON copy of your account and continuity record.
+          Download a JSON copy of your account and history.
         </p>
         <DataExportButton />
       </section>

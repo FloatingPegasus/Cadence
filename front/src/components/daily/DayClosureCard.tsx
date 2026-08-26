@@ -70,17 +70,12 @@ export default function DayClosureCard({
       className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 lg:col-span-2"
     >
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2
-            id="day-closure-title"
-            className="text-sm font-medium text-neutral-200"
-          >
-            Finish the day
-          </h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Review what you recorded. Nothing is required.
-          </p>
-        </div>
+        <h2
+          id="day-closure-title"
+          className="text-sm font-medium text-neutral-200"
+        >
+          Finish the day
+        </h2>
         {preview?.status === "closed" && (
           <button
             type="button"
@@ -134,8 +129,8 @@ export default function DayClosureCard({
                 {" · "}
                 {plural(
                   preview.capture.completed_habits,
-                  "discipline completed",
-                  "disciplines completed",
+                  "habit completed",
+                  "habits completed",
                 )}
               </dd>
             </div>

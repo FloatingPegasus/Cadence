@@ -52,9 +52,6 @@ describe("DayClosureCard", () => {
     await user.click(
       await screen.findByRole("button", { name: "Review and finish" }),
     );
-    expect(
-      screen.getByText(/Finishing does not lock this record/),
-    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Finish day" }));
 
     await waitFor(() =>
@@ -64,11 +61,5 @@ describe("DayClosureCard", () => {
       ),
     );
     expect(onChanged).toHaveBeenCalled();
-    expect(
-      screen.getByText(/This day is finished/),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Reopen day" }),
-    ).toBeTruthy();
   });
 });

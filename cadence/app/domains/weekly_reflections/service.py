@@ -2,15 +2,67 @@ import hashlib
 import json
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ..continuity import service as continuity_service
 from ...persistence.models.weekly_reflection import WeeklyReflection
 from ...services import ai as ai_service
+from ...services import embeddings as embedding_service
+from ...services.continuity_lock import acquire_continuity_lock
 
 
 PROMPT_VERSION = "weekly-reflection-v1"
+SOURCE_CHANGED_MESSAGE = "Source changed while generating; please retry."
+
+
+def _session_factory(db: AsyncSession):
+    bind = getattr(db, "bind", None)
+    if bind is None:
+        raise RuntimeError("reflection generation session has no database bind")
+    return async_sessionmaker(
+        bind,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+def _reflection_state(reflection: WeeklyReflection | None) -> dict | None:
+    if reflection is None:
+        return None
+    return {
+        "id": reflection.id,
+        "updated_at": reflection.updated_at,
+        "content": reflection.content,
+        "source_fingerprint": reflection.source_fingerprint,
+        "is_user_edited": reflection.is_user_edited,
+    }
+
+
+async def _initial_generation_state(
+    db: AsyncSession,
+    user_id: int,
+    anchor_date: date | str,
+) -> tuple[date, dict, str, dict | None]:
+    factory = _session_factory(db)
+    async with factory() as snapshot_db:
+        await acquire_continuity_lock(snapshot_db, user_id)
+        week_start, snapshot = await build_source_snapshot(
+            snapshot_db,
+            user_id,
+            anchor_date,
+        )
+        source_fingerprint, _ = fingerprint(snapshot)
+        reflection = await snapshot_db.scalar(
+            select(WeeklyReflection).where(
+                WeeklyReflection.user_id == user_id,
+                WeeklyReflection.week_start == week_start,
+            )
+        )
+        reflection_state = _reflection_state(reflection)
+        await snapshot_db.rollback()
+        return week_start, snapshot, source_fingerprint, reflection_state
 
 
 def _coerce_date(value: date | str) -> date:
@@ -72,6 +124,7 @@ async def get_weekly_reflection(
     user_id: int,
     anchor_date: date | str,
 ) -> dict | None:
+    await acquire_continuity_lock(db, user_id)
     week_start, snapshot = await build_source_snapshot(
         db,
         user_id,
@@ -120,12 +173,44 @@ async def save_manual_reflection(
     anchor_date: date | str,
     content: str,
 ) -> dict:
+    await acquire_continuity_lock(db, user_id)
     week_start, snapshot = await build_source_snapshot(
         db,
         user_id,
         anchor_date,
     )
     source_fingerprint, source_snapshot = fingerprint(snapshot)
+    now = ai_service.utcnow()
+    statement = pg_insert(WeeklyReflection).values(
+        user_id=user_id,
+        week_start=week_start,
+        content=content,
+        provider=None,
+        model=None,
+        prompt_version=PROMPT_VERSION,
+        source_fingerprint=source_fingerprint,
+        source_snapshot=source_snapshot,
+        is_user_edited=True,
+        generated_at=None,
+        updated_at=now,
+    )
+    excluded = statement.excluded
+    statement = statement.on_conflict_do_update(
+        index_elements=[WeeklyReflection.user_id, WeeklyReflection.week_start],
+        set_={
+            "content": excluded.content,
+            "provider": excluded.provider,
+            "model": excluded.model,
+            "prompt_version": excluded.prompt_version,
+            "source_fingerprint": excluded.source_fingerprint,
+            "source_snapshot": excluded.source_snapshot,
+            "is_user_edited": excluded.is_user_edited,
+            "generated_at": excluded.generated_at,
+            "updated_at": excluded.updated_at,
+        },
+    )
+    await db.execute(statement)
+    await db.commit()
     reflection = await db.scalar(
         select(WeeklyReflection).where(
             WeeklyReflection.user_id == user_id,
@@ -133,21 +218,15 @@ async def save_manual_reflection(
         )
     )
     if reflection is None:
-        reflection = WeeklyReflection(
-            user_id=user_id,
-            week_start=week_start,
-            prompt_version=PROMPT_VERSION,
-        )
-        db.add(reflection)
-    reflection.content = content
-    reflection.provider = None
-    reflection.model = None
-    reflection.source_fingerprint = source_fingerprint
-    reflection.source_snapshot = source_snapshot
-    reflection.is_user_edited = True
-    reflection.generated_at = None
-    await db.commit()
-    await db.refresh(reflection)
+        raise RuntimeError("reflection disappeared after manual save")
+    await embedding_service.sync_source_embedding(
+        db,
+        user_id=user_id,
+        source_type="weekly_reflections",
+        source_id=reflection.id,
+        source_date=reflection.week_start,
+        content=reflection.content,
+    )
     return serialize(reflection, source_fingerprint)
 
 
@@ -158,19 +237,18 @@ async def generate_weekly_reflection(
     *,
     replace_edited: bool = False,
 ) -> dict:
-    week_start, snapshot = await build_source_snapshot(
-        db,
-        user_id,
-        anchor_date,
-    )
-    reflection = await db.scalar(
-        select(WeeklyReflection).where(
-            WeeklyReflection.user_id == user_id,
-            WeeklyReflection.week_start == week_start,
-        )
-    )
-    if reflection and reflection.is_user_edited and not replace_edited:
+    (
+        week_start,
+        snapshot,
+        initial_source_fingerprint,
+        initial_state,
+    ) = await _initial_generation_state(db, user_id, anchor_date)
+    if initial_state and initial_state["is_user_edited"] and not replace_edited:
         raise ValueError("Edited reflection requires explicit replacement")
+    if not await ai_service.release_read_transaction(db):
+        raise ai_service.AIConfigurationError(
+            "AI provider calls require a caller session without pending work"
+        )
 
     result = await ai_service.chat_with_fallback(
         db,
@@ -195,21 +273,79 @@ async def generate_weekly_reflection(
         temperature=0.2,
         user_id=user_id,
     )
-    source_fingerprint, source_snapshot = fingerprint(snapshot)
-    if reflection is None:
-        reflection = WeeklyReflection(
-            user_id=user_id,
-            week_start=week_start,
-            prompt_version=PROMPT_VERSION,
+    factory = _session_factory(db)
+    async with factory() as write_db:
+        await acquire_continuity_lock(write_db, user_id)
+        current_week_start, current_snapshot = await build_source_snapshot(
+            write_db,
+            user_id,
+            anchor_date,
         )
-        db.add(reflection)
-    reflection.content = result["content"]
-    reflection.provider = result["provider"]
-    reflection.model = result["model"]
-    reflection.source_fingerprint = source_fingerprint
-    reflection.source_snapshot = source_snapshot
-    reflection.is_user_edited = False
-    reflection.generated_at = ai_service.utcnow()
-    await db.commit()
-    await db.refresh(reflection)
-    return serialize(reflection, source_fingerprint)
+        source_fingerprint, source_snapshot = fingerprint(current_snapshot)
+        if source_fingerprint != initial_source_fingerprint:
+            await write_db.rollback()
+            raise ValueError(SOURCE_CHANGED_MESSAGE)
+
+        now = ai_service.utcnow()
+        generated_values = {
+            "content": result["content"],
+            "provider": result["provider"],
+            "model": result["model"],
+            "prompt_version": PROMPT_VERSION,
+            "source_fingerprint": source_fingerprint,
+            "source_snapshot": source_snapshot,
+            "is_user_edited": False,
+            "generated_at": now,
+            "updated_at": now,
+        }
+        if initial_state is None:
+            statement = pg_insert(WeeklyReflection).values(
+                user_id=user_id,
+                week_start=current_week_start,
+                **generated_values,
+            )
+            result_row = await write_db.execute(
+                statement.on_conflict_do_nothing(
+                    index_elements=[
+                        WeeklyReflection.user_id,
+                        WeeklyReflection.week_start,
+                    ]
+                ).returning(WeeklyReflection.id)
+            )
+            wrote_generated = result_row.scalar_one_or_none() is not None
+        else:
+            result_row = await write_db.execute(
+                update(WeeklyReflection)
+                .where(
+                    WeeklyReflection.id == initial_state["id"],
+                    WeeklyReflection.updated_at.is_not_distinct_from(
+                        initial_state["updated_at"]
+                    ),
+                    WeeklyReflection.content == initial_state["content"],
+                    WeeklyReflection.source_fingerprint
+                    == initial_state["source_fingerprint"],
+                    WeeklyReflection.is_user_edited
+                    == initial_state["is_user_edited"],
+                )
+                .values(**generated_values)
+            )
+            wrote_generated = result_row.rowcount == 1
+        await write_db.commit()
+        reflection = await write_db.scalar(
+            select(WeeklyReflection).where(
+                WeeklyReflection.user_id == user_id,
+                WeeklyReflection.week_start == current_week_start,
+            )
+        )
+        if reflection is None:
+            raise RuntimeError("reflection disappeared after generation")
+        if wrote_generated:
+            await embedding_service.sync_source_embedding(
+                write_db,
+                user_id=user_id,
+                source_type="weekly_reflections",
+                source_id=reflection.id,
+                source_date=reflection.week_start,
+                content=reflection.content,
+            )
+        return serialize(reflection, source_fingerprint)

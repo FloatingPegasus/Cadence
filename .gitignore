@@ -11,7 +11,6 @@
 
 # Project documents intentionally kept out of the public repository
 handshake_tutorial_ocr.md
-DIAGRAMS.md
 CADENCE_MASTER_PLAN.md
 
 # Virtual environments
@@ -27,12 +26,11 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# SQLite database
+# Local database backups
 instance/
-cadence/data/*.db
-cadence/data/*.db-*
-cadence/data/backups/
+cadence/data/*.db*
 cadence/data/*.lock
+cadence/data/backups/
 !cadence/data/.gitkeep
 
 # Frontend build and dependencies

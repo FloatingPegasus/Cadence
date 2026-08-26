@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   fetchMonthlyContinuity,
@@ -56,11 +56,7 @@ function month(
 }
 
 describe("MonthlyContinuity", () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
-  it("opens daily traces and browses months independently", async () => {
+  it("opens days and browses months independently", async () => {
     const user = userEvent.setup();
     const onSelectDate = vi.fn();
     vi.mocked(fetchMonthlyContinuity)
@@ -83,7 +79,7 @@ describe("MonthlyContinuity", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Open daily trace for Jul 15",
+        name: "Open day for Jul 15",
       }),
     );
     expect(onSelectDate).toHaveBeenCalledWith("2026-07-15");
@@ -94,10 +90,10 @@ describe("MonthlyContinuity", () => {
     await waitFor(() =>
       expect(fetchMonthlyContinuity).toHaveBeenLastCalledWith("2026-06"),
     );
-    expect(await screen.findByText("June 2026")).toBeTruthy();
+    await screen.findByText("June 2026");
   });
 
-  it("opens context movement inline", async () => {
+  it("opens area activity inline", async () => {
     const user = userEvent.setup();
     const data = month("2026-07", "2026-07-01", "2026-07-31");
     data.contexts = [
@@ -124,9 +120,9 @@ describe("MonthlyContinuity", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Open Cadence monthly movement",
+        name: "Open Cadence monthly activity",
       }),
     );
-    expect(screen.getByText("Context detail 1")).toBeTruthy();
+    screen.getByText("Context detail 1");
   });
 });

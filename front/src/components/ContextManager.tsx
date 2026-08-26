@@ -43,7 +43,7 @@ export default function ContextManager({
       onChanged();
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Could not add context",
+        caught instanceof Error ? caught.message : "Could not add area",
       );
     }
   }
@@ -59,7 +59,7 @@ export default function ContextManager({
       onChanged();
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Could not update context",
+        caught instanceof Error ? caught.message : "Could not update area",
       );
     }
   }
@@ -71,7 +71,7 @@ export default function ContextManager({
       onChanged();
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Could not archive context",
+        caught instanceof Error ? caught.message : "Could not archive area",
       );
     }
   }
@@ -79,7 +79,7 @@ export default function ContextManager({
   return (
     <details className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950/50">
       <summary className="cursor-pointer px-4 py-3 text-sm text-neutral-400 hover:text-neutral-200">
-        Manage contexts
+        Manage areas
       </summary>
       <div className="border-t border-neutral-800 p-4">
         <form
@@ -87,7 +87,7 @@ export default function ContextManager({
           className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]"
         >
           <label className="sr-only" htmlFor="new-context-name">
-            New context name
+            New area name
           </label>
           <input
             id="new-context-name"
@@ -102,7 +102,7 @@ export default function ContextManager({
             onChange={(event) =>
               setNewKind(event.target.value as ContinuityContextKind)
             }
-            aria-label="Context type"
+            aria-label="Area type"
             className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-400 outline-none focus:border-neutral-600"
           >
             {Object.entries(kindLabels).map(([value, label]) => (
@@ -138,7 +138,7 @@ export default function ContextManager({
                       event.target.value as ContinuityContextKind,
                     )
                   }
-                  aria-label="Context type"
+                  aria-label="Area type"
                   className="rounded-lg border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-400 outline-none"
                 >
                   {Object.entries(kindLabels).map(([value, label]) => (
@@ -197,10 +197,6 @@ export default function ContextManager({
             {error}
           </p>
         )}
-        <p className="mt-4 text-xs text-neutral-600">
-          Contexts connect daily work across time without changing discipline
-          tracking.
-        </p>
       </div>
     </details>
   );

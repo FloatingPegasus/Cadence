@@ -1,13 +1,15 @@
 import calendar
 from datetime import date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...persistence.models.habit import Habit
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.day import Day
+from ...services.continuity_lock import acquire_continuity_lock
 
 
 class HabitNotFoundError(LookupError):
@@ -75,6 +77,7 @@ async def create_habit(db: AsyncSession, user_id: int, name: str) -> dict:
 async def rename_habit(
     db: AsyncSession, user_id: int, habit_id: int, name: str
 ) -> dict:
+    await acquire_continuity_lock(db, user_id)
     result = await db.execute(
         select(Habit).where(
             Habit.id == habit_id,
@@ -175,28 +178,50 @@ async def toggle_habit(
     if value not in {"0", "1"}:
         raise ValueError("Habit value must be '0' or '1'")
 
-    day_result = await db.execute(
-        select(Day).where(Day.user_id == user_id, Day.date == log_date)
-    )
-    day = day_result.scalar_one_or_none()
-    if day is None:
-        if value == "0":
-            return
-        day = Day(user_id=user_id, date=log_date)
-        db.add(day)
-        await db.flush()
+    await acquire_continuity_lock(db, user_id)
 
-    result = await db.execute(
-        select(HabitLog).where(
-            HabitLog.habit_id == habit_id,
-            HabitLog.day_id == day.id,
+    if value == "0":
+        day_id = await db.scalar(
+            select(Day.id).where(
+                Day.user_id == user_id,
+                Day.date == log_date,
+            )
+        )
+        if day_id is not None:
+            await db.execute(
+                delete(HabitLog).where(
+                    HabitLog.habit_id == habit_id,
+                    HabitLog.day_id == day_id,
+                )
+            )
+        await db.commit()
+        return
+
+    day_insert = pg_insert(Day).values(
+        user_id=user_id,
+        date=log_date,
+    )
+    day_result = await db.execute(
+        day_insert.on_conflict_do_nothing(
+            index_elements=[Day.user_id, Day.date]
+        ).returning(Day.id)
+    )
+    day_id = day_result.scalar_one_or_none()
+    if day_id is None:
+        day_id = await db.scalar(
+            select(Day.id).where(
+                Day.user_id == user_id,
+                Day.date == log_date,
+            )
+        )
+    if day_id is None:
+        raise RuntimeError("day disappeared while toggling habit")
+
+    await db.execute(
+        pg_insert(HabitLog)
+        .values(habit_id=habit_id, day_id=day_id)
+        .on_conflict_do_nothing(
+            index_elements=[HabitLog.day_id, HabitLog.habit_id]
         )
     )
-    existing = result.scalar_one_or_none()
-
-    if value == "1" and not existing:
-        db.add(HabitLog(habit_id=habit_id, day_id=day.id))
-        await db.commit()
-    elif value == "0" and existing:
-        await db.delete(existing)
-        await db.commit()
+    await db.commit()

@@ -62,21 +62,10 @@ export default function ContinuityExplorer({
 
   return (
     <section
-      aria-labelledby="history-explorer-title"
+      aria-label="History browser"
       className="mt-8 border-t border-neutral-800 pt-6"
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2
-            id="history-explorer-title"
-            className="text-sm font-medium text-neutral-200"
-          >
-            History
-          </h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Browse your notes, review the week, or see patterns.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-start justify-end gap-4">
         <div
           role="tablist"
           aria-label="History views"

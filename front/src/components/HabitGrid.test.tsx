@@ -61,7 +61,7 @@ describe("HabitGrid", () => {
     expect(onToggle).not.toHaveBeenCalled();
   });
 
-  it("opens continuity from a discipline name", async () => {
+  it("opens history from a habit name", async () => {
     const user = userEvent.setup();
     const onSelectHabit = vi.fn();
 
@@ -78,7 +78,7 @@ describe("HabitGrid", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Open Read continuity" }));
+    await user.click(screen.getByRole("button", { name: "Open Read history" }));
     expect(onSelectHabit).toHaveBeenCalledWith(1);
   });
 });

@@ -3,6 +3,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -24,4 +25,12 @@ class Day(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    __table_args__ = (UniqueConstraint("user_id", "date", name="user_day_uc"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "date", name="user_day_uc"),
+        Index(
+            "ix_days_daily_note_trgm",
+            "daily_note",
+            postgresql_using="gin",
+            postgresql_ops={"daily_note": "gin_trgm_ops"},
+        ),
+    )

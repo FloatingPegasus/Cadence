@@ -5,6 +5,7 @@ from math import isfinite
 
 from pydantic import EmailStr, Field, SecretStr, TypeAdapter, model_validator
 from pydantic_settings import BaseSettings
+from sqlalchemy.engine import make_url
 
 
 JWT_ALGORITHM = "HS256"
@@ -18,6 +19,25 @@ INSECURE_SECRET_KEYS = frozenset(
     }
 )
 EMAIL_ADAPTER = TypeAdapter(EmailStr)
+
+
+def _validate_database_url(value: str) -> str:
+    candidate = value.strip()
+    try:
+        parsed = make_url(candidate)
+    except Exception as error:
+        raise ValueError(
+            "CADENCE_DATABASE_URL must be a valid PostgreSQL psycopg URL"
+        ) from error
+    if (
+        parsed.get_backend_name() != "postgresql"
+        or parsed.get_driver_name() != "psycopg"
+        or not parsed.database
+    ):
+        raise ValueError(
+            "CADENCE_DATABASE_URL must use postgresql+psycopg:// and include a database"
+        )
+    return candidate
 
 
 def _validate_http_url(
@@ -62,8 +82,8 @@ def _validate_http_url(
 
 
 class Settings(BaseSettings):
-    database_url: str = "sqlite+aiosqlite:///" + str(
-        Path(__file__).parent.parent / "data" / "database.db"
+    database_url: str = (
+        "postgresql+psycopg://cadence:cadence-local-password@localhost:5432/cadence"
     )
     secret_key: str = ""
     algorithm: str = JWT_ALGORITHM
@@ -85,6 +105,11 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_catalog_refresh_minutes: int = 360
     ai_request_timeout_seconds: float = 45.0
+    embedding_enabled: bool = False
+    embedding_model: str = "nvidia/nv-embedqa-e5-v5"
+    embedding_dimensions: int = 1024
+    embedding_input_max_chars: int = 4_000
+    embedding_request_timeout_seconds: float = 15.0
 
     brevo_api_key: str = ""
     from_email: str = "no-reply@cadence.app"
@@ -101,9 +126,6 @@ class Settings(BaseSettings):
         Path(__file__).parent.parent / "data" / "backups"
     )
     backup_retention_count: int = 10
-    runtime_lock_path: Path = (
-        Path(__file__).parent.parent / "data" / "cadence.lock"
-    )
     auth_rate_limit_window_seconds: int = 60
     auth_register_rate_limit: int = 5
     auth_login_rate_limit: int = 10
@@ -124,6 +146,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_security_settings(self) -> "Settings":
+        self.database_url = _validate_database_url(self.database_url)
         self.secret_key = self.secret_key.strip()
         if self.algorithm != JWT_ALGORITHM:
             raise ValueError(
@@ -138,7 +161,10 @@ class Settings(BaseSettings):
             or len(self.secret_key) < 32
         ):
             raise ValueError(
-                "CADENCE_SECRET_KEY must be a random value of at least 32 characters outside test mode"
+                "CADENCE_SECRET_KEY must be a random value of at least 32 "
+                "characters outside test mode. Generate one with "
+                "`python3 -c 'import secrets; print(secrets.token_urlsafe(48))'` "
+                "and set it in the project-root .env"
             )
 
         self.frontend_base_url = _validate_http_url(
@@ -147,6 +173,15 @@ class Settings(BaseSettings):
             allow_insecure_loopback=True,
             allow_insecure_http=self.test_mode,
         )
+        try:
+            self.ai_base_url = _validate_http_url(
+                self.ai_base_url,
+                allow_path=True,
+                allow_insecure_loopback=True,
+                allow_insecure_http=self.test_mode,
+            )
+        except ValueError as error:
+            raise ValueError(f"CADENCE_AI_BASE_URL {error}") from error
         origins = self.allowed_cors_origins
         if not origins:
             raise ValueError("CADENCE_CORS_ORIGINS must contain at least one origin")
@@ -199,10 +234,20 @@ class Settings(BaseSettings):
         for field_name in (
             "redis_connect_timeout_seconds",
             "redis_socket_timeout_seconds",
+            "embedding_request_timeout_seconds",
         ):
             timeout = getattr(self, field_name)
             if not isfinite(timeout) or timeout <= 0:
                 raise ValueError(f"{field_name} must be a finite positive number")
+        if self.embedding_dimensions != 1024:
+            raise ValueError("CADENCE_EMBEDDING_DIMENSIONS must be 1024")
+        if not 256 <= self.embedding_input_max_chars <= 32_000:
+            raise ValueError(
+                "CADENCE_EMBEDDING_INPUT_MAX_CHARS must be between 256 and 32000"
+            )
+        if not self.embedding_model.strip():
+            raise ValueError("CADENCE_EMBEDDING_MODEL must not be blank")
+        self.embedding_model = self.embedding_model.strip()
         self.redis_url = self.redis_url.strip()
         self.redis_key_prefix = self.redis_key_prefix.strip()
         if not self.redis_key_prefix or len(self.redis_key_prefix) > 64:
@@ -236,19 +281,11 @@ class Settings(BaseSettings):
 
     @property
     def sync_database_url(self) -> str:
-        return self.database_url.replace("+aiosqlite", "")
+        return self.database_url
 
     @property
     def resolved_backup_dir(self) -> Path:
         path = self.backup_dir.expanduser()
-        if path.is_absolute():
-            return path
-        repository_root = Path(__file__).resolve().parents[2]
-        return repository_root / path
-
-    @property
-    def resolved_runtime_lock_path(self) -> Path:
-        path = self.runtime_lock_path.expanduser()
         if path.is_absolute():
             return path
         repository_root = Path(__file__).resolve().parents[2]

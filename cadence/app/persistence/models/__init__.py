@@ -10,6 +10,11 @@ from .carry_forward_item import CarryForwardItem
 from .continuity_context import ContinuityContext
 from .day_context import DayContext
 from .weekly_reflection import WeeklyReflection
+from .continuity_embedding import (
+    CONTINUITY_EMBEDDING_DIMENSION,
+    EMBEDDING_DIMENSIONS,
+    ContinuityEmbedding,
+)
 
 __all__ = [
     "Habit",
@@ -24,4 +29,7 @@ __all__ = [
     "ContinuityContext",
     "DayContext",
     "WeeklyReflection",
+    "ContinuityEmbedding",
+    "CONTINUITY_EMBEDDING_DIMENSION",
+    "EMBEDDING_DIMENSIONS",
 ]

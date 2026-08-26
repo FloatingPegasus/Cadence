@@ -175,11 +175,17 @@ async def search(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Search range cannot exceed 366 days",
         )
+    query = q.strip()
+    if len(query) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="q must contain at least 2 non-whitespace characters",
+        )
     try:
         return await continuity_service.search(
             db,
             user.id,
-            q.strip(),
+            query,
             search_start,
             search_end,
             source,

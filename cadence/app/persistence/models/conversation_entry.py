@@ -20,6 +20,12 @@ class ConversationEntry(Base):
             "day_id",
             "created_at",
         ),
+        Index(
+            "ix_conversation_entries_content_trgm",
+            "content",
+            postgresql_using="gin",
+            postgresql_ops={"content": "gin_trgm_ops"},
+        ),
     )
 
     id = Column(Integer, primary_key=True)

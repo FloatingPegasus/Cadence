@@ -19,10 +19,10 @@ const sourceOptions: Array<{
 }> = [
   { value: "all", label: "Everything" },
   { value: "notes", label: "Daily notes" },
-  { value: "conversation", label: "Conversation" },
+  { value: "conversation", label: "Log entries" },
   { value: "summaries", label: "Summaries" },
   { value: "threads", label: "Follow-ups" },
-  { value: "weekly_reflections", label: "Weekly reflections" },
+  { value: "weekly_reflections", label: "Weekly reviews" },
 ];
 
 function formatDate(date: string) {
@@ -82,10 +82,6 @@ export default function ContinuitySearch({
         <h2 className="text-sm font-medium text-neutral-200">
           Search your history
         </h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          Search your notes, logged moments, summaries, follow-ups, and
-          weekly reflections.
-        </p>
       </div>
 
       <form
@@ -93,7 +89,7 @@ export default function ContinuitySearch({
         className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_10rem_auto]"
       >
         <label className="sr-only" htmlFor="continuity-search-query">
-          Search continuity
+          Search history
         </label>
         <input
           id="continuity-search-query"
@@ -126,7 +122,7 @@ export default function ContinuitySearch({
           ))}
         </select>
         <label className="sr-only" htmlFor="continuity-search-context">
-          Search context
+          Search area
         </label>
         <select
           id="continuity-search-context"
@@ -139,7 +135,7 @@ export default function ContinuitySearch({
           }
           className="rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-400 outline-none transition-colors duration-150 focus:border-violet-500/60"
         >
-          <option value="">Every context</option>
+          <option value="">Every area</option>
           {contexts.map((context) => (
             <option key={context.id} value={context.id}>
               {context.name}

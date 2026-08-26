@@ -41,7 +41,7 @@ export default function ContextMonthlyDetail({
         setError(
           caught instanceof Error
             ? caught.message
-            : "Could not load context movement",
+            : "Could not load area activity",
         );
       })
       .finally(() => setIsLoading(false));
@@ -59,11 +59,8 @@ export default function ContextMonthlyDetail({
             id="context-month-title"
             className="text-xs font-medium text-neutral-300"
           >
-            {data?.context.name ?? "Context movement"}
+            {data?.context.name ?? "Area activity"}
           </h3>
-          <p className="mt-1 text-xs text-neutral-500">
-            Movement inside this context during the selected month.
-          </p>
         </div>
         <button
           type="button"
@@ -76,7 +73,7 @@ export default function ContextMonthlyDetail({
 
       {isLoading ? (
         <p className="mt-4 text-sm text-neutral-600">
-          Loading context movement…
+          Loading area activity...
         </p>
       ) : error ? (
         <p role="alert" className="mt-4 text-xs text-red-400">
@@ -137,7 +134,7 @@ export default function ContextMonthlyDetail({
                     <li key={week.week_start}>
                       <div className="flex justify-between gap-3">
                         <span className="text-xs text-neutral-300">
-                          {shortDate(week.week_start)} –{" "}
+                          {shortDate(week.week_start)} to{" "}
                           {shortDate(week.week_end)}
                         </span>
                         <span className="text-[11px] text-neutral-600">
@@ -145,8 +142,7 @@ export default function ContextMonthlyDetail({
                         </span>
                       </div>
                       <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500">
-                        {week.last_trace_preview ||
-                          "Linked activity without a written trace."}
+                        {week.last_trace_preview || "Activity without a note."}
                       </p>
                     </li>
                   ))}
@@ -156,14 +152,14 @@ export default function ContextMonthlyDetail({
 
             <div>
               <h4 className="text-xs font-medium text-neutral-400">
-                Daily traces
+                Daily notes
               </h4>
               <div className="mt-3 border-y border-neutral-800">
                 {data.days.map((day) => (
                   <button
                     key={day.date}
                     type="button"
-                    aria-label={`Open ${data.context.name} trace for ${shortDate(day.date)}`}
+                    aria-label={`Open ${data.context.name} note for ${shortDate(day.date)}`}
                     onClick={() => onSelectDate(day.date)}
                     className="grid w-full grid-cols-[4rem_1fr] gap-3 border-b border-neutral-800 px-2 py-2.5 text-left last:border-b-0 hover:bg-neutral-900/60"
                   >
@@ -171,8 +167,7 @@ export default function ContextMonthlyDetail({
                       {shortDate(day.date)}
                     </span>
                     <span className="min-w-0 truncate text-xs text-neutral-500">
-                      {day.trace_preview ||
-                        "Linked activity without a written trace."}
+                      {day.trace_preview || "Activity without a note."}
                     </span>
                   </button>
                 ))}

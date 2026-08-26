@@ -38,7 +38,7 @@ export default function DailyHabitsCard({
         setError(
           caught instanceof Error
             ? caught.message
-            : "Could not load your practices",
+            : "Could not load your habits",
         );
       })
       .finally(() => setIsLoading(false));
@@ -56,7 +56,7 @@ export default function DailyHabitsCard({
       onHabitsChanged();
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Could not add practice",
+        caught instanceof Error ? caught.message : "Could not add habit",
       );
     } finally {
       setIsSaving(false);
@@ -83,30 +83,25 @@ export default function DailyHabitsCard({
       setError(
         caught instanceof Error
           ? caught.message
-          : "Could not update the practice",
+          : "Could not update the habit",
       );
     }
   }
 
   return (
     <section
-      aria-labelledby="daily-practices-title"
+      aria-labelledby="daily-habits-title"
       className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5"
     >
-      <div>
-        <h2
-          id="daily-practices-title"
-          className="text-sm font-medium text-neutral-200"
-        >
-          Daily practices
-        </h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          Track only what you choose. Nothing is added automatically.
-        </p>
-      </div>
+      <h2
+        id="daily-habits-title"
+        className="text-sm font-medium text-neutral-200"
+      >
+        Habits
+      </h2>
 
       {isLoading ? (
-        <p className="mt-4 text-sm text-neutral-600">Loading practices…</p>
+        <p className="mt-4 text-sm text-neutral-600">Loading habits...</p>
       ) : dailyHabits.length > 0 ? (
         <div className="mt-4 space-y-2">
           {dailyHabits.map((habit) => (
@@ -127,19 +122,19 @@ export default function DailyHabitsCard({
         </div>
       ) : (
         <p className="mt-4 text-sm leading-6 text-neutral-500">
-          Start with one practice you want to keep visible each day.
+          Add your first daily habit.
         </p>
       )}
 
       <form onSubmit={addHabit} className="mt-4 flex gap-2">
-        <label htmlFor="new-daily-practice" className="sr-only">
-          Add a practice
+        <label htmlFor="new-daily-habit" className="sr-only">
+          Add a habit
         </label>
         <input
-          id="new-daily-practice"
+          id="new-daily-habit"
           value={newName}
           onChange={(event) => setNewName(event.target.value)}
-          placeholder="Add a practice"
+          placeholder="Add a habit"
           maxLength={100}
           className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
         />

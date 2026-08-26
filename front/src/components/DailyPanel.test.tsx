@@ -44,15 +44,15 @@ describe("DailyPanel", () => {
       />,
     );
 
-    expect(screen.getByText("Capture form")).toBeTruthy();
-    expect(screen.getByText("Today's log")).toBeTruthy();
+    screen.getByText("Capture form");
+    screen.getByText("Today's log");
 
     await user.click(screen.getByRole("button", { name: "Follow-ups" }));
     expect(screen.getAllByText("Follow-ups")).toHaveLength(2);
     expect(screen.queryByText("Capture form")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Summary" }));
-    expect(screen.getByText("Summary editor")).toBeTruthy();
+    screen.getByText("Summary editor");
     expect(screen.queryByText("Today's log")).toBeNull();
   });
 
@@ -76,6 +76,6 @@ describe("DailyPanel", () => {
 
     await user.click(screen.getByRole("button", { name: "Save note" }));
     expect(generateSummary).toHaveBeenCalledWith("2026-07-24");
-    expect(await screen.findByText("Summary updated")).toBeTruthy();
+    await screen.findByText("Summary updated");
   });
 });

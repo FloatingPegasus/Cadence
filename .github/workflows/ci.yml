@@ -13,6 +13,19 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg17
+        env:
+          POSTGRES_DB: cadence_test
+          POSTGRES_USER: cadence
+          POSTGRES_PASSWORD: cadence-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cadence -d cadence_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
       redis:
         image: redis:7.4-alpine
         ports:
@@ -25,8 +38,11 @@ jobs:
     env:
       CADENCE_TEST_MODE: "true"
       CADENCE_DEV_MODE: "false"
-      CADENCE_DATABASE_URL: sqlite+aiosqlite:////tmp/cadence-ci.db
-      CADENCE_RUNTIME_LOCK_PATH: /tmp/cadence-ci.lock
+      CADENCE_DATABASE_URL: postgresql+psycopg://cadence:cadence-test-password@localhost:5432/cadence_test
+      CADENCE_TEST_DATABASE_URL: postgresql+psycopg://cadence:cadence-test-password@localhost:5432/cadence_test
+      CADENCE_MIGRATION_DATABASE_URL: postgresql+psycopg://cadence:cadence-test-password@localhost:5432/cadence_test
+      CADENCE_INTEGRATION_ADMIN_DATABASE_URL: postgresql+psycopg://cadence:cadence-test-password@localhost:5432/postgres
+      CADENCE_RUN_INTEGRATION: "true"
       CADENCE_BACKUP_DIR: /tmp/cadence-ci-backups
       CADENCE_TEST_REDIS_URL: redis://localhost:6379/15
     steps:
@@ -38,12 +54,46 @@ jobs:
           cache-dependency-path: cadence/requirements.txt
       - name: Install backend dependencies
         run: python -m pip install -r cadence/requirements.txt
+      - name: Install PostgreSQL client tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes curl ca-certificates gnupg
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl --fail --silent --show-error --location \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo tee /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc >/dev/null
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo \"$VERSION_CODENAME\")-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client-17
+      - name: Verify PostgreSQL client version
+        run: |
+          pg_dump --version
+          test "$(pg_dump --version | sed -E 's/.* ([0-9]+)\..*/\1/')" = "17"
       - name: Apply migrations
         run: alembic -c cadence/alembic.ini upgrade head
       - name: Verify migration state
         run: alembic -c cadence/alembic.ini check
+      - name: Check Python syntax
+        run: python -m compileall -q cadence
+      - name: Run API readiness smoke
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+
+          from cadence.app import app
+
+          with TestClient(app) as client:
+              response = client.get("/healthz")
+              assert response.status_code == 200, response.text
+              assert response.json() == {"status": "ok"}
+          PY
       - name: Run backend tests
+        env:
+          CADENCE_RUN_INTEGRATION: "false"
         run: python -m unittest discover -s cadence/tests -v
+      - name: Run PostgreSQL integration tests
+        run: python -m unittest discover -s cadence/tests/integration -v
 
   frontend:
     runs-on: ubuntu-latest
@@ -60,6 +110,17 @@ jobs:
       - name: Typecheck, test, and build
         working-directory: front
         run: npm run check
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+      - name: Build application image
+        run: docker build --tag cadence:ci .
 
   security:
     runs-on: ubuntu-latest

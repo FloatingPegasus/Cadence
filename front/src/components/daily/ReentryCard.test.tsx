@@ -49,18 +49,43 @@ describe("ReentryCard", () => {
       />,
     );
 
-    expect(
-      await screen.findByText(
-        "The migration and interaction tests stabilized.",
-      ),
-    ).toBeTruthy();
-    expect(screen.getByText("Finish the re-entry view")).toBeTruthy();
+    await screen.findByText(
+      "The migration and interaction tests stabilized.",
+    );
+    screen.getByText("Finish the re-entry view");
 
     await user.click(
       screen.getByRole("button", {
-        name: "Open Cadence context from Jul 21",
+        name: "Open Cadence from Jul 21",
       }),
     );
     expect(onSelectDate).toHaveBeenCalledWith("2026-07-21");
+  });
+
+  it("shows only sections with useful content", async () => {
+    vi.mocked(fetchDayReentry).mockResolvedValue({
+      date: "2026-07-23",
+      previous_trace: null,
+      open_threads: [
+        {
+          id: 1,
+          origin_date: "2026-07-23",
+          content: "Publish the release",
+        },
+      ],
+      contexts: [],
+    });
+
+    render(
+      <ReentryCard
+        date="2026-07-23"
+        refreshKey={0}
+        onSelectDate={vi.fn()}
+      />,
+    );
+
+    await screen.findByText("Publish the release");
+    expect(screen.queryByText("Earlier note")).toBeNull();
+    expect(screen.queryByText("Related areas")).toBeNull();
   });
 });

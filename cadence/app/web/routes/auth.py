@@ -462,10 +462,10 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username or email already taken",
         ) from error
-    await db.refresh(user)
+    recipient = (user.id, user.email, user.username)
 
     try:
-        await _send_user_verification(user)
+        await _send_user_verification(*recipient)
     except EmailDeliveryError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -476,17 +476,21 @@ async def register(
         )
 
     return {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
+        "id": recipient[0],
+        "username": recipient[2],
+        "email": recipient[1],
         "is_verified": False,
         "message": "Account created. Check your email to verify your address before logging in.",
     }
 
 
-async def _send_user_verification(user: User) -> None:
+async def _send_user_verification(
+    user_id: int,
+    email: str,
+    username: str,
+) -> None:
     verification_token = _create_token(
-        user.id,
+        user_id,
         purpose="verify_email",
         expires_delta=timedelta(hours=settings.verification_token_expire_hours),
     )
@@ -504,8 +508,8 @@ async def _send_user_verification(user: User) -> None:
     )
     await run_in_threadpool(
         send_verification_email,
-        to_email=user.email,
-        to_name=user.username,
+        to_email=email,
+        to_name=username,
         verification_url=verify_url,
     )
 
@@ -526,9 +530,13 @@ async def resend_verification(
     user = await db.scalar(
         select(User).where(func.lower(User.email) == body.email)
     )
+    recipient = None
     if user is not None and not user.is_verified:
+        recipient = (user.id, user.email, user.username)
+    await db.rollback()
+    if recipient is not None:
         try:
-            await _send_user_verification(user)
+            await _send_user_verification(*recipient)
         except EmailDeliveryError:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

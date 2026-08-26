@@ -1,6 +1,6 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   fetchSummary,
@@ -37,14 +37,6 @@ function summary(isStale: boolean): DailySummary {
 }
 
 describe("DailySummaryCard", () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
-  afterEach(() => {
-    cleanup();
-  });
-
   it("marks changed source material and clears the warning after save", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchSummary).mockResolvedValue(summary(true));
@@ -58,9 +50,7 @@ describe("DailySummaryCard", () => {
       />,
     );
 
-    expect(
-      await screen.findByText(/Source entries changed/),
-    ).toBeTruthy();
+    await screen.findByText(/Source entries changed/);
     await user.click(screen.getByRole("button", { name: "Save summary" }));
 
     await waitFor(() =>
@@ -94,9 +84,7 @@ describe("DailySummaryCard", () => {
       />,
     );
 
-    expect(
-      await screen.findByText(/Source entries changed/),
-    ).toBeTruthy();
+    await screen.findByText(/Source entries changed/);
     expect(fetchSummary).toHaveBeenCalledTimes(2);
   });
 
@@ -116,12 +104,8 @@ describe("DailySummaryCard", () => {
       />,
     );
 
-    expect(
-      await screen.findByText("Generated automatically"),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Generate summary" }),
-    ).toBeTruthy();
+    await screen.findByText("Generated automatically");
+    screen.getByRole("button", { name: "Generate summary" });
     expect(screen.queryByText(/NVIDIA|nvidia/)).toBeNull();
   });
 });

@@ -66,7 +66,7 @@ export default function WeeklyContinuity({
           role={error ? "alert" : undefined}
           className={error ? "text-xs text-red-400" : "text-sm text-neutral-600"}
         >
-          {error || (isLoading ? "Loading week…" : "No weekly continuity found.")}
+          {error || (isLoading ? "Loading week..." : "No weekly history found.")}
         </p>
       </div>
     );
@@ -110,7 +110,7 @@ export default function WeeklyContinuity({
               month: "short",
               day: "numeric",
             })}
-            {" – "}
+            {" to "}
             {formatDate(week.week_end, {
               month: "short",
               day: "numeric",
@@ -143,7 +143,7 @@ export default function WeeklyContinuity({
         <div className="border-y border-neutral-800">
           {activeDays.length === 0 ? (
             <p className="py-4 text-sm text-neutral-500">
-              No traces recorded for this week.
+              No activity recorded for this week.
             </p>
           ) : (
             activeDays.map((day) => (
@@ -170,7 +170,7 @@ export default function WeeklyContinuity({
                       .join(", ")} · `}
                   {day.summary_preview ||
                     day.note_preview ||
-                    "A trace exists for this day."}
+                    "Activity recorded for this day."}
                 </span>
                 <span className="text-xs tabular-nums text-neutral-600">
                   {day.habit_completions} done

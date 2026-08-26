@@ -1,5 +1,6 @@
 import unittest
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, patch
 
 if __package__:
     from .bootstrap import configure_test_environment
@@ -174,8 +175,12 @@ class SecurityRegressionTests(unittest.TestCase):
             _decode_token(non_hs256, purpose="access")
 
     def test_security_headers_are_present(self) -> None:
-        with TestClient(app) as client:
-            response = client.get("/healthz")
+        with patch(
+            "cadence.app._database_readiness_probe",
+            new=AsyncMock(return_value=None),
+        ):
+            with TestClient(app) as client:
+                response = client.get("/healthz")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(response.headers["X-Frame-Options"], "DENY")
@@ -184,6 +189,16 @@ class SecurityRegressionTests(unittest.TestCase):
             response.headers["Referrer-Policy"],
             "strict-origin-when-cross-origin",
         )
+
+    def test_healthz_reports_database_unavailable(self) -> None:
+        with patch(
+            "cadence.app._database_readiness_probe",
+            new=AsyncMock(side_effect=RuntimeError("database unavailable")),
+        ):
+            with TestClient(app) as client:
+                response = client.get("/healthz")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {"status": "unavailable"})
 
     def test_cors_allows_explicit_credentials_and_csrf_header(self) -> None:
         with TestClient(app) as client:

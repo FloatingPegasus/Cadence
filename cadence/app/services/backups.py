@@ -1,20 +1,41 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import os
 from pathlib import Path
-import sqlite3
+import re
+import shutil
+import subprocess
 import tempfile
 
 from sqlalchemy.engine import make_url
 
-from .runtime_lock import RuntimeLock, RuntimeLockError
 
 BACKUP_PREFIX = "cadence-backup-"
-BACKUP_SUFFIX = ".db"
+BACKUP_SUFFIX = ".dump"
 REQUIRED_TABLES = {
     "alembic_version",
     "users",
     "habits",
     "days",
+    "conversation_entries",
+    "daily_checkins",
+    "habit_logs",
+    "carry_forward_items",
+    "contexts",
+    "day_contexts",
+    "ai_models",
+    "summary_artifacts",
+    "weekly_reflections",
+    "continuity_embeddings",
+}
+REQUIRED_EXTENSIONS = {"vector", "pg_trgm"}
+REQUIRED_INDEXES = {
+    "ix_continuity_embeddings_embedding_hnsw",
+    "ix_days_daily_note_trgm",
+    "ix_conversation_entries_content_trgm",
+    "ix_summary_artifacts_content_trgm",
+    "ix_carry_forward_items_content_trgm",
+    "ix_weekly_reflections_content_trgm",
 }
 
 
@@ -30,77 +51,147 @@ class BackupResult:
 
 @dataclass(frozen=True)
 class RestoreResult:
-    path: Path
+    database_url: str
     safety_backup: Path
 
 
-def database_path_from_url(database_url: str) -> Path:
-    url = make_url(database_url)
-    if url.get_backend_name() != "sqlite" or not url.database:
-        raise BackupError("Database maintenance currently supports SQLite only")
-    return Path(url.database).expanduser().resolve()
+def database_url_for_maintenance(database_url: str) -> str:
+    """Return a libpq URL suitable for pg_dump and pg_restore.
+
+    The application may use a SQLAlchemy driver suffix such as ``+psycopg``.
+    libpq utilities accept the same URL without that suffix.
+    Query parameters, including TLS settings, are retained.
+    """
+
+    try:
+        url = make_url(database_url.strip())
+    except Exception as error:
+        raise BackupError("CADENCE_DATABASE_URL is not a valid database URL") from error
+    if url.get_backend_name() != "postgresql" or not url.host or not url.database:
+        raise BackupError("Database maintenance requires a PostgreSQL URL")
+    try:
+        url.port
+    except ValueError as error:
+        raise BackupError("Database maintenance requires a valid PostgreSQL port") from error
+    return url.set(drivername="postgresql").render_as_string(
+        hide_password=False
+    )
+
+
+def _libpq_connection(database_url: str) -> tuple[str, dict[str, str]]:
+    normalized = database_url_for_maintenance(database_url)
+    url = make_url(normalized)
+    environment = os.environ.copy()
+    for variable in (
+        "PGHOST",
+        "PGPORT",
+        "PGDATABASE",
+        "PGUSER",
+        "PGPASSWORD",
+        "CADENCE_DATABASE_URL",
+        "CADENCE_MIGRATION_DATABASE_URL",
+    ):
+        environment.pop(variable, None)
+    if url.host:
+        environment["PGHOST"] = url.host
+    if url.port:
+        environment["PGPORT"] = str(url.port)
+    if url.database:
+        environment["PGDATABASE"] = url.database
+    if url.username is not None:
+        environment["PGUSER"] = url.username
+    if url.password is not None:
+        environment["PGPASSWORD"] = url.password
+    credential_free_url = url._replace(username=None, password=None)
+    return credential_free_url.render_as_string(hide_password=False), environment
+
+
+def _run_command(
+    command: list[str],
+    operation: str,
+    *,
+    environment: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
+    except FileNotFoundError as error:
+        raise BackupError(
+            f"{command[0]} is required for database {operation}"
+        ) from error
+    except OSError as error:
+        raise BackupError(
+            f"Could not run {command[0]} for database {operation}"
+        ) from error
+    if result.returncode != 0:
+        raise BackupError(
+            f"{command[0]} failed during database {operation} "
+            f"(exit code {result.returncode})"
+        )
+    return result
+
+
+def _backup_contains_table(output: str, table_name: str) -> bool:
+    return any(
+        "TABLE" in line
+        and re.search(rf"(?:^|\s){re.escape(table_name)}(?:\s|$|;)", line)
+        for line in output.splitlines()
+    )
+
+
+def _backup_contains_object(output: str, object_type: str, object_name: str) -> bool:
+    return any(
+        object_type in line
+        and re.search(rf"(?:^|\s){re.escape(object_name)}(?:\s|$|;)", line)
+        for line in output.splitlines()
+    )
 
 
 def verify_database(path: Path) -> None:
+    """Verify a custom-format pg_dump and its Cadence schema entries."""
+
     resolved = path.expanduser().resolve()
     if not resolved.is_file():
-        raise BackupError(f"Database file does not exist: {resolved}")
+        raise BackupError(f"Backup file does not exist: {resolved}")
+    if resolved.stat().st_size == 0:
+        raise BackupError(f"Backup file is empty: {resolved}")
 
-    try:
-        connection = sqlite3.connect(
-            f"{resolved.as_uri()}?mode=ro",
-            uri=True,
-            timeout=5,
-        )
-        try:
-            integrity = [
-                row[0]
-                for row in connection.execute("PRAGMA integrity_check")
-            ]
-            if integrity != ["ok"]:
-                raise BackupError(
-                    f"SQLite integrity check failed: {'; '.join(integrity)}"
-                )
-            tables = {
-                row[0]
-                for row in connection.execute(
-                    "SELECT name FROM sqlite_master WHERE type = 'table'"
-                )
-            }
-            missing = sorted(REQUIRED_TABLES - tables)
-            if missing:
-                raise BackupError(
-                    "Not a compatible Cadence database; missing tables: "
-                    + ", ".join(missing)
-                )
-        finally:
-            connection.close()
-    except sqlite3.DatabaseError as error:
-        raise BackupError(f"Could not verify SQLite database: {error}") from error
-
-
-def schema_version(path: Path) -> str:
-    verify_database(path)
-    resolved = path.expanduser().resolve()
-    try:
-        connection = sqlite3.connect(
-            f"{resolved.as_uri()}?mode=ro",
-            uri=True,
-            timeout=5,
-        )
-        try:
-            row = connection.execute(
-                "SELECT version_num FROM alembic_version"
-            ).fetchone()
-        finally:
-            connection.close()
-    except sqlite3.DatabaseError as error:
+    result = _run_command(
+        ["pg_restore", "--list", str(resolved)],
+        "backup verification",
+    )
+    missing_tables = sorted(
+        table
+        for table in REQUIRED_TABLES
+        if not _backup_contains_table(result.stdout, table)
+    )
+    missing_extensions = sorted(
+        extension
+        for extension in REQUIRED_EXTENSIONS
+        if not _backup_contains_object(result.stdout, "EXTENSION", extension)
+    )
+    missing_indexes = sorted(
+        index
+        for index in REQUIRED_INDEXES
+        if not _backup_contains_object(result.stdout, "INDEX", index)
+    )
+    if missing_tables or missing_extensions or missing_indexes:
+        missing_objects = []
+        if missing_tables:
+            missing_objects.append("tables: " + ", ".join(missing_tables))
+        if missing_extensions:
+            missing_objects.append("extensions: " + ", ".join(missing_extensions))
+        if missing_indexes:
+            missing_objects.append("indexes: " + ", ".join(missing_indexes))
         raise BackupError(
-            f"Could not read database schema version: {error}"
-        ) from error
-    if row is None or not row[0]:
-        raise BackupError("Database has no Alembic schema version")
-    return str(row[0])
+            "Not a compatible Cadence backup; missing "
+            + "; ".join(missing_objects)
+        )
 
 
 def prune_backups(backup_dir: Path, keep: int) -> tuple[Path, ...]:
@@ -109,9 +200,7 @@ def prune_backups(backup_dir: Path, keep: int) -> tuple[Path, ...]:
     candidates = sorted(
         (
             path
-            for path in backup_dir.glob(
-                f"{BACKUP_PREFIX}*{BACKUP_SUFFIX}"
-            )
+            for path in backup_dir.glob(f"{BACKUP_PREFIX}*{BACKUP_SUFFIX}")
             if path.is_file()
         ),
         reverse=True,
@@ -123,22 +212,19 @@ def prune_backups(backup_dir: Path, keep: int) -> tuple[Path, ...]:
 
 
 def create_backup(
-    database_path: Path,
+    database_url: str,
     backup_dir: Path,
     keep: int = 10,
 ) -> BackupResult:
-    source_path = database_path.expanduser().resolve()
-    destination_dir = backup_dir.expanduser().resolve()
-    if not source_path.is_file():
-        raise BackupError(f"Source database does not exist: {source_path}")
+    """Create and verify an atomic custom-format PostgreSQL snapshot."""
 
+    libpq_url, libpq_environment = _libpq_connection(database_url)
+    destination_dir = backup_dir.expanduser().resolve()
     destination_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     final_path = destination_dir / (
         f"{BACKUP_PREFIX}{timestamp}{BACKUP_SUFFIX}"
     )
-    if final_path == source_path:
-        raise BackupError("Backup destination cannot replace the live database")
 
     temporary = tempfile.NamedTemporaryFile(
         prefix=".cadence-backup-",
@@ -150,17 +236,20 @@ def create_backup(
     temporary.close()
 
     try:
-        source = sqlite3.connect(
-            f"{source_path.as_uri()}?mode=ro",
-            uri=True,
-            timeout=10,
+        _run_command(
+            [
+                "pg_dump",
+                "--format=custom",
+                "--no-owner",
+                "--no-acl",
+                "--file",
+                str(temporary_path),
+                "--dbname",
+                libpq_url,
+            ],
+            "backup",
+            environment=libpq_environment,
         )
-        destination = sqlite3.connect(temporary_path)
-        try:
-            source.backup(destination)
-        finally:
-            destination.close()
-            source.close()
         verify_database(temporary_path)
         temporary_path.replace(final_path)
     except Exception:
@@ -171,90 +260,76 @@ def create_backup(
     return BackupResult(path=final_path, removed=removed)
 
 
-def _staged_copy(source_path: Path, target_dir: Path) -> Path:
-    temporary = tempfile.NamedTemporaryFile(
-        prefix=".cadence-restore-",
-        suffix=".tmp",
-        dir=target_dir,
-        delete=False,
-    )
-    temporary_path = Path(temporary.name)
-    temporary.close()
-    try:
-        source = sqlite3.connect(
-            f"{source_path.as_uri()}?mode=ro",
-            uri=True,
-            timeout=10,
-        )
-        destination = sqlite3.connect(temporary_path)
-        try:
-            source.backup(destination)
-        finally:
-            destination.close()
-            source.close()
-        verify_database(temporary_path)
-        return temporary_path
-    except Exception:
-        temporary_path.unlink(missing_ok=True)
-        raise
-
-
-def _install_staged_database(
-    staged_path: Path,
-    target_path: Path,
+def _restore_backup(
+    backup_path: Path,
+    database_url: str,
+    operation: str,
+    environment: dict[str, str],
 ) -> None:
-    for suffix in ("-wal", "-shm"):
-        target_path.with_name(target_path.name + suffix).unlink(
-            missing_ok=True
-        )
-    staged_path.replace(target_path)
+    _run_command(
+        [
+            "pg_restore",
+            "--clean",
+            "--if-exists",
+            "--exit-on-error",
+            "--single-transaction",
+            "--no-owner",
+            "--no-acl",
+            "--dbname",
+            database_url,
+            str(backup_path),
+        ],
+        operation,
+        environment=environment,
+    )
 
 
 def restore_database(
     backup_path: Path,
-    database_path: Path,
+    database_url: str,
     backup_dir: Path,
-    runtime_lock_path: Path,
     keep: int = 10,
 ) -> RestoreResult:
+    """Restore a verified snapshot after creating a pre-restore safety dump.
+
+    Every running application instance must be stopped before this command is
+    used. PostgreSQL coordinates concurrent clients; a local process lock would
+    not coordinate instances deployed on separate machines.
+    """
+
     source_path = backup_path.expanduser().resolve()
-    target_path = database_path.expanduser().resolve()
-    if source_path == target_path:
-        raise BackupError("Restore source cannot be the live database")
     verify_database(source_path)
-    source_version = schema_version(source_path)
+    libpq_url, libpq_environment = _libpq_connection(database_url)
+    destination_dir = backup_dir.expanduser().resolve()
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    staged = tempfile.NamedTemporaryFile(
+        prefix=".cadence-restore-",
+        suffix=".dump",
+        dir=destination_dir,
+        delete=False,
+    )
+    staged_path = Path(staged.name)
+    staged.close()
 
     try:
-        runtime_lock = RuntimeLock(runtime_lock_path)
-        runtime_lock.acquire()
-    except RuntimeLockError as error:
-        raise BackupError(str(error)) from error
-
-    safety: BackupResult | None = None
-    staged_path: Path | None = None
-    try:
-        verify_database(target_path)
-        target_version = schema_version(target_path)
-        if source_version != target_version:
-            raise BackupError(
-                "Backup schema version does not match the live database "
-                f"({source_version} != {target_version})"
-            )
-        safety = create_backup(target_path, backup_dir, keep=keep)
-        staged_path = _staged_copy(source_path, target_path.parent)
+        shutil.copyfile(source_path, staged_path)
+        safety = create_backup(database_url, backup_dir, keep=keep)
         try:
-            _install_staged_database(staged_path, target_path)
-            staged_path = None
-            verify_database(target_path)
-        except Exception as restore_error:
-            if staged_path is not None:
-                staged_path.unlink(missing_ok=True)
-                staged_path = None
+            _restore_backup(
+                staged_path,
+                libpq_url,
+                "restore",
+                libpq_environment,
+            )
+        except BackupError as restore_error:
             try:
-                rollback = _staged_copy(safety.path, target_path.parent)
-                _install_staged_database(rollback, target_path)
-                verify_database(target_path)
-            except Exception as rollback_error:
+                _restore_backup(
+                    safety.path,
+                    libpq_url,
+                    "automatic rollback",
+                    libpq_environment,
+                )
+            except BackupError as rollback_error:
                 raise BackupError(
                     "Restore and automatic rollback both failed. "
                     f"Safety backup: {safety.path}"
@@ -263,13 +338,9 @@ def restore_database(
                 "Restore failed; the pre-restore safety backup was restored"
             ) from restore_error
     finally:
-        if staged_path is not None:
-            staged_path.unlink(missing_ok=True)
-        runtime_lock.release()
+        staged_path.unlink(missing_ok=True)
 
-    if safety is None:
-        raise BackupError("Restore did not create a safety backup")
     return RestoreResult(
-        path=target_path,
+        database_url=libpq_url,
         safety_backup=safety.path,
     )

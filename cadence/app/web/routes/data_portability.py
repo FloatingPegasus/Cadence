@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...domains.data_portability import service
 from ...extensions import get_db
 from ...persistence.models.user import User
+from ...services import embeddings as embedding_service
 from .auth import get_current_user
 
 router = APIRouter(tags=["data portability"])
@@ -44,8 +45,11 @@ async def update_ai_preferences(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    redaction_changed = user.ai_redaction_enabled != body.redaction_enabled
     user.ai_processing_consent = body.processing_consent
     user.ai_redaction_enabled = body.redaction_enabled
+    if not body.processing_consent or redaction_changed:
+        await embedding_service.purge_user_embeddings(db, user.id)
     await db.commit()
     await db.refresh(user)
     return _ai_preferences(user)

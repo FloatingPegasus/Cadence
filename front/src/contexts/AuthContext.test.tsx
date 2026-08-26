@@ -1,6 +1,6 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { request } from "../api";
 import { AuthProvider, useAuth } from "./AuthContext";
@@ -35,11 +35,6 @@ function LogoutProbe() {
 }
 
 describe("AuthProvider session restore", () => {
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-  });
-
   it("keeps the login view behind an initial loading state", async () => {
     let resolveSession: (user: { username: string }) => void = () => {};
     mockedRequest.mockReturnValueOnce(
@@ -54,12 +49,12 @@ describe("AuthProvider session restore", () => {
       </AuthProvider>,
     );
 
-    expect(screen.getByText("loading")).toBeTruthy();
-    expect(screen.getByText("anonymous")).toBeTruthy();
+    screen.getByText("loading");
+    screen.getByText("anonymous");
 
     resolveSession({ username: "alpha" });
-    await waitFor(() => expect(screen.getByText("ready")).toBeTruthy());
-    expect(screen.getByText("alpha")).toBeTruthy();
+    await waitFor(() => screen.getByText("ready"));
+    screen.getByText("alpha");
   });
 
   it("keeps the user on logout failure", async () => {
@@ -70,12 +65,12 @@ describe("AuthProvider session restore", () => {
         <LogoutProbe />
       </AuthProvider>,
     );
-    await waitFor(() => expect(screen.getByText("alpha")).toBeTruthy());
+    await waitFor(() => screen.getByText("alpha"));
 
     mockedRequest.mockRejectedValueOnce(new Error("logout failed"));
     await user.click(screen.getByRole("button", { name: "log out" }));
 
-    expect(screen.getByText("alpha")).toBeTruthy();
+    screen.getByText("alpha");
   });
 
   it("clears the user only after logout succeeds", async () => {
@@ -86,11 +81,11 @@ describe("AuthProvider session restore", () => {
         <LogoutProbe />
       </AuthProvider>,
     );
-    await waitFor(() => expect(screen.getByText("alpha")).toBeTruthy());
+    await waitFor(() => screen.getByText("alpha"));
 
     mockedRequest.mockResolvedValueOnce({ message: "Logged out" });
     await user.click(screen.getByRole("button", { name: "log out" }));
 
-    await waitFor(() => expect(screen.getByText("anonymous")).toBeTruthy());
+    await waitFor(() => screen.getByText("anonymous"));
   });
 });
