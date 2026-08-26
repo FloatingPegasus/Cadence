@@ -7,3 +7,105 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .cadence-enter {
+    animation: cadence-enter 320ms ease both;
+  }
+
+  .cadence-rain {
+    animation: cadence-rain 1.4s linear infinite;
+  }
+
+  .cadence-rain-delay {
+    animation-delay: 0.5s;
+  }
+
+  .cadence-steam {
+    animation: cadence-steam 2.4s ease-in-out infinite;
+    transform-origin: 0 28px;
+  }
+
+  .cadence-tail {
+    transform-origin: 72px 30px;
+    animation: cadence-tail 2.8s ease-in-out infinite;
+  }
+
+  .cadence-blink {
+    animation: cadence-blink 5s steps(1, end) infinite;
+  }
+
+  .cadence-blink-slow {
+    animation-duration: 7s;
+    animation-delay: 1.4s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cadence-enter,
+  .cadence-rain,
+  .cadence-steam,
+  .cadence-tail,
+  .cadence-blink {
+    animation: none;
+  }
+}
+
+@keyframes cadence-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes cadence-rain {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+
+@keyframes cadence-steam {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes cadence-tail {
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes cadence-blink {
+  0%,
+  92%,
+  100% {
+    opacity: 1;
+  }
+  94%,
+  96% {
+    opacity: 0.15;
+  }
+}

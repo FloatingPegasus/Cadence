@@ -8,6 +8,7 @@ from ...persistence.models.day import Day
 from ...persistence.models.daily_checkin import DailyCheckin
 from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.carry_forward_item import CarryForwardItem
+from ...persistence.models.hour_log import HourLog
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...persistence.models.day_context import DayContext
@@ -89,6 +90,12 @@ async def list_recent_days(
             select(ConversationEntry.id).where(
                 ConversationEntry.day_id == Day.id,
                 func.length(func.trim(ConversationEntry.content)) > 0,
+            )
+        ),
+        exists(
+            select(HourLog.id).where(
+                HourLog.day_id == Day.id,
+                func.length(func.trim(HourLog.content)) > 0,
             )
         ),
         exists(

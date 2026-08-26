@@ -3,6 +3,7 @@ import AIPrivacySettings from "./AIPrivacySettings";
 import ContextManager from "./ContextManager";
 import DataExportButton from "./DataExportButton";
 import DevAIModels from "./DevAIModels";
+import GoalsSettings from "./GoalsSettings";
 import HabitManager from "./HabitManager";
 
 interface SettingsPanelProps {
@@ -23,6 +24,7 @@ export default function SettingsPanel({
   return (
     <div>
       <h1 className="mb-6 text-base font-medium text-neutral-100">Settings</h1>
+      <GoalsSettings />
       <HabitManager habits={habits} onChanged={onHabitsChanged} />
       <ContextManager contexts={contexts} onChanged={onContextsChanged} />
       <AIPrivacySettings />

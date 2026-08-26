@@ -25,6 +25,8 @@ vi.mock("./MonthNav", () => ({ default: () => <div>Month navigation</div> }));
 vi.mock("./DisciplineContinuity", () => ({ default: () => <div>Discipline detail</div> }));
 vi.mock("./ContinuityExplorer", () => ({ default: () => <div>Continuity workspace</div> }));
 vi.mock("./SettingsPanel", () => ({ default: () => <div>Settings workspace</div> }));
+vi.mock("./HoursPage", () => ({ default: () => <div>Hours workspace</div> }));
+vi.mock("./FocusPage", () => ({ default: () => <div>Focus workspace</div> }));
 
 describe("DashboardPage progressive disclosure", () => {
   it("loads one workspace at a time and defers calendar data", async () => {
@@ -47,12 +49,14 @@ describe("DashboardPage progressive disclosure", () => {
       verifyEmail: vi.fn(),
       logout: vi.fn(),
     });
-    vi.mocked(fetchHabits).mockResolvedValue([]);
+    vi.mocked(fetchHabits).mockResolvedValue([
+      { id: 1, name: "Read", is_archived: false },
+    ]);
     vi.mocked(fetchContexts).mockResolvedValue([]);
     vi.mocked(fetchMonthData).mockResolvedValue({
       days: [1],
       month: "2026-07",
-      habits: [],
+      habits: [{ id: 1, name: "Read", is_archived: false }],
       lookup: {},
     });
 
@@ -61,6 +65,10 @@ describe("DashboardPage progressive disclosure", () => {
     expect(screen.queryByText("Continuity workspace")).toBeNull();
     expect(screen.queryByText("Settings workspace")).toBeNull();
     expect(fetchMonthData).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Hours" }));
+    screen.getByText("Hours workspace");
+    expect(screen.queryByText("Daily workspace")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Calendar" }));
     await waitFor(() => expect(fetchMonthData).toHaveBeenCalledOnce());

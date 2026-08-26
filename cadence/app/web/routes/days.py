@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...domains.days import service as days_service
 from ...domains.habits import service as habits_service
+from ...domains.hours import service as hours_service
 from ...domains.summaries import service as summaries_service
 from ...domains.carry_forward import service as carry_forward_service
 from ...domains.continuity import service as continuity_service
@@ -56,6 +57,11 @@ class CarryForwardCreate(BaseModel):
 
 class CarryForwardStatusUpdate(BaseModel):
     status: Literal["open", "completed", "released"]
+
+
+class HourLogUpdate(BaseModel):
+    hour: int = Field(ge=0, le=23)
+    content: str = Field(max_length=2_000)
 
 
 @router.get("/days")
@@ -283,3 +289,28 @@ async def update_carry_forward(
         )
 
 
+@router.get("/days/{target_date}/hours")
+async def list_hours(
+    target_date: date,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await hours_service.list_hours(db, user.id, target_date)
+
+
+@router.put("/days/{target_date}/hours")
+async def upsert_hour(
+    target_date: date,
+    body: HourLogUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        return await hours_service.upsert_hour(
+            db, user.id, target_date, body.hour, body.content
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error

@@ -11,7 +11,6 @@ import DailyCaptureCard from "./daily/DailyCaptureCard";
 import DailyHabitsCard from "./daily/DailyHabitsCard";
 import DayClosureCard from "./daily/DayClosureCard";
 import DailySummaryCard from "./daily/DailySummaryCard";
-import QuickThreadCard from "./daily/QuickThreadCard";
 import ReentryCard from "./daily/ReentryCard";
 
 interface DailyPanelProps {
@@ -34,7 +33,6 @@ export default function DailyPanel({
   onHabitsChanged,
 }: DailyPanelProps) {
   const { user } = useAuth();
-  const [view, setView] = useState<"log" | "followups" | "summary">("log");
   const [summaryStatus, setSummaryStatus] = useState<string | null>(null);
 
   function sourceChanged(hasSource = true) {
@@ -54,84 +52,42 @@ export default function DailyPanel({
       });
   }
 
-  const sections = [
-    { id: "log" as const, label: "Today" },
-    { id: "followups" as const, label: "Follow-ups" },
-    { id: "summary" as const, label: "Summary" },
-  ];
-
   return (
-    <div className="mt-6">
-      <div
-        aria-label="Daily sections"
-        className="flex gap-5 border-b border-neutral-800"
-      >
-        {sections.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            aria-pressed={view === item.id}
-            onClick={() => setView(item.id)}
-            className={
-              view === item.id
-                ? "border-b border-violet-400 px-0.5 py-2 text-xs capitalize text-neutral-200"
-                : "border-b border-transparent px-0.5 py-2 text-xs capitalize text-neutral-600 transition-colors duration-150 hover:text-neutral-300"
-            }
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+    <div className="mt-6 cadence-enter">
       {summaryStatus && (
-        <p role="status" className="mt-3 text-xs text-neutral-500">
+        <p role="status" className="mb-3 text-xs text-neutral-500">
           {summaryStatus}
         </p>
       )}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        {view === "log" && (
-          <>
-            <ReentryCard
-              date={date}
-              refreshKey={refreshKey}
-              onSelectDate={onSelectDate}
-            />
-            <DailyHabitsCard
-              date={date}
-              habits={habits}
-              refreshKey={refreshKey}
-              onHabitsChanged={onHabitsChanged}
-              onSourceChanged={() => sourceChanged(true)}
-            />
-            <DailyCaptureCard
-              date={date}
-              contexts={contexts}
-              onChanged={sourceChanged}
-            />
-            <QuickThreadCard
-              date={date}
-              onChanged={() => sourceChanged(true)}
-            />
-          </>
-        )}
-        {view === "followups" && (
-          <>
-            <CarryForwardCard date={date} onChanged={onChanged} />
-          </>
-        )}
-        {view === "summary" && (
-          <>
-            <DailySummaryCard
-              date={date}
-              refreshKey={refreshKey}
-              onChanged={onChanged}
-            />
-            <DayClosureCard
-              date={date}
-              refreshKey={refreshKey}
-              onChanged={onChanged}
-            />
-          </>
-        )}
+      <div className="grid gap-6">
+        <ReentryCard
+          date={date}
+          refreshKey={refreshKey}
+          onSelectDate={onSelectDate}
+        />
+        <DailyHabitsCard
+          date={date}
+          habits={habits}
+          refreshKey={refreshKey}
+          onHabitsChanged={onHabitsChanged}
+          onSourceChanged={() => sourceChanged(true)}
+        />
+        <DailyCaptureCard
+          date={date}
+          contexts={contexts}
+          onChanged={sourceChanged}
+        />
+        <CarryForwardCard date={date} onChanged={onChanged} />
+        <DailySummaryCard
+          date={date}
+          refreshKey={refreshKey}
+          onChanged={onChanged}
+        />
+        <DayClosureCard
+          date={date}
+          refreshKey={refreshKey}
+          onChanged={onChanged}
+        />
       </div>
     </div>
   );

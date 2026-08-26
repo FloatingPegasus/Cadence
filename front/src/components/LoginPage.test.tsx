@@ -29,6 +29,7 @@ describe("LoginPage verification recovery", () => {
     });
 
     render(<LoginPage />);
+    screen.getByText("Habits, an hourly log, and a quiet focus room.");
     await user.click(
       screen.getByRole("button", {
         name: "Resend verification email",

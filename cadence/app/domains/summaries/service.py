@@ -9,16 +9,18 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from ..days.service import get_or_create_day
 from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.daily_checkin import DailyCheckin
+from ...persistence.models.hour_log import HourLog
 from ...persistence.models.habit import Habit
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.day import Day
 from ...persistence.models.summary_artifact import SummaryArtifact
+from ...persistence.models.user_goal import UserGoal
 from ...services import ai as ai_service
 from ...services import embeddings as embedding_service
 from ...services.continuity_lock import acquire_continuity_lock
 
 
-PROMPT_VERSION = "daily-summary-v1"
+PROMPT_VERSION = "daily-summary-v2"
 SOURCE_CHANGED_MESSAGE = "Source changed while generating; please retry."
 
 
@@ -88,6 +90,16 @@ async def build_source_snapshot(
         .where(HabitLog.day_id == day.id)
         .order_by(Habit.name)
     )
+    hour_rows = await db.scalars(
+        select(HourLog)
+        .where(HourLog.day_id == day.id)
+        .order_by(HourLog.hour)
+    )
+    goal_rows = await db.scalars(
+        select(UserGoal)
+        .where(UserGoal.user_id == user_id)
+        .order_by(UserGoal.sort_order, UserGoal.id)
+    )
     snapshot = {
         "date": day.date.isoformat(),
         "daily_note": (day.daily_note or "")[:20_000],
@@ -106,6 +118,15 @@ async def build_source_snapshot(
             )
         },
         "completed_habits": list(habit_result.scalars().all()),
+        "hours": [
+            {"hour": row.hour, "content": row.content[:1_000]}
+            for row in hour_rows
+            if row.content.strip()
+        ],
+        "goals": [
+            {"kind": goal.kind, "title": goal.title}
+            for goal in goal_rows
+        ],
         "conversation": [
             {"role": entry.role, "content": entry.content[:4_000]}
             for entry in entries
@@ -251,10 +272,12 @@ async def generate_daily_summary(
             {
                 "role": "system",
                 "content": (
-                    "Create a concise, non-judgmental continuity summary. "
-                    "Preserve uncertainty. Cover what moved, what felt "
-                    "difficult, and what may deserve carrying forward. "
-                    "Do not invent facts or diagnose the user."
+                    "Write a concise daily review from the supplied record. "
+                    "Use the hour log to notice where time went. Mention "
+                    "completed habits only if listed. If goals are present, "
+                    "relate the day to them without inventing progress. "
+                    "End with two to four concrete suggestions for tomorrow. "
+                    "Do not invent hours, diagnose the user, or add a title."
                 ),
             },
             {

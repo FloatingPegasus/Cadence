@@ -56,7 +56,14 @@ export async function request<T = unknown>(
     }
     throw new Error(detail);
   }
-  return res.json() as Promise<T>;
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  const payload = await res.text();
+  if (!payload) {
+    return undefined as T;
+  }
+  return JSON.parse(payload) as T;
 }
 
 export interface Habit {
@@ -67,6 +74,22 @@ export interface Habit {
 
 export interface DailyHabit extends Habit {
   completed: boolean;
+}
+
+export interface HourSlot {
+  hour: number;
+  content: string;
+}
+
+export type GoalKind = "ultimate" | "secondary" | "short_term" | "long_term";
+
+export interface UserGoal {
+  id: number;
+  kind: GoalKind;
+  title: string;
+  notes: string;
+  sort_order: number;
+  updated_at: string | null;
 }
 
 export type ContinuityContextKind = "project" | "learning" | "area";
@@ -595,6 +618,52 @@ export function fetchDay(date: string): Promise<DayDetail> {
 
 export function fetchDayHabits(date: string): Promise<DailyHabit[]> {
   return request<DailyHabit[]>(`/api/days/${date}/habits`);
+}
+
+export function fetchHourLog(date: string): Promise<HourSlot[]> {
+  return request<HourSlot[]>(`/api/days/${date}/hours`);
+}
+
+export function upsertHourLog(
+  date: string,
+  hour: number,
+  content: string,
+): Promise<HourSlot> {
+  return request<HourSlot>(`/api/days/${date}/hours`, {
+    method: "PUT",
+    body: JSON.stringify({ hour, content }),
+  });
+}
+
+export function fetchGoals(): Promise<UserGoal[]> {
+  return request<UserGoal[]>("/api/goals");
+}
+
+export function createGoal(
+  kind: GoalKind,
+  title: string,
+  notes = "",
+): Promise<UserGoal> {
+  return request<UserGoal>("/api/goals", {
+    method: "POST",
+    body: JSON.stringify({ kind, title, notes }),
+  });
+}
+
+export function updateGoal(
+  goalId: number,
+  patch: Partial<Pick<UserGoal, "kind" | "title" | "notes">>,
+): Promise<UserGoal> {
+  return request<UserGoal>(`/api/goals/${goalId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export function deleteGoal(goalId: number): Promise<void> {
+  return request<void>(`/api/goals/${goalId}`, {
+    method: "DELETE",
+  });
 }
 
 export function fetchDayReentry(date: string): Promise<DailyReentry> {

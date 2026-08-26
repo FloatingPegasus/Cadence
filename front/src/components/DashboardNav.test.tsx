@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import DashboardNav from "./DashboardNav";
 
 describe("DashboardNav", () => {
-  it("moves through the four focused workspaces by keyboard", async () => {
+  it("moves through the six workspaces by keyboard", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     const { rerender } = render(
@@ -15,7 +15,7 @@ describe("DashboardNav", () => {
     const today = screen.getByRole("button", { name: "Today" });
     today.focus();
     await user.keyboard("{ArrowRight}");
-    expect(onChange).toHaveBeenCalledWith("calendar");
+    expect(onChange).toHaveBeenCalledWith("hours");
 
     rerender(<DashboardNav view="settings" onChange={onChange} />);
     const settings = screen.getByRole("button", { name: "Settings" });

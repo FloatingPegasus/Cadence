@@ -1,6 +1,12 @@
 import type { KeyboardEvent } from "react";
 
-export type DashboardView = "today" | "calendar" | "continuity" | "settings";
+export type DashboardView =
+  | "today"
+  | "hours"
+  | "focus"
+  | "calendar"
+  | "continuity"
+  | "settings";
 
 interface DashboardNavProps {
   view: DashboardView;
@@ -9,6 +15,8 @@ interface DashboardNavProps {
 
 const views: Array<{ id: DashboardView; label: string }> = [
   { id: "today", label: "Today" },
+  { id: "hours", label: "Hours" },
+  { id: "focus", label: "Focus" },
   { id: "calendar", label: "Calendar" },
   { id: "continuity", label: "History" },
   { id: "settings", label: "Settings" },
@@ -49,8 +57,8 @@ export default function DashboardNav({
             onKeyDown={(event) => handleKey(event, item.id)}
             className={
               view === item.id
-                ? "border-b border-violet-400 px-0.5 py-3 text-sm text-neutral-100"
-                : "border-b border-transparent px-0.5 py-3 text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+                ? "border-b border-violet-400 px-0.5 py-3 text-sm text-neutral-100 transition-[color,border-color] duration-200"
+                : "border-b border-transparent px-0.5 py-3 text-sm text-neutral-500 transition-[color,border-color] duration-200 hover:text-neutral-200"
             }
           >
             {item.label}

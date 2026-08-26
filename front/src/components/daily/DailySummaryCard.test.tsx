@@ -51,7 +51,7 @@ describe("DailySummaryCard", () => {
     );
 
     await screen.findByText(/Source entries changed/);
-    await user.click(screen.getByRole("button", { name: "Save summary" }));
+    await user.click(screen.getByRole("button", { name: "Save review" }));
 
     await waitFor(() =>
       expect(updateSummary).toHaveBeenCalledWith(
@@ -105,7 +105,7 @@ describe("DailySummaryCard", () => {
     );
 
     await screen.findByText("Generated automatically");
-    screen.getByRole("button", { name: "Generate summary" });
+    screen.getByRole("button", { name: "Generate review" });
     expect(screen.queryByText(/NVIDIA|nvidia/)).toBeNull();
   });
 });

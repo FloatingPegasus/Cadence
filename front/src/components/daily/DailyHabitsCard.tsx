@@ -107,7 +107,7 @@ export default function DailyHabitsCard({
           {dailyHabits.map((habit) => (
             <label
               key={habit.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2.5 text-sm text-neutral-300"
+              className="flex items-center justify-between gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-3 text-sm text-neutral-300 transition-colors duration-200 hover:border-neutral-700"
             >
               <span>{habit.name}</span>
               <input
@@ -115,14 +115,14 @@ export default function DailyHabitsCard({
                 checked={habit.completed}
                 onChange={() => toggle(habit)}
                 aria-label={`Mark ${habit.name} complete for ${date}`}
-                className="h-4 w-4 accent-violet-500"
+                className="h-5 w-5 accent-violet-500 transition-transform duration-200 checked:scale-110"
               />
             </label>
           ))}
         </div>
       ) : (
         <p className="mt-4 text-sm leading-6 text-neutral-500">
-          Add your first daily habit.
+          Add a habit, then check it off.
         </p>
       )}
 

@@ -96,7 +96,7 @@ export default function DailySummaryCard({
           id="daily-summary-title"
           className="text-sm font-medium text-neutral-200"
         >
-          Summary
+          Daily review
         </h2>
         <div className="flex gap-2">
           <button
@@ -107,15 +107,15 @@ export default function DailySummaryCard({
             }
             className="rounded-lg border border-violet-500/50 bg-violet-500/5 px-3 py-1.5 text-xs text-violet-300 transition-colors duration-150 hover:bg-violet-500/10 disabled:opacity-40"
           >
-            Generate summary
+            Generate review
           </button>
           <button
             type="button"
             onClick={save}
             disabled={isLoading || isBusy}
-            className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:opacity-40"
+            className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-200 hover:bg-neutral-700 disabled:opacity-40"
           >
-            Save summary
+            Save review
           </button>
         </div>
       </div>
@@ -138,7 +138,7 @@ export default function DailySummaryCard({
         value={content}
         disabled={isLoading}
         onChange={(event) => setContent(event.target.value)}
-        placeholder={isLoading ? "Loading summary…" : "Your summary will appear here."}
+        placeholder={isLoading ? "Loading review…" : "What today suggests for tomorrow."}
         className="mt-4 min-h-32 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 disabled:opacity-60"
       />
 

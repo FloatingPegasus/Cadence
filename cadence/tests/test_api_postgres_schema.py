@@ -102,6 +102,8 @@ class CadencePostgresSchemaApiTests(ApiTestCase):
         self.assertIn("ix_summary_artifacts_content_trgm", indexes)
         self.assertIn("ix_carry_forward_items_content_trgm", indexes)
         self.assertIn("ix_weekly_reflections_content_trgm", indexes)
+        self.assertIn("ix_hour_logs_day_id", indexes)
+        self.assertIn("ix_user_goals_user_id", indexes)
         normalized_index_definition = index_definition.casefold()
         self.assertIn("using hnsw", normalized_index_definition)
         self.assertIn("vector_cosine_ops", normalized_index_definition)

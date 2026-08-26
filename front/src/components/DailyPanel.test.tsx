@@ -16,8 +16,7 @@ vi.mock("./daily/DailyCaptureCard", () => ({
     </>
   ),
 }));
-vi.mock("./daily/DailyHabitsCard", () => ({ default: () => <div>Daily practices</div> }));
-vi.mock("./daily/QuickThreadCard", () => ({ default: () => <div>Today&apos;s log</div> }));
+vi.mock("./daily/DailyHabitsCard", () => ({ default: () => <div>Habits</div> }));
 vi.mock("./daily/CarryForwardCard", () => ({ default: () => <div>Follow-ups</div> }));
 vi.mock("./daily/DailySummaryCard", () => ({ default: () => <div>Summary editor</div> }));
 vi.mock("./daily/DayClosureCard", () => ({ default: () => <div>Day closure</div> }));
@@ -30,8 +29,7 @@ vi.mock("../api", async () => {
 });
 
 describe("DailyPanel", () => {
-  it("reveals one daily task group at a time", async () => {
-    const user = userEvent.setup();
+  it("shows habits, notes, and the daily review together", () => {
     render(
       <DailyPanel
         date="2026-07-24"
@@ -44,16 +42,10 @@ describe("DailyPanel", () => {
       />,
     );
 
+    screen.getByText("Habits");
     screen.getByText("Capture form");
-    screen.getByText("Today's log");
-
-    await user.click(screen.getByRole("button", { name: "Follow-ups" }));
-    expect(screen.getAllByText("Follow-ups")).toHaveLength(2);
-    expect(screen.queryByText("Capture form")).toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Summary" }));
+    screen.getByText("Follow-ups");
     screen.getByText("Summary editor");
-    expect(screen.queryByText("Today's log")).toBeNull();
   });
 
   it("updates the summary after a new note is saved", async () => {

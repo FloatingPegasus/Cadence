@@ -141,6 +141,7 @@ class Settings(BaseSettings):
         "env_prefix": "CADENCE_",
         "env_file": str(Path(__file__).parent.parent.parent / ".env"),
         "env_file_encoding": "utf-8",
+        "extra": "ignore",
         "hide_input_in_errors": True,
     }
 

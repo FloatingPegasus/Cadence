@@ -14,16 +14,14 @@ import DailyPanel from "./DailyPanel";
 import DisciplineContinuity from "./DisciplineContinuity";
 import ContinuityExplorer from "./ContinuityExplorer";
 import DashboardNav, { type DashboardView } from "./DashboardNav";
+import FocusPage from "./FocusPage";
 import HabitGrid from "./HabitGrid";
 import Header from "./Header";
+import HoursPage from "./HoursPage";
 import MonthNav from "./MonthNav";
 import RecentDays from "./RecentDays";
 import SettingsPanel from "./SettingsPanel";
-
-function todayAsLocalDate() {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-}
+import { todayAsLocalDate } from "../time";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -147,7 +145,7 @@ export default function DashboardPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(event) => setSelectedDate(event.target.value)}
-                className="ml-2 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-300 outline-none focus:border-neutral-600"
+                className="ml-2 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-300 outline-none transition-colors duration-200 focus:border-neutral-600"
               />
             </label>
           </div>
@@ -171,13 +169,23 @@ export default function DashboardPage() {
           />
         </>
       )}
+      {view === "hours" && selectedDate && (
+        <HoursPage
+          date={selectedDate}
+          onSelectDate={setSelectedDate}
+          onChanged={() =>
+            setContinuityVersion((version) => version + 1)
+          }
+        />
+      )}
+      {view === "focus" && <FocusPage />}
       {view === "calendar" && (
         <>
           <h1 className="mb-5 text-base font-medium text-neutral-100">
             Calendar
           </h1>
           <MonthNav month={month} onChange={setMonth} />
-          {data && (
+          {data && data.habits.length > 0 ? (
             <HabitGrid
               habits={data.habits}
               days={data.days}
@@ -188,6 +196,10 @@ export default function DashboardPage() {
               onSelectDate={setSelectedDate}
               onSelectHabit={setSelectedHabitId}
             />
+          ) : (
+            <p className="text-sm text-neutral-500">
+              Habits you add on Today show up here as a month grid.
+            </p>
           )}
           {selectedDate && (
             <button

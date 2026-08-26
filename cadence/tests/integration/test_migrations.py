@@ -52,11 +52,12 @@ class MigrationIntegrationTests(unittest.TestCase):
                         "WHERE schemaname = current_schema() "
                         "AND tablename IN ("
                         "'users', 'days', 'continuity_embeddings', "
-                        "'summary_artifacts', 'weekly_reflections'"
+                        "'summary_artifacts', 'weekly_reflections', "
+                        "'hour_logs', 'user_goals'"
                         ")"
                     )
                 )
-                self.assertEqual(table_count, 5)
+                self.assertEqual(table_count, 7)
                 index_names = set(
                     (
                         await connection.execute(

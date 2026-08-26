@@ -15,9 +15,11 @@ from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...persistence.models.user import User
 from ...persistence.models.weekly_reflection import WeeklyReflection
+from ...persistence.models.hour_log import HourLog
+from ...persistence.models.user_goal import UserGoal
 
 EXPORT_FORMAT = "cadence-export"
-EXPORT_SCHEMA_VERSION = 1
+EXPORT_SCHEMA_VERSION = 2
 
 
 def _serialize(value: Any) -> Any:
@@ -70,6 +72,15 @@ async def export_user_data(
             )
         ).all()
     )
+    goals = list(
+        (
+            await db.scalars(
+                select(UserGoal)
+                .where(UserGoal.user_id == user.id)
+                .order_by(UserGoal.sort_order, UserGoal.id)
+            )
+        ).all()
+    )
 
     day_ids = [day.id for day in days]
     habit_ids = [habit.id for habit in habits]
@@ -81,6 +92,7 @@ async def export_user_data(
     summaries: list[SummaryArtifact] = []
     carry_forward_items: list[CarryForwardItem] = []
     day_contexts: list[DayContext] = []
+    hour_logs: list[HourLog] = []
     if day_ids:
         checkins = list(
             (
@@ -151,6 +163,15 @@ async def export_user_data(
                     )
                 ).all()
             )
+        hour_logs = list(
+            (
+                await db.scalars(
+                    select(HourLog)
+                    .where(HourLog.day_id.in_(day_ids))
+                    .order_by(HourLog.day_id, HourLog.hour)
+                )
+            ).all()
+        )
 
     return {
         "format": EXPORT_FORMAT,
@@ -274,6 +295,28 @@ async def export_user_data(
                     ),
                 )
                 for reflection in weekly_reflections
+            ],
+            "hour_logs": [
+                _record(
+                    log,
+                    ("id", "day_id", "hour", "content", "updated_at"),
+                )
+                for log in hour_logs
+            ],
+            "goals": [
+                _record(
+                    goal,
+                    (
+                        "id",
+                        "kind",
+                        "title",
+                        "notes",
+                        "sort_order",
+                        "created_at",
+                        "updated_at",
+                    ),
+                )
+                for goal in goals
             ],
         },
     }

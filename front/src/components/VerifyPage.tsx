@@ -42,9 +42,12 @@ function VerifyPage() {
 
   return (
     <div className="max-w-sm mx-auto px-6 py-20 text-center">
-      <h1 className="text-xl font-semibold text-neutral-100 tracking-tight mb-4">
+      <h1 className="text-xl font-semibold text-neutral-100 tracking-tight mb-2">
         Cadence
       </h1>
+      <p className="text-sm text-neutral-500 mb-4">
+        Habits, an hourly log, and a quiet focus room.
+      </p>
 
       {status === "loading" && (
         <p className="text-sm text-neutral-400">{message}</p>
