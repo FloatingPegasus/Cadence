@@ -138,7 +138,7 @@ export default function DailySummaryCard({
         value={content}
         disabled={isLoading}
         onChange={(event) => setContent(event.target.value)}
-        placeholder={isLoading ? "Loading review…" : "What today suggests for tomorrow."}
+        placeholder={isLoading ? "Loading review…" : undefined}
         className="mt-4 min-h-32 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 disabled:opacity-60"
       />
 

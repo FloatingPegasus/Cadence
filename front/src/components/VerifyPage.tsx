@@ -46,7 +46,7 @@ function VerifyPage() {
         Cadence
       </h1>
       <p className="text-sm text-neutral-500 mb-4">
-        Habits, an hourly log, and a quiet focus room.
+        Habits, hours, and a focus room.
       </p>
 
       {status === "loading" && (

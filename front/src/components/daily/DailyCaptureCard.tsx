@@ -292,7 +292,6 @@ export default function DailyCaptureCard({
                   onChange={(event) =>
                     setText("emotional_state", event.target.value)
                   }
-                  placeholder="A few honest words"
                   className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
                 />
               </label>

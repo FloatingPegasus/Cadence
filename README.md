@@ -8,10 +8,10 @@ and follow-ups.
 ## Features
 
 - Habit tracking with a month grid, plus daily notes, check-ins, and close/reopen.
-- An hourly activity log for where the day actually went.
-- A focus room with a pomodoro timer and generated lo-fi audio.
-- Optional AI daily reviews that look at hours, habits, and goals.
-- Goals in settings, PostgreSQL storage with pgvector, account export, and backups.
+- Hourly activity log.
+- Focus room with a pomodoro timer and generated lo-fi audio.
+- Optional AI daily reviews from hours, habits, and goals.
+- Goals in settings, PostgreSQL with pgvector, account export, and backups.
 - Email-verified accounts. External summaries stay off until you consent.
 
 ## Database and migrations

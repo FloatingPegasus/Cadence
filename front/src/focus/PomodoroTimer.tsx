@@ -13,7 +13,6 @@ export default function PomodoroTimer() {
   const [mode, setMode] = useState<"work" | "break">("work");
   const [remaining, setRemaining] = useState(WORK_SECONDS);
   const [running, setRunning] = useState(false);
-  const [completed, setCompleted] = useState(0);
 
   useEffect(() => {
     if (!running) return;
@@ -21,7 +20,6 @@ export default function PomodoroTimer() {
       setRemaining((current) => {
         if (current > 1) return current - 1;
         const nextMode = mode === "work" ? "break" : "work";
-        if (mode === "work") setCompleted((count) => count + 1);
         setMode(nextMode);
         return nextMode === "work" ? WORK_SECONDS : BREAK_SECONDS;
       });
@@ -37,8 +35,8 @@ export default function PomodoroTimer() {
 
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-950/70 px-5 py-4">
-      <p className="text-xs uppercase tracking-wider text-neutral-500">
-        {mode === "work" ? "Focus" : "Break"}
+      <p className="text-xs text-neutral-500">
+        {mode === "work" ? "Work" : "Break"}
       </p>
       <p className="mt-2 font-mono text-4xl tracking-tight text-neutral-100">
         {formatClock(remaining)}
@@ -59,9 +57,6 @@ export default function PomodoroTimer() {
           Reset
         </button>
       </div>
-      <p className="mt-3 text-xs text-neutral-600">
-        {completed} session{completed === 1 ? "" : "s"} today
-      </p>
     </div>
   );
 }

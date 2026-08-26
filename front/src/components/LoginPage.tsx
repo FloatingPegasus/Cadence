@@ -41,7 +41,7 @@ function LoginPage() {
         Cadence
       </h1>
       <p className="mb-8 text-center text-sm text-neutral-500">
-        Habits, an hourly log, and a quiet focus room.
+        Habits, hours, and a focus room.
       </p>
 
       {successMsg ? (

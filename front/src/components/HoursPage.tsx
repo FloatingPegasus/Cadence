@@ -71,8 +71,6 @@ export default function HoursPage({
     void saveHour(hour);
   }
 
-  const filled = slots.filter((slot) => slot.content.trim()).length;
-
   return (
     <div className="cadence-enter">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -87,13 +85,6 @@ export default function HoursPage({
           />
         </label>
       </div>
-      <p className="mt-2 text-xs text-neutral-500">
-        {isLoading
-          ? "Loading hours…"
-          : filled === 0
-            ? "Log what you did each hour."
-            : `${filled} hour${filled === 1 ? "" : "s"} logged`}
-      </p>
       {error && (
         <p role="alert" className="mt-3 text-xs text-red-400">
           {error}

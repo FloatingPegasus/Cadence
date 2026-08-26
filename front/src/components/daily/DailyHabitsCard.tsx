@@ -120,11 +120,7 @@ export default function DailyHabitsCard({
             </label>
           ))}
         </div>
-      ) : (
-        <p className="mt-4 text-sm leading-6 text-neutral-500">
-          Add a habit, then check it off.
-        </p>
-      )}
+      ) : null}
 
       <form onSubmit={addHabit} className="mt-4 flex gap-2">
         <label htmlFor="new-daily-habit" className="sr-only">

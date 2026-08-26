@@ -4,7 +4,7 @@ export default function StudyScene() {
       viewBox="0 0 640 360"
       className="h-auto w-full"
       role="img"
-      aria-label="A cat at a study desk by a rainy window"
+      aria-label="Study scene"
     >
       <defs>
         <linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
