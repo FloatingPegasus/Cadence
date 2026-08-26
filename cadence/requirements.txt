@@ -5,7 +5,7 @@ alembic==1.18.5
 psycopg[binary]==3.2.10
 pgvector==0.4.1
 pydantic[email]==2.13.4
-pydantic-settings==2.14.2
+pydantic-settings==2.15.0
 PyJWT==2.13.0
 bcrypt==5.0.0
 brevo-python==5.0.1
