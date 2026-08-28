@@ -14,7 +14,10 @@ review and maintain.
 
 ## Local setup
 
-From the repository root:
+The short path is `./scripts/quickstart.sh` from the repository root. That
+copies `.env.example` if needed, writes a signing key, and starts Compose.
+
+For a manual environment:
 
 ```sh
 python3.14 -m venv .venv

@@ -23,13 +23,13 @@ def send_verification_email(to_email: str, to_name: str, verification_url: str) 
     html = _verification_html(to_name, verification_url)
     text = f"Hi {to_name},\n\nVerify your Cadence account by visiting:\n{verification_url}\n\nIf you didn't create an account, you can ignore this email.\n"
 
-    if settings.test_mode:
+    if settings.test_mode or not settings.mail_is_configured:
         logger.warning(
-            "[TEST_MODE] Verification email not sent. Recipient=%s\nVerification URL: %s",
+            "Verification email not sent. Recipient=%s\nVerification URL: %s",
             to_email,
             verification_url,
         )
-        print(f"\n[TEST_MODE] Verify {to_email} -> {verification_url}\n")
+        print(f"\nVerify {to_email} -> {verification_url}\n")
         return
 
     try:

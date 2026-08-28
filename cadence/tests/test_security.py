@@ -74,6 +74,22 @@ class SecurityRegressionTests(unittest.TestCase):
             )
         self.assertNotIn(leaked_password, str(raised.exception))
 
+    def test_mail_is_configured_ignores_placeholders(self) -> None:
+        empty = Settings(
+            secret_key="a" * 40,
+            test_mode=False,
+            brevo_api_key="replace-with-brevo-api-key",
+            _env_file=None,
+        )
+        self.assertFalse(empty.mail_is_configured)
+        real = Settings(
+            secret_key="a" * 40,
+            test_mode=False,
+            brevo_api_key="xkeysib-not-a-real-key",
+            _env_file=None,
+        )
+        self.assertTrue(real.mail_is_configured)
+
     def test_production_signing_configuration_rejects_defaults_and_algorithms(self) -> None:
         with self.assertRaises(ValueError):
             Settings(

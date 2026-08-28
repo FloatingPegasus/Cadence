@@ -20,6 +20,7 @@ concept. Do not include credentials, private records, or database files.
   failures stop authentication rather than falling back to local limits.
 - Keep `CADENCE_DEV_MODE=false` outside local development.
 - Keep `.env`, databases, backups, and API keys out of Git.
+- Local Compose without a mail key prints the verification URL in the server log.
 
 An XSS issue could still act as the signed-in user while the page is open.
 Keep dependencies updated and retain the response security headers.

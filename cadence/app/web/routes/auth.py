@@ -480,7 +480,12 @@ async def register(
         "username": recipient[2],
         "email": recipient[1],
         "is_verified": False,
-        "message": "Account created. Check your email to verify your address before logging in.",
+        "message": (
+            "Account created. Mail is not configured, so the verification "
+            "link is in the Cadence server log."
+            if not settings.mail_is_configured
+            else "Account created. Check your email to verify your address before logging in."
+        ),
     }
 
 
