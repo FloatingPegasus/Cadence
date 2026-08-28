@@ -1,60 +1,232 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: light;
+  --canvas: #e6ddd0;
+  --n-50: #1c1916;
+  --n-100: #241f1b;
+  --n-200: #2e2823;
+  --n-300: #3f3832;
+  --n-400: #5c534c;
+  --n-500: #6f675e;
+  --n-600: #8f867c;
+  --n-700: #d8cfc0;
+  --n-800: #e4dacb;
+  --n-900: #fbf7f0;
+  --n-950: #e6ddd0;
+  --v-200: #9a4a32;
+  --v-300: #b55238;
+  --v-400: #c45c3e;
+  --v-500: #c45c3e;
+  --red-300: #9a2f2a;
+  --red-400: #b42318;
+  --red-900: #edd5d1;
+  --red-950: #f6e8e5;
+  --amber-300: #8a5a10;
+  --amber-900: #ead9b8;
+  --amber-950: #f4ead4;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ui: 280ms;
+  --motion-micro: 180ms;
+  --shadow-page:
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    0 1px 1px rgba(28, 25, 22, 0.04),
+    0 16px 40px -24px rgba(28, 25, 22, 0.32);
+}
+
+html.dark {
+  color-scheme: dark;
+  --canvas: #100e0c;
+  --n-50: #f7f3ec;
+  --n-100: #f0ebe3;
+  --n-200: #e4dcd0;
+  --n-300: #cfc4b4;
+  --n-400: #a89c8e;
+  --n-500: #8a7f72;
+  --n-600: #6b6157;
+  --n-700: #3a332c;
+  --n-800: #2a241f;
+  --n-900: #1c1814;
+  --n-950: #100e0c;
+  --v-200: #e8b4a4;
+  --v-300: #e09a84;
+  --v-400: #d98970;
+  --v-500: #c45c3e;
+  --red-300: #f0b4ae;
+  --red-400: #e88980;
+  --red-900: #5c2a26;
+  --red-950: #3a1c19;
+  --amber-300: #e6c07a;
+  --amber-900: #5c4a24;
+  --amber-950: #3a3018;
+  --shadow-page:
+    inset 0 1px 0 rgba(255, 247, 236, 0.06),
+    0 1px 1px rgba(0, 0, 0, 0.28),
+    0 18px 40px -20px rgba(0, 0, 0, 0.58);
+}
+
+@theme inline {
+  --color-neutral-50: var(--n-50);
+  --color-neutral-100: var(--n-100);
+  --color-neutral-200: var(--n-200);
+  --color-neutral-300: var(--n-300);
+  --color-neutral-400: var(--n-400);
+  --color-neutral-500: var(--n-500);
+  --color-neutral-600: var(--n-600);
+  --color-neutral-700: var(--n-700);
+  --color-neutral-800: var(--n-800);
+  --color-neutral-900: var(--n-900);
+  --color-neutral-950: var(--n-950);
+  --color-violet-200: var(--v-200);
+  --color-violet-300: var(--v-300);
+  --color-violet-400: var(--v-400);
+  --color-violet-500: var(--v-500);
+  --color-red-300: var(--red-300);
+  --color-red-400: var(--red-400);
+  --color-red-900: var(--red-900);
+  --color-red-950: var(--red-950);
+  --color-amber-300: var(--amber-300);
+  --color-amber-900: var(--amber-900);
+  --color-amber-950: var(--amber-950);
+}
+
+html {
+  background-color: var(--canvas);
+  color: var(--n-200);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    transition:
+      background-color var(--motion-ui) var(--ease-out),
+      color var(--motion-ui) var(--ease-out);
+  }
+}
+
 body {
-  background: #0a0a0a;
-  color: #e5e5e5;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  position: relative;
+  min-height: 100vh;
+  background-color: var(--canvas);
+  color: var(--n-200);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.62;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 80% 50% at 50% -8%,
+      rgba(255, 251, 244, 0.7),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 45% 35% at 6% 94%,
+      rgba(210, 190, 164, 0.22),
+      transparent 70%
+    );
+}
+
+html.dark body::before {
+  background:
+    radial-gradient(
+      ellipse 80% 50% at 50% -8%,
+      rgba(255, 247, 236, 0.05),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 45% 35% at 6% 94%,
+      rgba(0, 0, 0, 0.28),
+      transparent 70%
+    );
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+.cadence-mark,
+.cadence-title {
+  font-family: "Source Serif 4", "Iowan Old Style", Palatino, Georgia, serif;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.cadence-kicker {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--n-300);
+}
+
+.cadence-surface {
+  background: var(--n-900);
+  border-radius: 1.15rem;
+  padding: 1.35rem 1.4rem 1.45rem;
+  box-shadow: var(--shadow-page);
+}
+
+.cadence-chip {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: 0.55rem;
+  background: var(--n-900);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--n-400);
+  box-shadow: var(--shadow-page);
+}
+
+.cadence-chip:hover {
+  color: var(--n-200);
+}
+
+.cadence-chip-accent {
+  color: var(--v-300);
+}
+
+.cadence-chip-accent:hover {
+  color: var(--v-200);
+}
+
+.cadence-rail {
+  border-bottom: 1px solid var(--n-800);
+}
+
+.cadence-fade {
+  transition: opacity 400ms var(--ease-out);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .cadence-enter {
-    animation: cadence-enter 320ms ease both;
-  }
-
-  .cadence-rain {
-    animation: cadence-rain 1.4s linear infinite;
-  }
-
-  .cadence-rain-delay {
-    animation-delay: 0.5s;
-  }
-
-  .cadence-steam {
-    animation: cadence-steam 2.4s ease-in-out infinite;
-    transform-origin: 0 28px;
-  }
-
-  .cadence-tail {
-    transform-origin: 72px 30px;
-    animation: cadence-tail 2.8s ease-in-out infinite;
-  }
-
-  .cadence-blink {
-    animation: cadence-blink 5s steps(1, end) infinite;
-  }
-
-  .cadence-blink-slow {
-    animation-duration: 7s;
-    animation-delay: 1.4s;
+    animation: cadence-enter var(--motion-ui) var(--ease-out) both;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cadence-enter,
-  .cadence-rain,
-  .cadence-steam,
-  .cadence-tail,
-  .cadence-blink {
-    animation: none;
+  .cadence-enter {
+    animation: cadence-fade var(--motion-micro) ease both;
+  }
+
+  .cadence-fade {
+    transition-duration: var(--motion-micro);
   }
 }
 
 @keyframes cadence-enter {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -62,50 +234,11 @@ body {
   }
 }
 
-@keyframes cadence-rain {
+@keyframes cadence-fade {
   from {
-    transform: translateY(-12px);
     opacity: 0;
-  }
-  20% {
-    opacity: 0.7;
   }
   to {
-    transform: translateY(16px);
-    opacity: 0;
-  }
-}
-
-@keyframes cadence-steam {
-  0%,
-  100% {
-    opacity: 0.3;
-    transform: translateY(0);
-  }
-  50% {
-    opacity: 0.8;
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes cadence-tail {
-  0%,
-  100% {
-    transform: rotate(-8deg);
-  }
-  50% {
-    transform: rotate(10deg);
-  }
-}
-
-@keyframes cadence-blink {
-  0%,
-  92%,
-  100% {
     opacity: 1;
-  }
-  94%,
-  96% {
-    opacity: 0.15;
   }
 }

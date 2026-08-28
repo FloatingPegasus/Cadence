@@ -58,9 +58,9 @@ export default function ReentryCard({
   return (
     <section
       aria-labelledby="reentry-title"
-      className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 lg:col-span-2"
+      className="cadence-surface"
     >
-      <h2 id="reentry-title" className="text-sm font-medium text-neutral-200">
+      <h2 id="reentry-title" className="cadence-kicker">
         Pick up where you left off
       </h2>
 

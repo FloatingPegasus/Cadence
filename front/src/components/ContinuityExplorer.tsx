@@ -32,9 +32,7 @@ export default function ContinuityExplorer({
   onSelectDate,
   refreshKey,
 }: ContinuityExplorerProps) {
-  const [view, setView] = useState<ExplorerView>(
-    contexts.length > 0 ? "contexts" : "search",
-  );
+  const [view, setView] = useState<ExplorerView>("week");
 
   function handleTabKey(
     event: KeyboardEvent<HTMLButtonElement>,
@@ -61,15 +59,15 @@ export default function ContinuityExplorer({
   }
 
   return (
-    <section
-      aria-label="History browser"
-      className="mt-8 border-t border-neutral-800 pt-6"
-    >
-      <div className="flex flex-wrap items-start justify-end gap-4">
+    <section aria-label="History browser">
+      <div className="flex flex-wrap items-baseline justify-between gap-6">
+        <h1 className="cadence-title text-2xl font-medium text-neutral-100">
+          History
+        </h1>
         <div
           role="tablist"
           aria-label="History views"
-          className="flex rounded-lg border border-neutral-800 p-0.5"
+          className="cadence-rail flex gap-5 pb-2"
         >
           {views.map((item) => (
             <button
@@ -84,8 +82,8 @@ export default function ContinuityExplorer({
               onKeyDown={(event) => handleTabKey(event, item.id)}
               className={
                 view === item.id
-                  ? "rounded px-3 py-1.5 text-xs text-violet-300"
-                  : "rounded px-3 py-1.5 text-xs text-neutral-500 transition-colors duration-150 hover:text-neutral-300"
+                  ? "text-sm text-violet-300"
+                  : "text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300"
               }
             >
               {item.label}
@@ -98,6 +96,7 @@ export default function ContinuityExplorer({
         id="continuity-explorer-panel"
         role="tabpanel"
         aria-labelledby={`continuity-tab-${view}`}
+        className="cadence-surface mt-12"
       >
         {view === "contexts" && (
           <ContextHub

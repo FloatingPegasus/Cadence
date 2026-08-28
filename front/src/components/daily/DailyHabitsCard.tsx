@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import {
   createHabit,
@@ -28,20 +28,33 @@ export default function DailyHabitsCard({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadedDate = useRef<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
     setError(null);
+    const initial = loadedDate.current !== date;
+    if (initial) setIsLoading(true);
     fetchDayHabits(date)
-      .then(setDailyHabits)
+      .then((rows) => {
+        if (cancelled) return;
+        loadedDate.current = date;
+        setDailyHabits(rows);
+      })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load your habits",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [date, refreshKey, habits.length]);
 
   async function addHabit(event: FormEvent<HTMLFormElement>) {
@@ -91,11 +104,10 @@ export default function DailyHabitsCard({
   return (
     <section
       aria-labelledby="daily-habits-title"
-      className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5"
     >
       <h2
         id="daily-habits-title"
-        className="text-sm font-medium text-neutral-200"
+        className="cadence-kicker"
       >
         Habits
       </h2>
@@ -103,11 +115,11 @@ export default function DailyHabitsCard({
       {isLoading ? (
         <p className="mt-4 text-sm text-neutral-600">Loading habits...</p>
       ) : dailyHabits.length > 0 ? (
-        <div className="mt-4 space-y-2">
+        <div className="mt-6 space-y-1">
           {dailyHabits.map((habit) => (
             <label
               key={habit.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-3 text-sm text-neutral-300 transition-colors duration-200 hover:border-neutral-700"
+              className="flex items-center justify-between gap-3 py-3 text-sm text-neutral-200"
             >
               <span>{habit.name}</span>
               <input
@@ -115,14 +127,14 @@ export default function DailyHabitsCard({
                 checked={habit.completed}
                 onChange={() => toggle(habit)}
                 aria-label={`Mark ${habit.name} complete for ${date}`}
-                className="h-5 w-5 accent-violet-500 transition-transform duration-200 checked:scale-110"
+                className="h-5 w-5 accent-violet-500"
               />
             </label>
           ))}
         </div>
       ) : null}
 
-      <form onSubmit={addHabit} className="mt-4 flex gap-2">
+      <form onSubmit={addHabit} className="mt-5 flex gap-3">
         <label htmlFor="new-daily-habit" className="sr-only">
           Add a habit
         </label>

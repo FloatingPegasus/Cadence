@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 import {
   archiveHabit,
-  createHabit,
   renameHabit,
   type Habit,
 } from "../api";
@@ -15,24 +14,9 @@ export default function HabitManager({
   habits,
   onChanged,
 }: HabitManagerProps) {
-  const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState("");
   const [error, setError] = useState<string | null>(null);
-
-  async function addHabit(event: FormEvent) {
-    event.preventDefault();
-    const name = newName.trim();
-    if (!name) return;
-    setError(null);
-    try {
-      await createHabit(name);
-      setNewName("");
-      onChanged();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not add habit");
-    }
-  }
 
   async function saveRename(event: FormEvent, habitId: number) {
     event.preventDefault();
@@ -62,29 +46,15 @@ export default function HabitManager({
     }
   }
 
+  if (habits.length === 0) return null;
+
   return (
-    <details className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950/50">
-      <summary className="cursor-pointer px-4 py-3 text-sm text-neutral-400 hover:text-neutral-200">
+    <details>
+      <summary className="cursor-pointer text-sm text-neutral-400 hover:text-neutral-200">
         Manage habits
       </summary>
-      <div className="border-t border-neutral-800 p-4">
-        <form onSubmit={addHabit} className="flex gap-2">
-          <label className="sr-only" htmlFor="new-habit-name">
-            New habit name
-          </label>
-          <input
-            id="new-habit-name"
-            value={newName}
-            onChange={(event) => setNewName(event.target.value)}
-            placeholder="Add a habit"
-            maxLength={100}
-            className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
-          />
-          <button className="rounded-lg bg-neutral-800 px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-700">
-            Add
-          </button>
-        </form>
-        <div className="mt-4 space-y-2">
+      <div className="pt-5">
+        <div className="space-y-2">
           {habits.map((habit) =>
             editingId === habit.id ? (
               <form

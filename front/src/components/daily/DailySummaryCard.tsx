@@ -87,37 +87,33 @@ export default function DailySummaryCard({
   }
 
   return (
-    <section
-      aria-labelledby="daily-summary-title"
-      className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 lg:col-span-2"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <h2
-          id="daily-summary-title"
-          className="text-sm font-medium text-neutral-200"
+    <details className="py-2">
+      <summary
+        id="daily-summary-title"
+        className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+      >
+        Daily review
+      </summary>
+
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={generate}
+          disabled={
+            isLoading || isBusy || !user?.ai_processing_consent
+          }
+          className="rounded-lg border border-violet-500/50 bg-violet-500/5 px-3 py-1.5 text-xs text-violet-300 transition-colors duration-150 hover:bg-violet-500/10 disabled:opacity-40"
         >
-          Daily review
-        </h2>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={generate}
-            disabled={
-              isLoading || isBusy || !user?.ai_processing_consent
-            }
-            className="rounded-lg border border-violet-500/50 bg-violet-500/5 px-3 py-1.5 text-xs text-violet-300 transition-colors duration-150 hover:bg-violet-500/10 disabled:opacity-40"
-          >
-            Generate review
-          </button>
-          <button
-            type="button"
-            onClick={save}
-            disabled={isLoading || isBusy}
-            className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-200 hover:bg-neutral-700 disabled:opacity-40"
-          >
-            Save review
-          </button>
-        </div>
+          Generate review
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={isLoading || isBusy}
+          className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-200 hover:bg-neutral-700 disabled:opacity-40"
+        >
+          Save review
+        </button>
       </div>
 
       {!user?.ai_processing_consent && (
@@ -163,6 +159,6 @@ export default function DailySummaryCard({
           {error}
         </p>
       )}
-    </section>
+    </details>
   );
 }

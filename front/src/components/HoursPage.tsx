@@ -72,9 +72,16 @@ export default function HoursPage({
   }
 
   return (
-    <div className="cadence-enter">
+    <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-base font-medium text-neutral-100">Hours</h1>
+        <div>
+          <h1 className="cadence-title text-2xl font-medium text-neutral-100">
+            Hourly log
+          </h1>
+          <p className="mt-2 text-sm text-neutral-500">
+            Don't lose track of any time.
+          </p>
+        </div>
         <label className="text-xs text-neutral-500">
           Day
           <input
@@ -90,7 +97,7 @@ export default function HoursPage({
           {error}
         </p>
       )}
-      <ol className="mt-6 space-y-1.5">
+      <ol className="cadence-surface mt-10 space-y-1">
         {(slots.length ? slots : Array.from({ length: 24 }, (_, hour) => ({
           hour,
           content: "",
@@ -102,8 +109,8 @@ export default function HoursPage({
                 onSubmit={(event) => handleSubmit(event, slot.hour)}
                 className={
                   active
-                    ? "grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2"
-                    : "grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-3 py-2 transition-colors duration-200 hover:bg-neutral-900/70"
+                    ? "grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg bg-violet-500/10 py-2 pr-1"
+                    : "grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg py-2 pr-1 hover:bg-neutral-950/40"
                 }
               >
                 <label
@@ -127,7 +134,7 @@ export default function HoursPage({
                     }))
                   }
                   onBlur={() => void saveHour(slot.hour)}
-                  placeholder={active ? "This hour" : ""}
+                  placeholder={active ? "Now" : ""}
                   maxLength={2000}
                   className="min-w-0 rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-700 focus:bg-neutral-950"
                 />

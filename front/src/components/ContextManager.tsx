@@ -77,11 +77,11 @@ export default function ContextManager({
   }
 
   return (
-    <details className="mb-6 rounded-lg border border-neutral-800 bg-neutral-950/50">
-      <summary className="cursor-pointer px-4 py-3 text-sm text-neutral-400 hover:text-neutral-200">
+    <details>
+      <summary className="cursor-pointer text-sm text-neutral-400 hover:text-neutral-200">
         Manage areas
       </summary>
-      <div className="border-t border-neutral-800 p-4">
+      <div className="pt-5">
         <form
           onSubmit={add}
           className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]"

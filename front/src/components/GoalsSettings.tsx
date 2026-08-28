@@ -63,11 +63,14 @@ export default function GoalsSettings() {
   }
 
   return (
-    <section className="mb-6">
-      <h2 className="text-sm font-medium text-neutral-200">Goals</h2>
+    <details>
+      <summary className="cursor-pointer text-sm text-neutral-400 hover:text-neutral-200">
+        Goals
+      </summary>
+      <div className="pt-5">
       <form
         onSubmit={addGoal}
-        className="mt-4 grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
+        className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
       >
         <label className="sr-only" htmlFor="goal-kind">
           Goal type
@@ -140,6 +143,7 @@ export default function GoalsSettings() {
           {error}
         </p>
       )}
-    </section>
+      </div>
+    </details>
   );
 }

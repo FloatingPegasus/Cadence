@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 function Header() {
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
   async function handleLogout() {
@@ -17,15 +19,20 @@ function Header() {
   }
 
   return (
-    <header className="mb-6 flex items-center justify-between">
-      <div>
-        <h1 className="text-xl font-semibold text-neutral-100 tracking-tight">
-          Cadence
-        </h1>
-      </div>
+    <header className="mb-10 flex items-baseline justify-between gap-4">
+      <h1 className="cadence-mark text-[1.35rem] font-medium text-neutral-100">
+        Cadence
+      </h1>
       {user && (
         <div className="flex items-center gap-3">
-          <span className="text-sm text-neutral-400">{user.username}</span>
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            className="cadence-chip"
+          >
+            {theme === "light" ? "Dark" : "Light"}
+          </button>
+          <span className="text-sm text-neutral-500">{user.username}</span>
           {logoutError && (
             <span role="alert" className="text-xs text-red-400">
               {logoutError}
@@ -34,7 +41,7 @@ function Header() {
           <button
             type="button"
             onClick={handleLogout}
-            className="px-3 py-1.5 text-sm rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+            className="cadence-chip"
           >
             Log out
           </button>

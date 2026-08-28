@@ -61,14 +61,10 @@ export default function ContextHub({
   }, [selectedId, refreshKey]);
 
   return (
-    <section
-      className={
-        embedded ? "pt-4" : "mt-8 border-t border-neutral-800 pt-6"
-      }
-    >
+    <section>
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <h2 className="text-sm font-medium text-neutral-200">
-          Area history
+        <h2 className="text-sm text-neutral-400">
+          Areas
         </h2>
         {contexts.length > 0 && (
           <label className="flex items-center gap-2 text-xs text-neutral-500">

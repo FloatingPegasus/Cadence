@@ -39,16 +39,18 @@ export default function ContinuityPatterns({
   if (!data) return <p className="pt-4 text-sm text-neutral-600">Loading patterns…</p>;
 
   return (
-    <section className="pt-4" aria-labelledby="patterns-title">
-      <div>
-        <h2 id="patterns-title" className="text-sm font-medium text-neutral-200">
-          Recorded patterns
-        </h2>
-        <p className="mt-1 text-xs text-neutral-500">{data.interpretation}</p>
-      </div>
+    <section aria-labelledby="patterns-title">
+      <h2 id="patterns-title" className="text-sm text-neutral-400">
+        Patterns
+      </h2>
+      {data.interpretation ? (
+        <p className="mt-3 text-sm leading-6 text-neutral-500">
+          {data.interpretation}
+        </p>
+      ) : null}
       <div className="mt-5 grid gap-4 md:grid-cols-3">
         {data.observations.map((observation) => (
-          <article key={observation.kind} className="border-t border-neutral-800 pt-3">
+          <article key={observation.kind} className="pt-1">
             <h3 className="text-xs font-medium text-neutral-300">{observation.title}</h3>
             <p className="mt-2 text-sm leading-6 text-neutral-500">{observation.body}</p>
           </article>

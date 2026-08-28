@@ -41,21 +41,16 @@ describe("ContinuityExplorer", () => {
       />,
     );
 
-    const contextsTab = screen.getByRole("tab", { name: "Areas" });
-    contextsTab.focus();
-    screen.getByText("Context panel");
+    screen.getByText("Week panel");
+    const weekTab = screen.getByRole("tab", { name: "Week" });
+    expect(weekTab.getAttribute("aria-selected")).toBe("true");
+    weekTab.focus();
 
     await user.keyboard("{ArrowRight}");
-    const searchTab = screen.getByRole("tab", { name: "Search" });
-    expect(document.activeElement).toBe(searchTab);
-    expect(searchTab.getAttribute("aria-selected")).toBe("true");
-    screen.getByText("Search panel");
+    screen.getByText("Month panel");
 
     await user.keyboard("{End}");
     screen.getByText("Patterns panel");
-
-    await user.keyboard("{ArrowLeft}");
-    screen.getByText("Month panel");
 
     await user.keyboard("{Home}");
     screen.getByText("Context panel");

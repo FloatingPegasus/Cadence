@@ -94,44 +94,36 @@ export default function WeeklyReflectionCard({
   return (
     <section
       aria-labelledby="weekly-reflection-title"
-      className="mt-6 border-t border-neutral-800 pt-5"
+      className="mt-16"
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h3
-            id="weekly-reflection-title"
-            className="text-xs font-medium text-neutral-300"
-          >
-            Weekly review
-          </h3>
-        </div>
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <h3
+          id="weekly-reflection-title"
+          className="text-sm text-neutral-400"
+        >
+          Review
+        </h3>
+        <div className="flex gap-5">
           <button
             type="button"
             onClick={generate}
             disabled={
               isLoading || isBusy || !user?.ai_processing_consent
             }
-            className="rounded-lg border border-violet-500/50 bg-violet-500/5 px-3 py-1.5 text-xs text-violet-300 transition-colors duration-150 hover:bg-violet-500/10 disabled:opacity-40"
+            className="text-sm text-neutral-500 transition-colors hover:text-neutral-200 disabled:opacity-40"
           >
-            Generate review
+            Generate
           </button>
           <button
             type="button"
             onClick={save}
             disabled={isLoading || isBusy}
-            className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:opacity-40"
+            className="text-sm text-neutral-500 transition-colors hover:text-neutral-200 disabled:opacity-40"
           >
-            Save review
+            Save
           </button>
         </div>
       </div>
-
-      {!user?.ai_processing_consent && (
-        <p className="mt-3 text-xs text-neutral-600">
-          Automatic writing is off. Write locally or enable it in Settings.
-        </p>
-      )}
 
       <label className="sr-only" htmlFor="weekly-reflection-content">
         Weekly review
@@ -142,28 +134,17 @@ export default function WeeklyReflectionCard({
         disabled={isLoading}
         maxLength={30000}
         onChange={(event) => setContent(event.target.value)}
-        placeholder={
-          isLoading
-            ? "Loading review..."
-            : "What moved, what created friction, and what should remain visible next week?"
-        }
-        className="mt-4 min-h-32 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 disabled:opacity-60"
+        placeholder={isLoading ? "Loading review..." : ""}
+        className="mt-5 min-h-36 w-full resize-y border-0 border-b border-neutral-800 bg-transparent p-0 pb-3 text-base leading-7 text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-500 disabled:opacity-60"
       />
 
       {reflection?.is_stale && (
         <p
           role="status"
-          className="mt-2 rounded-lg border border-amber-900 bg-amber-950/30 px-3 py-2 text-xs leading-5 text-amber-300"
+          className="mt-4 text-xs leading-5 text-amber-300"
         >
           The week changed after this review was saved. Save your edits
           to make it current, or generate a new draft.
-        </p>
-      )}
-      {reflection && (
-        <p className="mt-2 text-[11px] text-neutral-600">
-          {reflection.is_user_edited
-            ? "Manually edited"
-            : "Generated automatically"}
         </p>
       )}
       {error && (
