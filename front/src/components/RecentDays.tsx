@@ -31,40 +31,37 @@ export default function RecentDays({
   if (days.length === 0 && !error) return null;
 
   return (
-    <section className="mt-8">
-      <h2 className="mb-3 text-sm font-medium text-neutral-200">Recent days</h2>
+    <section className="cadence-surface mt-6">
+      <h2 className="cadence-kicker mb-5">Recent days</h2>
       {error && (
         <p role="alert" className="text-xs text-red-400">
           {error}
         </p>
       )}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-5">
         {days.map((day) => (
           <button
             key={day.id}
             onClick={() => onSelect(day.date)}
-            className={
-              selectedDate === day.date
-                ? "rounded-lg border border-violet-500/60 bg-violet-500/10 p-3 text-left"
-                : "rounded-lg border border-neutral-800 bg-neutral-950/50 p-3 text-left hover:border-neutral-700 hover:bg-neutral-900/70"
-            }
+            className="block w-full rounded-lg px-1 py-2 text-left hover:bg-neutral-950/40"
           >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-medium text-neutral-300">
-                {new Date(`${day.date}T00:00:00`).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-              {(day.energy_level || day.focus_quality) && (
-                <span className="text-[11px] text-neutral-600">
-                  E {day.energy_level ?? "-"} · F {day.focus_quality ?? "-"}
-                </span>
-              )}
-            </div>
-            <p className="mt-2 line-clamp-2 min-h-8 text-xs leading-4 text-neutral-500">
-              {day.note_preview || "No written note."}
-            </p>
+            <span
+              className={
+                selectedDate === day.date
+                  ? "text-sm text-violet-300"
+                  : "text-sm text-neutral-400"
+              }
+            >
+              {new Date(`${day.date}T00:00:00`).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
+            {day.note_preview ? (
+              <p className="mt-1 line-clamp-2 text-sm leading-6 text-neutral-500">
+                {day.note_preview}
+              </p>
+            ) : null}
           </button>
         ))}
       </div>

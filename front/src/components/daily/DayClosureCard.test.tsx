@@ -49,6 +49,9 @@ describe("DayClosureCard", () => {
       />,
     );
 
+    const summaryToggle = await screen.findByText("Finish the day");
+    const details = summaryToggle.closest("details");
+    if (details) details.open = true;
     await user.click(
       await screen.findByRole("button", { name: "Review and finish" }),
     );

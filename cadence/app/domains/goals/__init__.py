@@ -1,1 +1,1 @@
-"""User goals for the habit ecosystem."""
+"""User goals."""

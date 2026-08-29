@@ -273,11 +273,10 @@ async def generate_daily_summary(
                 "role": "system",
                 "content": (
                     "Write a concise daily review from the supplied record. "
-                    "Use the hour log to notice where time went. Mention "
-                    "completed habits only if listed. If goals are present, "
-                    "relate the day to them without inventing progress. "
-                    "End with two to four concrete suggestions for tomorrow. "
-                    "Do not invent hours, diagnose the user, or add a title."
+                    "Use hours, completed habits, and goals when present. "
+                    "Do not invent hours, progress, or a diagnosis. "
+                    "End with two to four suggestions for tomorrow. "
+                    "Do not add a title."
                 ),
             },
             {

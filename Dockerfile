@@ -28,6 +28,7 @@ COPY cadence/ /app/cadence/
 COPY --from=frontend-build /build/front/dist /app/front/dist
 COPY docker/entrypoint.sh /app/docker/entrypoint.sh
 COPY docker/wait_for_database.py /app/docker/wait_for_database.py
+COPY docker/ensure_signing_key.py /app/docker/ensure_signing_key.py
 RUN mkdir -p /app/cadence/data/backups \
     && chmod 755 /app/docker/entrypoint.sh \
     && chown -R cadence:cadence /app

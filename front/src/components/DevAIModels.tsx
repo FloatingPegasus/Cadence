@@ -62,11 +62,11 @@ export default function DevAIModels() {
   if (!registry) return null;
 
   return (
-    <details className="mt-8 rounded-lg border border-neutral-800 bg-neutral-950/50">
-      <summary className="cursor-pointer px-4 py-3 text-sm text-neutral-500 hover:text-neutral-300">
+    <details>
+      <summary className="cursor-pointer text-sm text-neutral-500 hover:text-neutral-300">
         Developer · NVIDIA models
       </summary>
-      <div className="border-t border-neutral-800 p-4">
+      <div className="pt-5">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-xs text-neutral-500">

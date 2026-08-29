@@ -1,0 +1,29 @@
+services:
+  app:
+    environment:
+      FORWARDED_ALLOW_IPS: "*"
+    restart: unless-stopped
+
+  db:
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      CADENCE_DOMAIN: ${CADENCE_DOMAIN:-cadence.kanishq.dev}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  caddy-data:
+  caddy-config:

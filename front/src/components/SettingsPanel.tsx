@@ -23,21 +23,36 @@ export default function SettingsPanel({
 }: SettingsPanelProps) {
   return (
     <div>
-      <h1 className="mb-6 text-base font-medium text-neutral-100">Settings</h1>
-      <GoalsSettings />
-      <HabitManager habits={habits} onChanged={onHabitsChanged} />
-      <ContextManager contexts={contexts} onChanged={onContextsChanged} />
-      <AIPrivacySettings />
-      <section aria-labelledby="data-export-title" className="mt-6 border-t border-neutral-800 pt-6">
-        <h2 id="data-export-title" className="text-sm font-medium text-neutral-200">
-          Your data
-        </h2>
-        <p className="mt-1 mb-3 text-xs leading-5 text-neutral-500">
-          Download a JSON copy of your account and history.
-        </p>
-        <DataExportButton />
-      </section>
-      {isDeveloper && <DevAIModels />}
+      <h1 className="cadence-title mb-10 text-2xl font-medium text-neutral-100">
+        Settings
+      </h1>
+      <div className="space-y-5">
+        <div className="cadence-surface">
+          <GoalsSettings />
+        </div>
+        <div className="cadence-surface">
+          <HabitManager habits={habits} onChanged={onHabitsChanged} />
+        </div>
+        <div className="cadence-surface">
+          <ContextManager contexts={contexts} onChanged={onContextsChanged} />
+        </div>
+        <div className="cadence-surface">
+          <AIPrivacySettings />
+        </div>
+        <section aria-labelledby="data-export-title" className="cadence-surface">
+          <h2 id="data-export-title" className="cadence-kicker">
+            Your data
+          </h2>
+          <div className="mt-4">
+            <DataExportButton />
+          </div>
+        </section>
+        {isDeveloper && (
+          <div className="cadence-surface">
+            <DevAIModels />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

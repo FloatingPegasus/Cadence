@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 function LoginPage() {
   const { login, register, resendVerification } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,12 +38,22 @@ function LoginPage() {
   }
 
   return (
-    <div className="max-w-sm mx-auto px-6 py-20">
-      <h1 className="mb-2 text-center text-xl font-semibold tracking-tight text-neutral-100">
+    <div className="px-6 py-6">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+          className="cadence-chip"
+        >
+          {theme === "light" ? "Dark" : "Light"}
+        </button>
+      </div>
+      <div className="cadence-surface mx-auto mt-10 max-w-sm">
+      <h1 className="cadence-mark mb-2 text-center text-xl font-semibold tracking-tight text-neutral-100">
         Cadence
       </h1>
       <p className="mb-8 text-center text-sm text-neutral-500">
-        Habits, an hourly log, and a quiet focus room.
+        Habits, hours, and a focus room.
       </p>
 
       {successMsg ? (
@@ -66,7 +78,7 @@ function LoginPage() {
               <div>
                 <label
                   htmlFor="auth-username"
-                  className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5"
+                  className="block text-xs text-neutral-500 mb-1.5"
                 >
                   {mode === "login" ? "Username or email" : "Username"}
                 </label>
@@ -89,7 +101,7 @@ function LoginPage() {
               <div>
               <label
                 htmlFor="auth-email"
-                className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5"
+                className="block text-xs text-neutral-500 mb-1.5"
               >
                 Email
               </label>
@@ -110,7 +122,7 @@ function LoginPage() {
               <div>
                 <label
                   htmlFor="auth-password"
-                  className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5"
+                  className="block text-xs text-neutral-500 mb-1.5"
                 >
                   Password
                 </label>
@@ -185,6 +197,7 @@ function LoginPage() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

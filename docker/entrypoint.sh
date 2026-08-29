@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+export CADENCE_SECRET_KEY="$(python /app/docker/ensure_signing_key.py)"
+
 python /app/docker/wait_for_database.py
 if [ -n "${CADENCE_MIGRATION_DATABASE_URL:-}" ]; then
   CADENCE_DATABASE_URL="$CADENCE_MIGRATION_DATABASE_URL" \

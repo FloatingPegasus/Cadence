@@ -78,17 +78,10 @@ export default function CarryForwardCard({
   }
 
   return (
-    <section
-      aria-labelledby="follow-ups-title"
-      className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 lg:col-span-2"
-    >
-      <h2
-        id="follow-ups-title"
-        className="text-sm font-medium text-neutral-200"
-      >
+    <details className="py-2">
+      <summary className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200">
         Follow-ups
-      </h2>
-
+      </summary>
       <form onSubmit={addItem} className="mt-4 flex gap-2">
         <label className="sr-only" htmlFor="carry-forward-entry">
           Add a follow-up
@@ -97,7 +90,6 @@ export default function CarryForwardCard({
           id="carry-forward-entry"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="What should stay on your list?"
           maxLength={2000}
           className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
         />
@@ -112,18 +104,14 @@ export default function CarryForwardCard({
       <div className="mt-4">
         {isLoading ? (
           <p className="text-xs text-neutral-600">Loading follow-ups…</p>
-        ) : items.length === 0 ? (
-          <p className="text-xs text-neutral-600">
-            No follow-ups yet.
-          </p>
-        ) : (
+        ) : items.length === 0 ? null : (
           <ul className="space-y-2">
             {items.map((item) => (
               <li
                 key={item.id}
                 className={
                   item.status === "open"
-                    ? "flex items-center justify-between gap-4 rounded-lg bg-neutral-900 px-3 py-2"
+                    ? "flex items-center justify-between gap-4 rounded-lg bg-neutral-950 px-3 py-2"
                     : "flex items-center justify-between gap-4 rounded-lg px-3 py-2 opacity-50"
                 }
               >
@@ -166,6 +154,6 @@ export default function CarryForwardCard({
           {error}
         </p>
       )}
-    </section>
+    </details>
   );
 }

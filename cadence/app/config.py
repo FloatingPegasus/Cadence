@@ -281,6 +281,13 @@ class Settings(BaseSettings):
         return self
 
     @property
+    def mail_is_configured(self) -> bool:
+        key = (self.brevo_api_key or "").strip()
+        return bool(key) and key not in {
+            "replace-with-brevo-api-key",
+        }
+
+    @property
     def sync_database_url(self) -> str:
         return self.database_url
 

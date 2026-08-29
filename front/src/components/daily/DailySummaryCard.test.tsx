@@ -50,6 +50,9 @@ describe("DailySummaryCard", () => {
       />,
     );
 
+    const summaryToggle = await screen.findByText("Daily review");
+    const details = summaryToggle.closest("details");
+    if (details) details.open = true;
     await screen.findByText(/Source entries changed/);
     await user.click(screen.getByRole("button", { name: "Save review" }));
 
@@ -74,6 +77,9 @@ describe("DailySummaryCard", () => {
         onChanged={vi.fn()}
       />,
     );
+    const summaryToggle = await screen.findByText("Daily review");
+    const details = summaryToggle.closest("details");
+    if (details) details.open = true;
     await screen.findByDisplayValue("The original summary.");
 
     rerender(
@@ -104,6 +110,9 @@ describe("DailySummaryCard", () => {
       />,
     );
 
+    const summaryToggle = await screen.findByText("Daily review");
+    const details = summaryToggle.closest("details");
+    if (details) details.open = true;
     await screen.findByText("Generated automatically");
     screen.getByRole("button", { name: "Generate review" });
     expect(screen.queryByText(/NVIDIA|nvidia/)).toBeNull();

@@ -31,7 +31,6 @@ export default function MonthlyContinuity({
   selectedDate,
   onSelectDate,
   refreshKey,
-  embedded = false,
 }: MonthlyContinuityProps) {
   const [month, setMonth] = useState(anchorDate.slice(0, 7));
   const [selectedContextId, setSelectedContextId] = useState<number | null>(
@@ -67,73 +66,48 @@ export default function MonthlyContinuity({
 
   if (isLoading && !data) {
     return (
-      <div className={embedded ? "pt-4" : "mt-8 border-t border-neutral-800 pt-6"}>
-        <p className="text-sm text-neutral-600">Loading month...</p>
+      <div>
+        <p className="text-sm text-neutral-500">Loading month...</p>
       </div>
     );
   }
 
   return (
-    <section
-      className={
-        embedded ? "pt-4" : "mt-8 border-t border-neutral-800 pt-6"
-      }
-    >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-medium text-neutral-200">
-              Month in review
-            </h2>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                aria-label="Previous month"
-                onClick={() => setMonth((current) => shiftMonth(current, -1))}
-                className="rounded border border-neutral-800 px-2 py-0.5 text-xs text-neutral-500 transition-colors duration-150 hover:text-neutral-300"
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                aria-label="Next month"
-                onClick={() => setMonth((current) => shiftMonth(current, 1))}
-                className="rounded border border-neutral-800 px-2 py-0.5 text-xs text-neutral-500 transition-colors duration-150 hover:text-neutral-300"
-              >
-                →
-              </button>
-            </div>
-          </div>
-          <p className="mt-1 text-xs text-neutral-500">
+    <section>
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <div className="flex items-baseline gap-3">
+          <h2 className="cadence-title text-xl font-medium text-neutral-100">
             {data
               ? formatDate(data.month_start, {
                   month: "long",
                   year: "numeric",
                 })
               : month}
-          </p>
+          </h2>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              aria-label="Previous month"
+              onClick={() => setMonth((current) => shiftMonth(current, -1))}
+              className="text-sm text-neutral-500 transition-colors hover:text-neutral-200"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              aria-label="Next month"
+              onClick={() => setMonth((current) => shiftMonth(current, 1))}
+              className="text-sm text-neutral-500 transition-colors hover:text-neutral-200"
+            >
+              →
+            </button>
+          </div>
         </div>
-        {data && (
-          <dl className="flex gap-6 text-xs">
-            <div>
-              <dt className="text-neutral-600">Active days</dt>
-              <dd className="mt-1 font-medium text-neutral-300">
-                {data.totals.active_days}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-neutral-600">Reviews</dt>
-              <dd className="mt-1 font-medium text-neutral-300">
-                {data.totals.weekly_reflections}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-neutral-600">Completions</dt>
-              <dd className="mt-1 font-medium text-neutral-300">
-                {data.totals.habit_completions}
-              </dd>
-            </div>
-          </dl>
+        {data && data.totals.active_days > 0 && (
+          <p className="text-sm text-neutral-500">
+            {data.totals.active_days}{" "}
+            {data.totals.active_days === 1 ? "day" : "days"}
+          </p>
         )}
       </div>
 
@@ -145,103 +119,87 @@ export default function MonthlyContinuity({
 
       {data && (
         <>
-          <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1fr)_16rem]">
-            <div>
-              <h3 className="text-xs font-medium text-neutral-400">
-                Daily notes
-              </h3>
-              <div className="mt-3 border-y border-neutral-800">
-                {data.days.length === 0 ? (
-                  <p className="py-4 text-sm text-neutral-500">
-                    No activity recorded this month.
-                  </p>
-                ) : (
-                  data.days.map((day) => (
-                    <button
-                      key={day.date}
-                      type="button"
-                      aria-label={`Open day for ${formatDate(day.date, {
-                        month: "short",
-                        day: "numeric",
-                      })}`}
-                      onClick={() => onSelectDate(day.date)}
+          <div className="mt-10">
+            {data.days.length === 0 ? (
+              <p className="text-sm text-neutral-500">A quiet month.</p>
+            ) : (
+              data.days.map((day) => {
+                const preview =
+                  day.trace_preview ||
+                  (day.contexts.length > 0
+                    ? day.contexts.map((context) => context.name).join(", ")
+                    : "");
+                return (
+                  <button
+                    key={day.date}
+                    type="button"
+                    aria-label={`Open day for ${formatDate(day.date, {
+                      month: "short",
+                      day: "numeric",
+                    })}`}
+                    onClick={() => onSelectDate(day.date)}
+                    className="grid w-full grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-4 py-4 text-left"
+                  >
+                    <span
                       className={
                         selectedDate === day.date
-                          ? "grid w-full grid-cols-[4.5rem_1fr_auto] gap-3 border-b border-violet-500/40 bg-violet-500/5 px-2 py-3 text-left last:border-b-0"
-                          : "grid w-full grid-cols-[4.5rem_1fr_auto] gap-3 border-b border-neutral-800 px-2 py-3 text-left transition-colors duration-150 last:border-b-0 hover:bg-neutral-900/60"
+                          ? "text-sm text-violet-300"
+                          : "text-sm text-neutral-400"
                       }
                     >
-                      <span className="text-xs font-medium text-neutral-300">
-                        {formatDate(day.date, {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                      {formatDate(day.date, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                    <span className="min-w-0 truncate text-sm text-neutral-500">
+                      {preview}
+                    </span>
+                    {day.habit_completions > 0 ? (
+                      <span className="text-sm tabular-nums text-neutral-500">
+                        {day.habit_completions}
                       </span>
-                      <span className="min-w-0 truncate text-xs text-neutral-500">
-                        {day.contexts.length > 0 &&
-                          `${day.contexts
-                            .map((context) => context.name)
-                            .join(", ")} · `}
-                        {day.trace_preview ||
-                          (day.status === "closed"
-                            ? "Day closed without a note."
-                            : "Structured activity recorded.")}
-                      </span>
-                      <span className="text-xs tabular-nums text-neutral-600">
-                        {day.habit_completions} done
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-xs font-medium text-neutral-400">
-                Area activity
-              </h3>
-              {data.contexts.length === 0 ? (
-                <p className="mt-3 text-xs leading-5 text-neutral-600">
-                  No linked area activity.
-                </p>
-              ) : (
-                <ul className="mt-3 space-y-3">
-                  {data.contexts.map((context) => (
-                    <li key={context.id}>
-                      <button
-                        type="button"
-                        aria-label={`Open ${context.name} monthly activity`}
-                        aria-controls="context-month-detail"
-                        aria-expanded={selectedContextId === context.id}
-                        onClick={() =>
-                          setSelectedContextId((current) =>
-                            current === context.id ? null : context.id,
-                          )
-                        }
-                        className="w-full text-left"
-                      >
-                        <span className="flex justify-between gap-3">
-                          <span className="text-xs text-neutral-300">
-                            {context.name}
-                          </span>
-                          <span className="text-[11px] text-neutral-600">
-                            {context.active_days} days
-                          </span>
-                        </span>
-                        <span className="mt-1 line-clamp-2 block text-xs leading-5 text-neutral-500">
-                          {context.last_trace_preview ||
-                            `Last linked ${formatDate(context.last_date, {
-                              month: "short",
-                              day: "numeric",
-                            })}`}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                    ) : (
+                      <span />
+                    )}
+                  </button>
+                );
+              })
+            )}
           </div>
+
+          {data.contexts.length > 0 && (
+            <div className="mt-14">
+              <h3 className="text-sm text-neutral-400">Areas</h3>
+              <ul className="mt-5 space-y-5">
+                {data.contexts.map((context) => (
+                  <li key={context.id}>
+                    <button
+                      type="button"
+                      aria-label={`Open ${context.name} monthly activity`}
+                      aria-controls="context-month-detail"
+                      aria-expanded={selectedContextId === context.id}
+                      onClick={() =>
+                        setSelectedContextId((current) =>
+                          current === context.id ? null : context.id,
+                        )
+                      }
+                      className="w-full text-left"
+                    >
+                      <span className="text-sm text-neutral-300">
+                        {context.name}
+                      </span>
+                      {context.last_trace_preview ? (
+                        <span className="mt-1 line-clamp-2 block text-sm leading-6 text-neutral-500">
+                          {context.last_trace_preview}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {selectedContextId !== null && (
             <ContextMonthlyDetail
@@ -253,61 +211,49 @@ export default function MonthlyContinuity({
             />
           )}
 
-          <div className="mt-6 grid gap-6 border-t border-neutral-800 pt-5 md:grid-cols-2">
-            <div>
-              <h3 className="text-xs font-medium text-neutral-400">
-                Weekly reviews
-              </h3>
-              {data.weekly_reflections.length === 0 ? (
-                <p className="mt-3 text-xs text-neutral-600">
-                  No weekly reviews overlap this month.
-                </p>
-              ) : (
-                <ul className="mt-3 space-y-3">
-                  {data.weekly_reflections.map((reflection) => (
-                    <li key={reflection.id}>
-                      <p className="text-[11px] text-neutral-600">
-                        {formatDate(reflection.week_start, {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                        {" to "}
-                        {formatDate(reflection.week_end, {
-                          month: "short",
-                          day: "numeric",
-                        })}
+          {data.weekly_reflections.length > 0 && (
+            <div className="mt-14">
+              <h3 className="text-sm text-neutral-400">Reviews</h3>
+              <ul className="mt-5 space-y-5">
+                {data.weekly_reflections.map((reflection) => (
+                  <li key={reflection.id}>
+                    <p className="text-sm text-neutral-400">
+                      {formatDate(reflection.week_start, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      {" to "}
+                      {formatDate(reflection.week_end, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                    {reflection.excerpt ? (
+                      <p className="mt-1 line-clamp-3 text-sm leading-6 text-neutral-500">
+                        {reflection.excerpt}
                       </p>
-                      <p className="mt-1 line-clamp-3 text-xs leading-5 text-neutral-400">
-                        {reflection.excerpt || "Review saved without text"}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             </div>
+          )}
 
-            <div>
-              <h3 className="text-xs font-medium text-neutral-400">
-                Open follow-ups
-              </h3>
-              {data.open_threads.length === 0 ? (
-                <p className="mt-3 text-xs text-neutral-600">
-                  Nothing unresolved at month end.
-                </p>
-              ) : (
-                <ul className="mt-3 space-y-2">
-                  {data.open_threads.slice(0, 5).map((thread) => (
-                    <li
-                      key={thread.id}
-                      className="text-xs leading-5 text-neutral-500"
-                    >
-                      {thread.content}
-                    </li>
-                  ))}
-                </ul>
-              )}
+          {data.open_threads.length > 0 && (
+            <div className="mt-14">
+              <h3 className="text-sm text-neutral-400">Follow-ups</h3>
+              <ul className="mt-5 space-y-4">
+                {data.open_threads.slice(0, 5).map((thread) => (
+                  <li
+                    key={thread.id}
+                    className="text-sm leading-6 text-neutral-500"
+                  >
+                    {thread.content}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          )}
         </>
       )}
     </section>

@@ -53,7 +53,7 @@ describe("WeeklyReflectionCard", () => {
 
     await screen.findByText(/The week changed after this review/);
     await user.click(
-      screen.getByRole("button", { name: "Save review" }),
+      screen.getByRole("button", { name: "Save" }),
     );
 
     await waitFor(() =>

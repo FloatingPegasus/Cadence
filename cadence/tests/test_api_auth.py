@@ -193,6 +193,27 @@ class CadenceAuthApiTests(ApiTestCase):
         self.assertEqual(habits_after_registration.json(), [])
         self.assertEqual(login_after.status_code, 200)
 
+    def test_unconfigured_mail_prints_a_verify_link_instead_of_failing(
+        self,
+    ) -> None:
+        settings.test_mode = False
+        settings.brevo_api_key = "replace-with-brevo-api-key"
+        try:
+            registered = self.client.post(
+                "/api/auth/register",
+                json={
+                    "username": "nomaillocal",
+                    "email": "nomaillocal@example.com",
+                    "password": "test-password",
+                },
+            )
+        finally:
+            settings.test_mode = True
+            settings.brevo_api_key = ""
+
+        self.assertEqual(registered.status_code, 200)
+        self.assertIn("server log", registered.json()["message"])
+
     def test_login_uses_secure_cookie_session_and_signed_csrf(self) -> None:
         settings.frontend_base_url = "https://app.example.test"
         client = TestClient(app, base_url="https://testserver")

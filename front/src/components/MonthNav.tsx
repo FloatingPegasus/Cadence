@@ -18,25 +18,25 @@ function MonthNav({ month, onChange }: MonthNavProps) {
   });
 
   return (
-    <div className="flex items-center justify-center gap-3 mb-8">
+    <div className="mb-10 flex items-baseline justify-center gap-3">
       <button
         type="button"
         aria-label="Previous month"
         onClick={() => go(-1)}
-        className="px-3 py-1.5 text-sm rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+        className="cadence-chip"
       >
-        &larr;
+        ←
       </button>
-      <span className="text-sm font-medium text-neutral-100 w-32 text-center">
+      <h1 className="cadence-title w-44 text-center text-2xl font-medium text-neutral-100">
         {label}
-      </span>
+      </h1>
       <button
         type="button"
         aria-label="Next month"
         onClick={() => go(1)}
-        className="px-3 py-1.5 text-sm rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+        className="cadence-chip"
       >
-        &rarr;
+        →
       </button>
     </div>
   );

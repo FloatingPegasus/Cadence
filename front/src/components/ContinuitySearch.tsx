@@ -73,14 +73,10 @@ export default function ContinuitySearch({
   }
 
   return (
-    <section
-      className={
-        embedded ? "pt-4" : "mt-8 border-t border-neutral-800 pt-6"
-      }
-    >
+    <section>
       <div>
-        <h2 className="text-sm font-medium text-neutral-200">
-          Search your history
+        <h2 className="text-sm text-neutral-400">
+          Search
         </h2>
       </div>
 

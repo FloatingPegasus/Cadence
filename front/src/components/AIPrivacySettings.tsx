@@ -36,8 +36,8 @@ export default function AIPrivacySettings() {
   }
 
   return (
-    <section aria-labelledby="ai-privacy-title" className="border-t border-neutral-800 pt-6">
-      <h2 id="ai-privacy-title" className="text-sm font-medium text-neutral-200">
+    <section aria-labelledby="ai-privacy-title">
+      <h2 id="ai-privacy-title" className="cadence-kicker">
         Automatic summaries
       </h2>
       <p className="mt-1 max-w-2xl text-xs leading-5 text-neutral-500">
@@ -81,7 +81,7 @@ export default function AIPrivacySettings() {
           type="button"
           onClick={save}
           disabled={saving}
-          className="rounded-lg bg-neutral-800 px-3 py-2 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:opacity-50"
+          className="text-sm text-neutral-500 transition-colors hover:text-neutral-200 disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save AI preferences"}
         </button>

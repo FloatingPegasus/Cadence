@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   fetchCheckin,
@@ -64,6 +64,8 @@ export default function DailyCaptureCard({
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const saveChain = useRef(Promise.resolve());
+  const lastNote = useRef("");
 
   useEffect(() => {
     setIsLoading(true);
@@ -72,6 +74,7 @@ export default function DailyCaptureCard({
       .then(([day, values]) => {
         setNote(day.daily_note);
         setCheckin(values);
+        lastNote.current = day.daily_note;
       })
       .catch((caught) => {
         setError(
@@ -98,54 +101,67 @@ export default function DailyCaptureCard({
       });
   }, [date, contexts]);
 
-  async function save() {
-    setIsSaving(true);
-    setSaved(false);
-    setError(null);
-    try {
-      const [, , updatedContexts] = await Promise.all([
-        updateDay(date, note),
-        updateCheckin(date, checkin),
-        updateDayContexts(date, selectedContextIds),
-      ]);
-      setAttachedContexts(updatedContexts);
-      setSaved(true);
-      const hasSource =
-        note.trim().length > 0 ||
-        Object.values(checkin).some(
-          (value) => value !== null && value !== undefined && value !== "",
+  function save(
+    nextNote = note,
+    nextCheckin = checkin,
+    nextContextIds = selectedContextIds,
+  ) {
+    const task = saveChain.current.catch(() => undefined).then(async () => {
+      setIsSaving(true);
+      setSaved(false);
+      setError(null);
+      try {
+        const [, , updatedContexts] = await Promise.all([
+          updateDay(date, nextNote),
+          updateCheckin(date, nextCheckin),
+          updateDayContexts(date, nextContextIds),
+        ]);
+        setAttachedContexts(updatedContexts);
+        setSaved(true);
+        lastNote.current = nextNote;
+        const hasSource =
+          nextNote.trim().length > 0 ||
+          Object.values(nextCheckin).some(
+            (value) => value !== null && value !== undefined && value !== "",
+          );
+        onChanged(hasSource);
+        window.setTimeout(() => setSaved(false), 1800);
+      } catch (caught) {
+        setError(
+          caught instanceof Error ? caught.message : "Could not save the day",
         );
-      onChanged(hasSource);
-      window.setTimeout(() => setSaved(false), 1800);
-    } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Could not save the day",
-      );
-    } finally {
-      setIsSaving(false);
-    }
+      } finally {
+        setIsSaving(false);
+      }
+    });
+    saveChain.current = task;
+    return task;
   }
 
   function setNumber(key: keyof Checkin, value: string) {
-    setCheckin((current) => ({
-      ...current,
+    const next = {
+      ...checkin,
       [key]: value === "" ? null : Number(value),
-    }));
+    };
+    setCheckin(next);
+    void save(note, next);
   }
 
   function setText(key: keyof Checkin, value: string) {
-    setCheckin((current) => ({
-      ...current,
+    const next = {
+      ...checkin,
       [key]: value === "" ? null : value,
-    }));
+    };
+    setCheckin(next);
+    void save(note, next);
   }
 
   function toggleContext(contextId: number) {
-    setSelectedContextIds((current) =>
-      current.includes(contextId)
-        ? current.filter((id) => id !== contextId)
-        : [...current, contextId],
-    );
+    const next = selectedContextIds.includes(contextId)
+      ? selectedContextIds.filter((id) => id !== contextId)
+      : [...selectedContextIds, contextId];
+    setSelectedContextIds(next);
+    void save(note, checkin, next);
   }
 
   const contextOptions = [
@@ -159,41 +175,33 @@ export default function DailyCaptureCard({
   return (
     <section
       aria-labelledby="daily-capture-title"
-      className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5"
     >
-      <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="mb-5 flex items-baseline justify-between gap-4">
         <h2
           id="daily-capture-title"
-          className="text-sm font-medium text-neutral-200"
+          className="cadence-kicker"
         >
           Day note
         </h2>
-        <button
-          type="button"
-          onClick={save}
-          disabled={isLoading || isSaving}
-          className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSaving ? "Saving" : saved ? "Saved" : "Save note"}
-        </button>
+        <span className="text-xs text-neutral-600">
+          {isSaving ? "Saving" : saved ? "Saved" : ""}
+        </span>
       </div>
 
       {isLoading ? (
         <p className="text-sm text-neutral-600">Loading day…</p>
       ) : (
         <>
-          <label
-            htmlFor="daily-note"
-            className="mb-1.5 block text-xs text-neutral-500"
-          >
-            What happened today?
-          </label>
           <textarea
             id="daily-note"
+            aria-labelledby="daily-capture-title"
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="Write down what you want to remember."
-            className="min-h-28 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
+            onBlur={() => {
+              if (note === lastNote.current) return;
+              void save();
+            }}
+            className="min-h-36 w-full resize-y border-0 border-b border-neutral-800 bg-transparent p-0 pb-3 text-base leading-7 text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-500"
           />
 
           {contextOptions.length > 0 && (
@@ -222,10 +230,10 @@ export default function DailyCaptureCard({
             </fieldset>
           )}
 
-          <fieldset className="mt-4">
-            <legend className="text-xs text-neutral-500">
-              Quick check-in
-            </legend>
+          <details className="mt-8">
+            <summary className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
+              Check-in
+            </summary>
             <div className="mt-2 grid grid-cols-2 gap-3">
               {checkinFields.map(({ key, label, low, high }) => (
                 <label key={key} className="text-xs text-neutral-500">
@@ -245,10 +253,10 @@ export default function DailyCaptureCard({
                 </label>
               ))}
             </div>
-          </fieldset>
+          </details>
 
-          <details className="mt-4 border-t border-neutral-800 pt-3">
-            <summary className="cursor-pointer text-xs text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
+          <details className="mt-6">
+            <summary className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
               Add more detail
             </summary>
             <div className="mt-3 grid grid-cols-2 gap-3">
@@ -292,7 +300,6 @@ export default function DailyCaptureCard({
                   onChange={(event) =>
                     setText("emotional_state", event.target.value)
                   }
-                  placeholder="A few honest words"
                   className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
                 />
               </label>
@@ -314,7 +321,6 @@ export default function DailyCaptureCard({
                 <textarea
                   value={checkin.notes ?? ""}
                   onChange={(event) => setText("notes", event.target.value)}
-                  placeholder="Anything that explains these numbers"
                   className="mt-1 min-h-20 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
                 />
               </label>

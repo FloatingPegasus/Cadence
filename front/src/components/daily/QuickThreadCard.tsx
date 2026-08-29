@@ -82,7 +82,7 @@ export default function QuickThreadCard({
   return (
     <section
       aria-labelledby="daily-log-title"
-      className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5"
+      className="rounded-lg border border-neutral-800 bg-neutral-900 p-5"
     >
       <h2
         id="daily-log-title"

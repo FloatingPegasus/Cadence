@@ -34,12 +34,12 @@ function DataExportButton() {
   }
 
   return (
-    <div className="text-right">
+    <div>
       <button
         type="button"
         onClick={handleExport}
         disabled={isExporting}
-        className="px-3 py-1.5 text-sm rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 transition-colors duration-150 hover:bg-neutral-800 hover:text-neutral-200 disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
+        className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200 disabled:cursor-wait disabled:opacity-60"
       >
         {isExporting ? "Exporting…" : "Export data"}
       </button>

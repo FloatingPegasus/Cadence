@@ -49,23 +49,28 @@ describe("hybrid daily capture", () => {
       />,
     );
 
+    const checkinSummary = await screen.findByText("Check-in");
+    const checkinDetails = checkinSummary.closest("details");
+    if (checkinDetails) checkinDetails.open = true;
     await user.selectOptions(
-      await screen.findByRole("combobox", { name: "Energy" }),
+      screen.getByRole("combobox", { name: "Energy" }),
       "",
     );
-    await user.click(screen.getByText("Add more detail"));
+    const extraSummary = screen.getByText("Add more detail");
+    const extraDetails = extraSummary.closest("details");
+    if (extraDetails) extraDetails.open = true;
     await user.clear(
       screen.getByRole("textbox", { name: "Emotional state" }),
     );
-    await user.click(screen.getByRole("button", { name: "Save note" }));
 
-    await waitFor(() =>
-      expect(api.updateCheckin).toHaveBeenCalledWith("2026-07-23", {
+    await waitFor(() => {
+      const calls = vi.mocked(api.updateCheckin).mock.calls;
+      expect(calls.at(-1)?.[1]).toEqual({
         energy_level: null,
         emotional_state: null,
         focus_quality: 3,
-      }),
-    );
+      });
+    });
   });
 
   it("uses prompts as guidance without changing the saved entry", async () => {

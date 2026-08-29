@@ -44,13 +44,13 @@ export default function WeeklyReflectionHistory({
   return (
     <section
       aria-labelledby="reflection-history-title"
-      className="mt-6 border-t border-neutral-800 pt-5"
+      className="mt-16"
     >
       <h3
         id="reflection-history-title"
-        className="text-xs font-medium text-neutral-300"
+        className="text-sm text-neutral-400"
       >
-        Earlier reviews
+        Earlier
       </h3>
 
       {error ? (
@@ -58,7 +58,7 @@ export default function WeeklyReflectionHistory({
           {error}
         </p>
       ) : (
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="mt-6 space-y-5">
           {items.map((item) => (
             <button
               key={item.id}
@@ -68,18 +68,22 @@ export default function WeeklyReflectionHistory({
                 item.week_start === currentWeekStart ? "true" : undefined
               }
               onClick={() => onSelectWeek(item.week_start)}
-              className={
-                item.week_start === currentWeekStart
-                  ? "rounded-lg border border-violet-500/50 bg-violet-500/5 px-3 py-2 text-left"
-                  : "rounded-lg border border-neutral-800 px-3 py-2 text-left transition-colors duration-150 hover:bg-neutral-900/60"
-              }
+              className="block w-full text-left"
             >
-              <span className="text-xs text-neutral-300">
+              <span
+                className={
+                  item.week_start === currentWeekStart
+                    ? "text-sm text-violet-300"
+                    : "text-sm text-neutral-400"
+                }
+              >
                 {shortDate(item.week_start)} to {shortDate(item.week_end)}
               </span>
-              <span className="mt-1 line-clamp-2 block text-xs leading-5 text-neutral-500">
-                {item.excerpt || "Review saved without text"}
-              </span>
+              {item.excerpt ? (
+                <span className="mt-1 line-clamp-2 block text-sm leading-6 text-neutral-500">
+                  {item.excerpt}
+                </span>
+              ) : null}
             </button>
           ))}
         </div>

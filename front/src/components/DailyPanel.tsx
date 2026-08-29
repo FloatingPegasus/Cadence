@@ -53,41 +53,47 @@ export default function DailyPanel({
   }
 
   return (
-    <div className="mt-6 cadence-enter">
+    <div className="mt-12">
       {summaryStatus && (
-        <p role="status" className="mb-3 text-xs text-neutral-500">
+        <p role="status" className="mb-8 text-sm text-neutral-500">
           {summaryStatus}
         </p>
       )}
-      <div className="grid gap-6">
+      <div className="grid gap-5">
         <ReentryCard
           date={date}
           refreshKey={refreshKey}
           onSelectDate={onSelectDate}
         />
-        <DailyHabitsCard
-          date={date}
-          habits={habits}
-          refreshKey={refreshKey}
-          onHabitsChanged={onHabitsChanged}
-          onSourceChanged={() => sourceChanged(true)}
-        />
-        <DailyCaptureCard
-          date={date}
-          contexts={contexts}
-          onChanged={sourceChanged}
-        />
-        <CarryForwardCard date={date} onChanged={onChanged} />
-        <DailySummaryCard
-          date={date}
-          refreshKey={refreshKey}
-          onChanged={onChanged}
-        />
-        <DayClosureCard
-          date={date}
-          refreshKey={refreshKey}
-          onChanged={onChanged}
-        />
+        <div className="cadence-surface">
+          <DailyHabitsCard
+            date={date}
+            habits={habits}
+            refreshKey={refreshKey}
+            onHabitsChanged={onHabitsChanged}
+            onSourceChanged={() => sourceChanged(true)}
+          />
+        </div>
+        <div className="cadence-surface">
+          <DailyCaptureCard
+            date={date}
+            contexts={contexts}
+            onChanged={sourceChanged}
+          />
+        </div>
+        <div className="cadence-surface space-y-1">
+          <CarryForwardCard date={date} onChanged={onChanged} />
+          <DailySummaryCard
+            date={date}
+            refreshKey={refreshKey}
+            onChanged={onChanged}
+          />
+          <DayClosureCard
+            date={date}
+            refreshKey={refreshKey}
+            onChanged={onChanged}
+          />
+        </div>
       </div>
     </div>
   );

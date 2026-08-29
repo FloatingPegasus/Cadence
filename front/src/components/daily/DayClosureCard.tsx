@@ -65,28 +65,24 @@ export default function DayClosureCard({
   }
 
   return (
-    <section
-      aria-labelledby="day-closure-title"
-      className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 lg:col-span-2"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <h2
-          id="day-closure-title"
-          className="text-sm font-medium text-neutral-200"
+    <details className="py-2">
+      <summary
+        id="day-closure-title"
+        className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+      >
+        Finish the day
+      </summary>
+
+      {preview?.status === "closed" && (
+        <button
+          type="button"
+          disabled={isUpdating}
+          onClick={() => setStatus("open")}
+          className="mt-4 rounded-lg border border-neutral-800 px-3 py-1.5 text-xs text-neutral-400 transition-colors duration-150 hover:bg-neutral-900 disabled:opacity-50"
         >
-          Finish the day
-        </h2>
-        {preview?.status === "closed" && (
-          <button
-            type="button"
-            disabled={isUpdating}
-            onClick={() => setStatus("open")}
-            className="rounded-lg border border-neutral-800 px-3 py-1.5 text-xs text-neutral-400 transition-colors duration-150 hover:bg-neutral-900 disabled:opacity-50"
-          >
-            {isUpdating ? "Reopening" : "Reopen day"}
-          </button>
-        )}
-      </div>
+          {isUpdating ? "Reopening" : "Reopen day"}
+        </button>
+      )}
 
       {isLoading ? (
         <p className="mt-4 text-sm text-neutral-600">
@@ -201,6 +197,6 @@ export default function DayClosureCard({
           )}
         </>
       ) : null}
-    </section>
+    </details>
   );
 }
