@@ -80,7 +80,9 @@ Keep dev mode off outside local development.
 `./scripts/quickstart.sh` copies `.env.example` if needed, writes a signing
 key, and runs Compose. You can also run `docker compose up --build` after
 that `.env` exists. Public deployments must use HTTPS and a trusted reverse
-proxy. For multiple workers, set `CADENCE_AUTH_RATE_LIMIT_BACKEND=redis` and
+proxy. For the always-on `cadence.kanishq.dev` layout (Caddy + Compose on one
+VM), see [deploy.md](deploy.md). For multiple workers, set
+`CADENCE_AUTH_RATE_LIMIT_BACKEND=redis` and
 `CADENCE_REDIS_URL`. PostgreSQL is bound to `127.0.0.1`.
 
 Compose replaces host-side URLs from `.env` with container URLs that use the

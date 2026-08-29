@@ -30,10 +30,10 @@ services:
       # db service hostname even when .env contains host-side localhost URLs.
       CADENCE_MIGRATION_DATABASE_URL: ${CADENCE_COMPOSE_MIGRATION_DATABASE_URL:-${CADENCE_COMPOSE_DATABASE_URL:-postgresql+psycopg://${CADENCE_POSTGRES_USER:-cadence}:${CADENCE_POSTGRES_PASSWORD:-cadence-local-password}@db:5432/${CADENCE_POSTGRES_DB:-cadence}}}
       CADENCE_SERVE_FRONTEND: "true"
-      CADENCE_FRONTEND_BASE_URL: http://localhost:8000
-      CADENCE_CORS_ORIGINS: http://localhost:8000
+      CADENCE_FRONTEND_BASE_URL: ${CADENCE_FRONTEND_BASE_URL:-http://localhost:8000}
+      CADENCE_CORS_ORIGINS: ${CADENCE_CORS_ORIGINS:-http://localhost:8000}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - cadence-backups:/app/cadence/data/backups
     healthcheck:

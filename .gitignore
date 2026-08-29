@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+!.env.production.example
+node_modules/
 
 # Local/private tool state
 .agents/
@@ -37,3 +39,4 @@ cadence/data/backups/
 front/node_modules/
 front/dist/
 coverage/
+node_modules/

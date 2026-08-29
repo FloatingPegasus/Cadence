@@ -66,6 +66,7 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
           sudo apt-get update
           sudo apt-get install --yes postgresql-client-17
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
       - name: Verify PostgreSQL client version
         run: |
           pg_dump --version
@@ -119,6 +120,7 @@ jobs:
         run: |
           cp .env.example .env
           docker compose config --quiet
+          docker compose -f compose.yaml -f compose.prod.yaml config --quiet
       - name: Build application image
         run: docker build --tag cadence:ci .
 
@@ -139,7 +141,7 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check pip-audit==2.10.1 bandit==1.9.4
           pip-audit -r cadence/requirements.txt
-          bandit -r cadence -x cadence/tests,cadence/app/persistence/migrations
+          bandit -ll -r cadence -x cadence/tests,cadence/app/persistence/migrations
       - uses: actions/setup-node@v4
         with:
           node-version: "22"

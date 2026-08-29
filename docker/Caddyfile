@@ -1,0 +1,4 @@
+{$CADENCE_DOMAIN:cadence.kanishq.dev} {
+	encode gzip
+	reverse_proxy app:8000
+}

@@ -26,7 +26,8 @@ the verification link if you have not set Brevo.
 - Read the week back in History.
 
 Email verification, PostgreSQL, backups, and production config live in
-[Self-hosting](docs/self-host.md).
+[Self-hosting](docs/self-host.md). Always-on public deploy (Caddy + one VM):
+[Deploy](docs/deploy.md).
 
 ## Contributing
 
