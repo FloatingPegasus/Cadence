@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +26,20 @@ from .extensions import async_engine, sync_engine
 
 
 logger = logging.getLogger("cadence.app")
+
+
+def resolve_published_frontend_file(frontend_dir: Path, path: str) -> Path | None:
+    if not path or path.endswith("/") or "\0" in path:
+        return None
+    root = frontend_dir.resolve()
+    candidate = (root / path).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    if candidate.is_file():
+        return candidate
+    return None
 
 
 async def _database_readiness_probe() -> None:
@@ -152,6 +167,9 @@ def create_app() -> FastAPI:
             async def serve_frontend(path: str):
                 if path == "healthz" or path.startswith("api/"):
                     raise HTTPException(status_code=404)
+                published = resolve_published_frontend_file(frontend_dir, path)
+                if published is not None:
+                    return FileResponse(published)
                 return FileResponse(index_file)
 
     return app

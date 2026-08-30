@@ -1,5 +1,7 @@
 import unittest
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, patch
 
 if __package__:
@@ -13,7 +15,7 @@ from fastapi.testclient import TestClient
 import jwt
 from pydantic import ValidationError
 
-from cadence.app import app
+from cadence.app import app, create_app, resolve_published_frontend_file
 from cadence.app.config import Settings, settings
 from cadence.app.services.email import _verification_html
 from cadence.app.services.rate_limit import InMemoryRateLimiter, auth_rate_limiter
@@ -255,6 +257,41 @@ class SecurityRegressionTests(unittest.TestCase):
         self.assertIsNone(
             limiter.retry_after("test", limit=2, window_seconds=60)
         )
+
+    def test_hosted_frontend_serves_built_public_files(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "index.html").write_text("<!doctype html>spa", encoding="utf-8")
+            photo_dir = root / "focus"
+            photo_dir.mkdir()
+            photo = photo_dir / "cat-keyboard.jpg"
+            photo.write_bytes(b"jpeg-bytes")
+            self.assertEqual(
+                resolve_published_frontend_file(root, "focus/cat-keyboard.jpg"),
+                photo.resolve(),
+            )
+            self.assertIsNone(
+                resolve_published_frontend_file(root, "missing.jpg")
+            )
+            self.assertIsNone(
+                resolve_published_frontend_file(root, "../secrets")
+            )
+
+            original_serve = settings.serve_frontend
+            original_dir = settings.frontend_dist_dir
+            try:
+                settings.serve_frontend = True
+                settings.frontend_dist_dir = root
+                client = TestClient(create_app())
+                image = client.get("/focus/cat-keyboard.jpg")
+                self.assertEqual(image.status_code, 200)
+                self.assertEqual(image.content, b"jpeg-bytes")
+                spa = client.get("/today")
+                self.assertEqual(spa.status_code, 200)
+                self.assertIn(b"spa", spa.content)
+            finally:
+                settings.serve_frontend = original_serve
+                settings.frontend_dist_dir = original_dir
 
 
 if __name__ == "__main__":
