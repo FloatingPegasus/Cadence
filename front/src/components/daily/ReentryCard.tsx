@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   fetchDayReentry,
@@ -26,20 +26,33 @@ export default function ReentryCard({
   const [reentry, setReentry] = useState<DailyReentry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadedDate = useRef<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
+    const initial = loadedDate.current !== date;
+    if (initial) setIsLoading(true);
     setError(null);
     fetchDayReentry(date)
-      .then(setReentry)
+      .then((result) => {
+        if (cancelled) return;
+        loadedDate.current = date;
+        setReentry(result);
+      })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load earlier activity",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [date, refreshKey]);
 
   const hasContext =
