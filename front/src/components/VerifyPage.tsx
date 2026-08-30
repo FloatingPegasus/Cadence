@@ -41,13 +41,10 @@ function VerifyPage() {
   }, []);
 
   return (
-    <div className="max-w-sm mx-auto px-6 py-20 text-center">
-      <h1 className="text-xl font-semibold text-neutral-100 tracking-tight mb-2">
+    <div className="max-w-sm mx-auto px-6 py-16 text-center">
+      <h1 className="cadence-mark text-xl font-semibold text-neutral-100 tracking-tight mb-8">
         Cadence
       </h1>
-      <p className="text-sm text-neutral-500 mb-4">
-        Habits, hours, and a focus room.
-      </p>
 
       {status === "loading" && (
         <p className="text-sm text-neutral-400">{message}</p>
@@ -55,26 +52,27 @@ function VerifyPage() {
 
       {status === "success" && (
         <div className="space-y-4">
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-            <p className="text-sm text-neutral-300">{message}</p>
-          </div>
+          <h2 className="cadence-mark text-lg font-semibold tracking-tight text-neutral-100">
+            Email verified
+          </h2>
           <a
             href="/"
-            className="inline-block px-4 py-2 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 transition-colors"
+            className="inline-flex items-center justify-center w-full min-h-11 px-4 py-2.5 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 transition-colors"
           >
-            Go to login
+            Log in
           </a>
         </div>
       )}
 
       {status === "error" && (
         <div className="space-y-4">
-          <div className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3">
-            <p className="text-sm text-red-400">{message}</p>
-          </div>
+          <h2 className="cadence-mark text-lg font-semibold tracking-tight text-neutral-100">
+            Could not verify
+          </h2>
+          <p className="text-sm text-red-400">{message}</p>
           <a
             href="/"
-            className="inline-block px-4 py-2 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 transition-colors"
+            className="inline-flex items-center justify-center w-full min-h-11 px-4 py-2.5 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 transition-colors"
           >
             Back to login
           </a>

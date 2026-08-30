@@ -73,14 +73,19 @@ def _send_via_brevo(
         name=settings.from_name, email=settings.from_email
     )
     recipient = SendTransacEmailRequestToItem(email=to_email, name=to_name)
-    client.transactional_emails.send_transac_email(
+    result = client.transactional_emails.send_transac_email(
         sender=sender,
         to=[recipient],
         subject=subject,
         html_content=html_content,
         text_content=text_content,
     )
-    logger.info("Verification email sent to %s", to_email)
+    logger.info(
+        "Verification email accepted by Brevo recipient=%s from=%s message_id=%s",
+        to_email,
+        settings.from_email,
+        getattr(result, "message_id", None),
+    )
 
 
 def _verification_html(name: str, url: str) -> str:

@@ -12,11 +12,16 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sentAgain, setSentAgain] = useState(false);
+
+  const checkEmail = Boolean(successMsg) && (mode === "register" || mode === "resend");
+  const mailInServerLog = Boolean(successMsg?.includes("server log"));
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
+    setSentAgain(false);
     setLoading(true);
     try {
       if (mode === "login") {
@@ -37,6 +42,19 @@ function LoginPage() {
     }
   }
 
+  async function handleSendAgain() {
+    setError(null);
+    setLoading(true);
+    try {
+      setSuccessMsg(await resendVerification(email));
+      setSentAgain(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="px-6 py-6">
       <div className="flex justify-end">
@@ -49,24 +67,47 @@ function LoginPage() {
         </button>
       </div>
       <div className="cadence-surface mx-auto mt-10 max-w-sm">
-      <h1 className="cadence-mark mb-2 text-center text-xl font-semibold tracking-tight text-neutral-100">
+      <h1 className={`cadence-mark text-center text-xl font-semibold tracking-tight text-neutral-100 ${checkEmail ? "mb-6" : "mb-2"}`}>
         Cadence
       </h1>
-      <p className="mb-8 text-center text-sm text-neutral-500">
-        Habits, hours, and a focus room.
-      </p>
+      {!checkEmail ? (
+        <p className="mb-8 text-center text-sm text-neutral-500">
+          Habits, hours, and a focus room.
+        </p>
+      ) : null}
 
       {successMsg ? (
         <div className="text-center space-y-4">
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-3">
-            <p className="text-sm text-neutral-300">{successMsg}</p>
-          </div>
+          <h2 className="cadence-mark text-lg font-semibold tracking-tight text-neutral-100">
+            {mailInServerLog ? "Account created" : "Check your email"}
+          </h2>
+          <p className="text-sm text-neutral-400 break-words">
+            {mailInServerLog
+              ? successMsg
+              : email
+                ? `Link sent to ${email}.`
+                : successMsg}
+          </p>
+          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {email && !mailInServerLog ? (
+            <button
+              type="button"
+              onClick={() => void handleSendAgain()}
+              disabled={loading}
+              className="w-full min-h-11 px-4 py-2.5 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? "Please wait..." : sentAgain ? "Sent again" : "Send again"}
+            </button>
+          ) : null}
           <button
+            type="button"
             onClick={() => {
               setSuccessMsg(null);
+              setSentAgain(false);
+              setError(null);
               setMode("login");
             }}
-            className="text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+            className="w-full min-h-11 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
           >
             Back to login
           </button>
@@ -88,7 +129,7 @@ function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
+                  className="w-full min-h-11 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
                   placeholder={
                     mode === "login" ? "you@example.com" : "your name"
                   }
@@ -111,8 +152,8 @@ function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
-                  placeholder="you@example.com"
+                className="w-full min-h-11 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
+                placeholder="you@example.com"
                   required
                 />
               </div>
@@ -134,7 +175,7 @@ function LoginPage() {
                   autoComplete={
                     mode === "login" ? "current-password" : "new-password"
                   }
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
+                  className="w-full min-h-11 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
                   placeholder="••••••"
                   required
                 />
@@ -146,7 +187,7 @@ function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-2 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full min-h-11 px-4 py-2.5 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading
                 ? "Please wait..."
