@@ -67,7 +67,7 @@ export default function ContinuityExplorer({
         <div
           role="tablist"
           aria-label="History views"
-          className="cadence-rail flex gap-5 pb-2"
+          className="cadence-rail flex flex-wrap gap-x-3 gap-y-1 pb-2"
         >
           {views.map((item) => (
             <button
@@ -82,8 +82,8 @@ export default function ContinuityExplorer({
               onKeyDown={(event) => handleTabKey(event, item.id)}
               className={
                 view === item.id
-                  ? "text-sm text-violet-300"
-                  : "text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300"
+                  ? "min-h-11 px-1 text-sm text-violet-300"
+                  : "min-h-11 px-1 text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300"
               }
             >
               {item.label}
@@ -96,7 +96,7 @@ export default function ContinuityExplorer({
         id="continuity-explorer-panel"
         role="tabpanel"
         aria-labelledby={`continuity-tab-${view}`}
-        className="cadence-surface mt-12"
+        className="cadence-surface mt-8 sm:mt-12"
       >
         {view === "contexts" && (
           <ContextHub

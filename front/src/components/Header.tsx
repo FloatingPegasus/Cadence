@@ -19,12 +19,12 @@ function Header() {
   }
 
   return (
-    <header className="mb-10 flex items-baseline justify-between gap-4">
-      <h1 className="cadence-mark text-[1.35rem] font-medium text-neutral-100">
+    <header className="mb-6 flex items-center justify-between gap-3 sm:mb-10">
+      <h1 className="cadence-mark min-w-0 text-[1.35rem] font-medium text-neutral-100">
         Cadence
       </h1>
       {user && (
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
@@ -32,7 +32,9 @@ function Header() {
           >
             {theme === "light" ? "Dark" : "Light"}
           </button>
-          <span className="text-sm text-neutral-500">{user.username}</span>
+          <span className="hidden text-sm text-neutral-500 sm:inline">
+            {user.username}
+          </span>
           {logoutError && (
             <span role="alert" className="text-xs text-red-400">
               {logoutError}

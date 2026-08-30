@@ -43,7 +43,7 @@ export default function RecentDays({
           <button
             key={day.id}
             onClick={() => onSelect(day.date)}
-            className="block w-full rounded-lg px-1 py-2 text-left hover:bg-neutral-950/40"
+            className="block min-h-11 w-full rounded-lg px-1 py-3 text-left hover:bg-neutral-950/40"
           >
             <span
               className={

@@ -41,9 +41,10 @@ function HabitGrid({
         {weekdays.map((day) => (
           <div
             key={day}
-            className="pb-2 text-center text-[11px] text-neutral-500"
+            className="pb-1 text-center text-[11px] text-neutral-500 sm:pb-2"
           >
-            {day}
+            <span className="sm:hidden">{day.slice(0, 1)}</span>
+            <span className="hidden sm:inline">{day}</span>
           </div>
         ))}
         {Array.from({ length: leading }, (_, index) => (
@@ -63,8 +64,8 @@ function HabitGrid({
               key={day}
               className={
                 selected
-                  ? "rounded-2xl bg-violet-500/10 p-2.5"
-                  : "rounded-2xl p-2.5"
+                  ? "rounded-xl bg-violet-500/10 p-1.5 sm:rounded-2xl sm:p-2.5"
+                  : "rounded-xl p-1.5 sm:rounded-2xl sm:p-2.5"
               }
             >
               <button
@@ -73,10 +74,10 @@ function HabitGrid({
                 onClick={() => onSelectDate(date)}
                 className={
                   selected
-                    ? "block w-full text-left text-sm text-violet-300"
+                    ? "block min-h-9 w-full text-left text-sm text-violet-300"
                     : isToday
-                      ? "block w-full text-left text-sm text-neutral-200"
-                      : "block w-full text-left text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+                      ? "block min-h-9 w-full text-left text-sm text-neutral-200"
+                      : "block min-h-9 w-full text-left text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
                 }
               >
                 {day}
@@ -99,7 +100,7 @@ function HabitGrid({
                             onToggle(habit.id, date, active ? "0" : "1");
                           }
                         }}
-                        className="flex h-5 w-5 items-center justify-center"
+                        className="flex h-7 w-7 items-center justify-center sm:h-5 sm:w-5"
                       >
                         <span
                           className={

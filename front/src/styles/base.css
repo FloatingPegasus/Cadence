@@ -93,6 +93,7 @@ html.dark {
 html {
   background-color: var(--canvas);
   color: var(--n-200);
+  overflow-x: clip;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -106,6 +107,9 @@ html {
 body {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: clip;
   background-color: var(--canvas);
   color: var(--n-200);
   font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
@@ -170,8 +174,14 @@ html.dark body::before {
 .cadence-surface {
   background: var(--n-900);
   border-radius: 1.15rem;
-  padding: 1.35rem 1.4rem 1.45rem;
+  padding: 1.1rem 1rem 1.2rem;
   box-shadow: var(--shadow-page);
+}
+
+@media (min-width: 640px) {
+  .cadence-surface {
+    padding: 1.35rem 1.4rem 1.45rem;
+  }
 }
 
 .cadence-chip {
@@ -180,11 +190,20 @@ html.dark body::before {
   font-family: inherit;
   border-radius: 0.55rem;
   background: var(--n-900);
-  padding: 0.35rem 0.7rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.85rem;
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: var(--n-400);
   box-shadow: var(--shadow-page);
+  touch-action: manipulation;
+}
+
+@media (min-width: 640px) {
+  .cadence-chip {
+    min-height: 0;
+    padding: 0.35rem 0.7rem;
+  }
 }
 
 .cadence-chip:hover {
@@ -197,6 +216,19 @@ html.dark body::before {
 
 .cadence-chip-accent:hover {
   color: var(--v-200);
+}
+
+button,
+summary {
+  touch-action: manipulation;
+}
+
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 1rem;
+  }
 }
 
 .cadence-rail {

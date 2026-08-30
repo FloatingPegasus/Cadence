@@ -162,12 +162,12 @@ export default function QuickThreadCard({
                 ? "Write as much or as little as you need"
                 : "What happened just now?"
             }
-            className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
+            className="min-h-11 min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 sm:min-h-0 sm:text-sm"
           />
           <button
             type="submit"
             disabled={isSubmitting || draft.trim().length === 0}
-            className="rounded-lg border border-neutral-800 px-3 py-2 text-xs text-neutral-300 transition-colors duration-150 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-11 rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-300 transition-colors duration-150 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
           >
             {isSubmitting ? "Saving" : "Log"}
           </button>

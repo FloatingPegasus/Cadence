@@ -125,7 +125,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-8 py-16">
+    <div className="mx-auto max-w-2xl px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-8 sm:py-16">
       <Header />
       <DashboardNav view={view} onChange={setView} />
       {actionError && (
@@ -146,7 +146,7 @@ export default function DashboardPage() {
                   type="date"
                   value={selectedDate}
                   onChange={(event) => setSelectedDate(event.target.value)}
-                  className="ml-2 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-300 outline-none transition-colors duration-200 focus:border-neutral-600"
+                  className="ml-2 min-h-11 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-2 text-base text-neutral-300 outline-none transition-colors duration-200 focus:border-neutral-600 sm:min-h-0 sm:py-1.5 sm:text-xs"
                 />
               </label>
             </div>

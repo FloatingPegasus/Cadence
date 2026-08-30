@@ -56,7 +56,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="px-6 py-6">
+    <div className="px-4 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6">
       <div className="flex justify-end">
         <button
           type="button"
@@ -208,7 +208,7 @@ function LoginPage() {
                     setMode("register");
                     setError(null);
                   }}
-                  className="w-full text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+                  className="w-full min-h-11 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
                 >
                   Need an account? Register
                 </button>
@@ -218,7 +218,7 @@ function LoginPage() {
                     setMode("resend");
                     setError(null);
                   }}
-                  className="w-full text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+                  className="w-full min-h-11 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
                 >
                   Resend verification email
                 </button>
@@ -230,7 +230,7 @@ function LoginPage() {
                   setMode("login");
                   setError(null);
                 }}
-                className="w-full text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+                className="w-full min-h-11 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
               >
                 Back to login
               </button>
