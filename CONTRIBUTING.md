@@ -79,8 +79,16 @@ If a change affects migrations, API behavior, or configuration, include the
 relevant test coverage and explain any manual verification in the pull
 request.
 
+## Branches
+
+Open a pull request against `main`. Name the branch after the change, for
+example `fix/habit-checkbox` or `chore/ci`. GitHub Dependabot opens its own
+`dependabot/...` branches for package updates; those are not a model for
+feature work.
+
 ## Pull requests
 
 Describe what changed, why it changed, and how it was tested. Keep unrelated
 cleanup out of feature changes, and update documentation when setup or
-behavior changes.
+behavior changes. `main` is protected: changes go through a pull request,
+and CI must pass before merge.
