@@ -5,6 +5,20 @@ import { describe, expect, it, vi } from "vitest";
 import DashboardNav from "./DashboardNav";
 
 describe("DashboardNav", () => {
+  it("shows all six workspaces", () => {
+    render(<DashboardNav view="today" onChange={vi.fn()} />);
+    for (const name of [
+      "Today",
+      "Hours",
+      "Focus",
+      "Calendar",
+      "History",
+      "Settings",
+    ]) {
+      screen.getByRole("button", { name });
+    }
+  });
+
   it("moves through the six workspaces by keyboard", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

@@ -141,7 +141,7 @@ export default function ContinuitySearch({
         <button
           type="submit"
           disabled={query.trim().length < 2 || isSearching}
-          className="rounded-lg border border-violet-500/60 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-300 transition-colors duration-150 hover:bg-violet-500/15 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600"
+          className="min-h-11 rounded-lg border border-violet-500/60 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-300 transition-colors duration-150 hover:bg-violet-500/15 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600"
         >
           {isSearching ? "Searching" : "Search"}
         </button>

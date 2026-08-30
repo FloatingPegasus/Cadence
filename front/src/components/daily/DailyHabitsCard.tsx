@@ -127,14 +127,14 @@ export default function DailyHabitsCard({
                 checked={habit.completed}
                 onChange={() => toggle(habit)}
                 aria-label={`Mark ${habit.name} complete for ${date}`}
-                className="h-5 w-5 accent-violet-500"
+                className="h-6 w-6 accent-violet-500"
               />
             </label>
           ))}
         </div>
       ) : null}
 
-      <form onSubmit={addHabit} className="mt-5 flex gap-3">
+      <form onSubmit={addHabit} className="mt-5 flex gap-2 sm:gap-3">
         <label htmlFor="new-daily-habit" className="sr-only">
           Add a habit
         </label>
@@ -144,12 +144,12 @@ export default function DailyHabitsCard({
           onChange={(event) => setNewName(event.target.value)}
           placeholder="Add a habit"
           maxLength={100}
-          className="min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 sm:min-h-0 sm:text-sm"
         />
         <button
           type="submit"
           disabled={isSaving || newName.trim().length === 0}
-          className="rounded-lg bg-neutral-800 px-3 py-2 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-11 rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
         >
           {isSaving ? "Adding" : "Add"}
         </button>

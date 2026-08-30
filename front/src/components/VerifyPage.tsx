@@ -41,7 +41,7 @@ function VerifyPage() {
   }, []);
 
   return (
-    <div className="max-w-sm mx-auto px-6 py-16 text-center">
+    <div className="mx-auto max-w-sm px-4 py-10 text-center sm:px-6 sm:py-16">
       <h1 className="cadence-mark text-xl font-semibold text-neutral-100 tracking-tight mb-8">
         Cadence
       </h1>

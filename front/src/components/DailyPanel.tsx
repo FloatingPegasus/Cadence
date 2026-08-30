@@ -53,7 +53,7 @@ export default function DailyPanel({
   }
 
   return (
-    <div className="mt-12">
+    <div className="mt-6 sm:mt-12">
       {summaryStatus && (
         <p role="status" className="mb-8 text-sm text-neutral-500">
           {summaryStatus}

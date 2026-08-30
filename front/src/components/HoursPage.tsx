@@ -88,7 +88,7 @@ export default function HoursPage({
             type="date"
             value={date}
             onChange={(event) => onSelectDate(event.target.value)}
-            className="ml-2 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-300 outline-none transition-colors duration-200 focus:border-neutral-600"
+            className="ml-2 min-h-11 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-2 text-base text-neutral-300 outline-none transition-colors duration-200 focus:border-neutral-600 sm:min-h-0 sm:py-1.5 sm:text-xs"
           />
         </label>
       </div>
@@ -107,10 +107,11 @@ export default function HoursPage({
             <li key={slot.hour}>
               <form
                 onSubmit={(event) => handleSubmit(event, slot.hour)}
+                aria-busy={savingHour === slot.hour}
                 className={
                   active
-                    ? "grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg bg-violet-500/10 py-2 pr-1"
-                    : "grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg py-2 pr-1 hover:bg-neutral-950/40"
+                    ? "grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-2 rounded-lg bg-violet-500/10 py-1.5 sm:grid-cols-[4.5rem_minmax(0,1fr)_auto] sm:gap-3 sm:py-2 sm:pr-1"
+                    : "grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-2 rounded-lg py-1.5 hover:bg-neutral-950/40 sm:grid-cols-[4.5rem_minmax(0,1fr)_auto] sm:gap-3 sm:py-2 sm:pr-1"
                 }
               >
                 <label
@@ -136,9 +137,9 @@ export default function HoursPage({
                   onBlur={() => void saveHour(slot.hour)}
                   placeholder={active ? "Now" : ""}
                   maxLength={2000}
-                  className="min-w-0 rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-700 focus:bg-neutral-950"
+                  className="min-h-11 min-w-0 rounded-md border border-transparent bg-transparent px-2 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-700 focus:bg-neutral-950 sm:min-h-0 sm:py-1.5 sm:text-sm"
                 />
-                <span className="w-12 text-right text-[11px] text-neutral-600">
+                <span className="hidden w-12 text-right text-[11px] text-neutral-600 sm:block">
                   {savingHour === slot.hour ? "Saving" : ""}
                 </span>
               </form>

@@ -45,8 +45,8 @@ export default function DashboardNav({
   }
 
   return (
-    <nav aria-label="Primary" className="cadence-rail mb-12">
-      <div className="flex gap-7 overflow-x-auto pb-3">
+    <nav aria-label="Primary" className="cadence-rail mb-8 sm:mb-12">
+      <div className="grid grid-cols-3 gap-1 pb-2 sm:flex sm:gap-7 sm:overflow-x-auto sm:pb-3">
         {views.map((item) => (
           <button
             key={item.id}
@@ -57,8 +57,8 @@ export default function DashboardNav({
             onKeyDown={(event) => handleKey(event, item.id)}
             className={
               view === item.id
-                ? "border-b border-violet-400 pb-1 text-sm text-neutral-100"
-                : "border-b border-transparent pb-1 text-sm text-neutral-500 transition-colors duration-200 hover:text-neutral-200"
+                ? "min-h-11 rounded-lg bg-neutral-800/80 px-2 text-sm text-neutral-100 sm:rounded-none sm:border-b sm:border-violet-400 sm:bg-transparent sm:px-0 sm:pb-1"
+                : "min-h-11 rounded-lg px-2 text-sm text-neutral-500 transition-colors duration-200 hover:text-neutral-200 sm:rounded-none sm:border-b sm:border-transparent sm:px-0 sm:pb-1"
             }
           >
             {item.label}

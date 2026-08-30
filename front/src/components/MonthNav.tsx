@@ -18,7 +18,7 @@ function MonthNav({ month, onChange }: MonthNavProps) {
   });
 
   return (
-    <div className="mb-10 flex items-baseline justify-center gap-3">
+    <div className="mb-8 flex items-center justify-center gap-3 sm:mb-10 sm:items-baseline">
       <button
         type="button"
         aria-label="Previous month"
@@ -27,7 +27,7 @@ function MonthNav({ month, onChange }: MonthNavProps) {
       >
         ←
       </button>
-      <h1 className="cadence-title w-44 text-center text-2xl font-medium text-neutral-100">
+      <h1 className="cadence-title min-w-0 flex-1 text-center text-xl font-medium text-neutral-100 sm:w-44 sm:flex-none sm:text-2xl">
         {label}
       </h1>
       <button
