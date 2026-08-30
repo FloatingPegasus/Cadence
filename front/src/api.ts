@@ -23,6 +23,36 @@ function getCsrfCookie(): string | null {
   return null;
 }
 
+const FALLBACK_ERROR = "Something went wrong";
+
+function messageFromErrorBody(data: unknown, fallback: string): string {
+  if (!data || typeof data !== "object" || !("detail" in data)) {
+    return fallback;
+  }
+  const detail = (data as { detail: unknown }).detail;
+  if (typeof detail === "string" && detail.trim()) {
+    return detail.trim();
+  }
+  if (!Array.isArray(detail)) {
+    return fallback;
+  }
+  const parts = detail.flatMap((item) => {
+    if (!item || typeof item !== "object" || !("msg" in item)) {
+      return [];
+    }
+    const msg = String((item as { msg: unknown }).msg).trim();
+    if (!msg) return [];
+    const loc = Array.isArray((item as { loc?: unknown }).loc)
+      ? (item as { loc: unknown[] }).loc.filter(
+          (part): part is string => typeof part === "string" && part !== "body",
+        )
+      : [];
+    const field = loc[0];
+    return [field ? `${field}: ${msg}` : msg];
+  });
+  return parts.length > 0 ? parts.join(". ") : fallback;
+}
+
 export async function request<T = unknown>(
   input: RequestInfo,
   init: RequestInit = {},
@@ -46,12 +76,9 @@ export async function request<T = unknown>(
     credentials: "include",
   });
   if (!res.ok) {
-    let detail = res.statusText;
+    let detail = res.statusText.trim() || FALLBACK_ERROR;
     try {
-      const data = await res.json();
-      if (typeof data?.detail === "string") {
-        detail = data.detail;
-      }
+      detail = messageFromErrorBody(await res.json(), detail);
     } catch {
     }
     throw new Error(detail);

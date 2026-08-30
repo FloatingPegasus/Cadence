@@ -15,6 +15,7 @@ import DisciplineContinuity from "./DisciplineContinuity";
 import ContinuityExplorer from "./ContinuityExplorer";
 import DashboardNav, { type DashboardView } from "./DashboardNav";
 import FocusPage from "./FocusPage";
+import DayHabitsDialog from "./DayHabitsDialog";
 import HabitGrid from "./HabitGrid";
 import Header from "./Header";
 import HoursPage from "./HoursPage";
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [habitVersion, setHabitVersion] = useState(0);
   const [contextVersion, setContextVersion] = useState(0);
+  const [dayDialogOpen, setDayDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -119,7 +121,13 @@ export default function DashboardPage() {
       });
   }
 
+  function openDateDialog(date: string) {
+    setSelectedDate(date);
+    setDayDialogOpen(true);
+  }
+
   function openDay(date: string) {
+    setDayDialogOpen(false);
     setSelectedDate(date);
     setView("today");
   }
@@ -127,7 +135,13 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-8 sm:py-16">
       <Header />
-      <DashboardNav view={view} onChange={setView} />
+      <DashboardNav
+        view={view}
+        onChange={(next) => {
+          setView(next);
+          if (next !== "calendar") setDayDialogOpen(false);
+        }}
+      />
       {actionError && (
         <div className="mb-6 rounded-lg border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
           {actionError}
@@ -190,23 +204,23 @@ export default function DashboardPage() {
                   days={data.days}
                   month={data.month}
                   lookup={data.lookup}
-                  onToggle={handleToggle}
                   selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
+                  onSelectDate={openDateDialog}
                   onSelectHabit={setSelectedHabitId}
                 />
               </div>
             ) : (
               <p className="mt-8 text-sm text-neutral-500">No habits yet.</p>
             )}
-            {selectedDate && (
-              <button
-                type="button"
-                onClick={() => openDay(selectedDate)}
-                className="cadence-chip mt-6"
-              >
-                Open selected day
-              </button>
+            {dayDialogOpen && selectedDate && data && (
+              <DayHabitsDialog
+                date={selectedDate}
+                habits={data.habits}
+                lookup={data.lookup}
+                onToggle={handleToggle}
+                onOpenDay={() => openDay(selectedDate)}
+                onClose={() => setDayDialogOpen(false)}
+              />
             )}
             {selectedHabitId !== null && data && (
               <DisciplineContinuity

@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import {
   generateSummary,
   type ContinuityContext,
@@ -33,32 +31,15 @@ export default function DailyPanel({
   onHabitsChanged,
 }: DailyPanelProps) {
   const { user } = useAuth();
-  const [summaryStatus, setSummaryStatus] = useState<string | null>(null);
 
   function sourceChanged(hasSource = true) {
     onChanged();
     if (!hasSource || !user?.ai_processing_consent) return;
-
-    setSummaryStatus("Updating your summary…");
-    void generateSummary(date)
-      .then(() => setSummaryStatus("Summary updated"))
-      .catch((caught) => {
-        const message = caught instanceof Error ? caught.message : "";
-        setSummaryStatus(
-          message.toLowerCase().includes("edited summary")
-            ? "Your edited summary was kept"
-            : "Summary could not be updated automatically",
-        );
-      });
+    void generateSummary(date).catch(() => {});
   }
 
   return (
     <div className="mt-6 sm:mt-12">
-      {summaryStatus && (
-        <p role="status" className="mb-8 text-sm text-neutral-500">
-          {summaryStatus}
-        </p>
-      )}
       <div className="grid gap-5">
         <ReentryCard
           date={date}

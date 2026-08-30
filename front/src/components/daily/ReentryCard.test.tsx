@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -87,5 +87,37 @@ describe("ReentryCard", () => {
     await screen.findByText("Publish the release");
     expect(screen.queryByText("Earlier note")).toBeNull();
     expect(screen.queryByText("Related areas")).toBeNull();
+  });
+
+  it("does not flash a loading card while the day refreshes", async () => {
+    vi.mocked(fetchDayReentry).mockResolvedValue({
+      date: "2026-07-23",
+      previous_trace: null,
+      open_threads: [],
+      contexts: [],
+    });
+
+    const { rerender } = render(
+      <ReentryCard
+        date="2026-07-23"
+        refreshKey={0}
+        onSelectDate={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByText("Pick up where you left off")).toBeNull(),
+    );
+
+    rerender(
+      <ReentryCard
+        date="2026-07-23"
+        refreshKey={1}
+        onSelectDate={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Loading earlier activity...")).toBeNull();
+    expect(screen.queryByText("Pick up where you left off")).toBeNull();
   });
 });

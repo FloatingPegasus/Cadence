@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   fetchClosurePreview,
@@ -26,21 +26,36 @@ export default function DayClosureCard({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadedDate = useRef<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
-    setIsReviewing(false);
+    let cancelled = false;
+    const initial = loadedDate.current !== date;
+    if (initial) {
+      setIsLoading(true);
+      setIsReviewing(false);
+    }
     setError(null);
     fetchClosurePreview(date)
-      .then(setPreview)
+      .then((result) => {
+        if (cancelled) return;
+        loadedDate.current = date;
+        setPreview(result);
+      })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load the closure review",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [date, refreshKey]);
 
   async function setStatus(status: "open" | "closed") {

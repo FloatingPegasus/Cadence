@@ -25,6 +25,12 @@
   --amber-300: #8a5a10;
   --amber-900: #ead9b8;
   --amber-950: #f4ead4;
+  --habit-1: #c45c3e;
+  --habit-2: #5f7a5a;
+  --habit-3: #5a6e82;
+  --habit-4: #b07a2c;
+  --habit-5: #7a5a6e;
+  --habit-6: #6b7344;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-ui: 280ms;
   --motion-micro: 180ms;
@@ -59,6 +65,12 @@ html.dark {
   --amber-300: #e6c07a;
   --amber-900: #5c4a24;
   --amber-950: #3a3018;
+  --habit-1: #d98970;
+  --habit-2: #8fad88;
+  --habit-3: #8aa0b5;
+  --habit-4: #e6c07a;
+  --habit-5: #c4a0b4;
+  --habit-6: #a3ab6e;
   --shadow-page:
     inset 0 1px 0 rgba(255, 247, 236, 0.06),
     0 1px 1px rgba(0, 0, 0, 0.28),
@@ -244,6 +256,30 @@ summary {
 
 button:disabled {
   cursor: not-allowed;
+}
+
+.habit-mark-1 {
+  background-color: var(--habit-1);
+}
+
+.habit-mark-2 {
+  background-color: var(--habit-2);
+}
+
+.habit-mark-3 {
+  background-color: var(--habit-3);
+}
+
+.habit-mark-4 {
+  background-color: var(--habit-4);
+}
+
+.habit-mark-5 {
+  background-color: var(--habit-5);
+}
+
+.habit-mark-6 {
+  background-color: var(--habit-6);
 }
 
 @media (max-width: 639px) {
