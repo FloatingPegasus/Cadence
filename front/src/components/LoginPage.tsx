@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { useTheme } from "../contexts/ThemeContext";
+import ThemeToggle from "./ThemeToggle";
 
 function LoginPage() {
   const { login, register, resendVerification } = useAuth();
-  const { theme, setTheme } = useTheme();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,13 +57,7 @@ function LoginPage() {
   return (
     <div className="px-4 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6">
       <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          className="cadence-chip"
-        >
-          {theme === "light" ? "Dark" : "Light"}
-        </button>
+        <ThemeToggle />
       </div>
       <div className="cadence-surface mx-auto mt-10 max-w-sm">
       <h1 className={`cadence-mark text-center text-xl font-semibold tracking-tight text-neutral-100 ${checkEmail ? "mb-6" : "mb-2"}`}>

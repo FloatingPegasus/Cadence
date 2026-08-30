@@ -90,7 +90,7 @@ export default function DailySummaryCard({
     <details className="py-2">
       <summary
         id="daily-summary-title"
-        className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+        className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
       >
         Daily review
       </summary>

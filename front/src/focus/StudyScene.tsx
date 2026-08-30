@@ -36,7 +36,7 @@ export default function StudyScene() {
   return (
     <button
       type="button"
-      className="relative block aspect-[16/9] w-full cursor-pointer overflow-hidden border-0 bg-neutral-900 p-0"
+      className="relative block aspect-[16/9] w-full overflow-hidden border-0 bg-neutral-900 p-0"
       aria-label="Study scene"
       onClick={() => setIndex((current) => (current + 1) % cats.length)}
     >

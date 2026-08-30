@@ -64,7 +64,7 @@ export default function GoalsSettings() {
 
   return (
     <details>
-      <summary className="cursor-pointer text-sm text-neutral-400 hover:text-neutral-200">
+      <summary className="text-sm text-neutral-400 hover:text-neutral-200">
         Goals
       </summary>
       <div className="pt-5">

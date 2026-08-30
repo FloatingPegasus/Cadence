@@ -231,7 +231,7 @@ export default function DailyCaptureCard({
           )}
 
           <details className="mt-8">
-            <summary className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
+            <summary className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
               Check-in
             </summary>
             <div className="mt-2 grid grid-cols-2 gap-3">
@@ -256,7 +256,7 @@ export default function DailyCaptureCard({
           </details>
 
           <details className="mt-6">
-            <summary className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
+            <summary className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
               Add more detail
             </summary>
             <div className="mt-3 grid grid-cols-2 gap-3">
