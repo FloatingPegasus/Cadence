@@ -2,8 +2,7 @@
 
 [![CI](https://github.com/FloatingPegasus/Cadence/actions/workflows/ci.yml/badge.svg)](https://github.com/FloatingPegasus/Cadence/actions/workflows/ci.yml)
 
-Private habits, an hourly log, and a focus room. Self-hosted. AI reviews stay
-off until you consent.
+Private habits, an hourly log, and a focus room. Self-hosted. AI reviews stay off until you consent.
 
 ![Focus room](front/public/focus/cat-keyboard.jpg)
 
