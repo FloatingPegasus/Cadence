@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   fetchSummary,
@@ -25,23 +25,34 @@ export default function DailySummaryCard({
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadedDate = useRef<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
+    const initial = loadedDate.current !== date;
+    if (initial) setIsLoading(true);
     setError(null);
     fetchSummary(date)
       .then((dailySummary) => {
+        if (cancelled) return;
+        loadedDate.current = date;
         setSummary(dailySummary);
         setContent(dailySummary?.content ?? "");
       })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load the summary",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [date, refreshKey]);
 
   async function save() {

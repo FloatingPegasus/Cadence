@@ -1,3 +1,4 @@
+import { habitMarkClass } from "../habitMark";
 import { todayAsLocalDate } from "../time";
 
 interface HabitGridProps {
@@ -5,7 +6,6 @@ interface HabitGridProps {
   days: number[];
   month: string;
   lookup: Record<string, boolean>;
-  onToggle: (habitId: number, dateStr: string, newVal: string) => void;
   selectedDate: string | null;
   onSelectDate: (dateStr: string) => void;
   onSelectHabit?: (habitId: number) => void;
@@ -13,12 +13,18 @@ interface HabitGridProps {
 
 const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+function listedHabitsFor(
+  habits: HabitGridProps["habits"],
+): HabitGridProps["habits"] {
+  const visible = habits.filter((habit) => !habit.is_archived);
+  return visible.length > 0 ? visible : habits;
+}
+
 function HabitGrid({
   habits,
   days,
   month,
   lookup,
-  onToggle,
   selectedDate,
   onSelectDate,
   onSelectHabit,
@@ -28,8 +34,7 @@ function HabitGrid({
   const lastDay = new Date(year, monthNumber, 0).getDate();
   const available = new Set(days);
   const today = todayAsLocalDate();
-  const visibleHabits = habits.filter((habit) => !habit.is_archived);
-  const listedHabits = visibleHabits.length > 0 ? visibleHabits : habits;
+  const listedHabits = listedHabitsFor(habits);
 
   function dateStr(day: number) {
     return `${month}-${String(day).padStart(2, "0")}`;
@@ -72,53 +77,39 @@ function HabitGrid({
                 type="button"
                 disabled={!enabled}
                 onClick={() => onSelectDate(date)}
+                aria-current={selected ? "date" : undefined}
+                aria-label={
+                  listedHabits.length > 0
+                    ? `${date}, ${completed} of ${listedHabits.length} complete`
+                    : date
+                }
                 className={
                   selected
-                    ? "block min-h-9 w-full text-left text-sm text-violet-300"
+                    ? "flex min-h-11 w-full flex-col items-start text-left text-sm text-violet-300"
                     : isToday
-                      ? "block min-h-9 w-full text-left text-sm text-neutral-200"
-                      : "block min-h-9 w-full text-left text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+                      ? "flex min-h-11 w-full flex-col items-start text-left text-sm text-neutral-200"
+                      : "flex min-h-11 w-full flex-col items-start text-left text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
                 }
               >
-                {day}
-              </button>
-              {enabled && listedHabits.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {listedHabits.map((habit) => {
-                    const active = lookup[`${habit.id}-${date}`] === true;
-                    return (
-                      <button
-                        key={habit.id}
-                        type="button"
-                        aria-pressed={active}
-                        aria-label={`${habit.name} on ${date}: ${
-                          active ? "completed" : "not completed"
-                        }${habit.is_archived ? ", archived" : ""}`}
-                        onClick={() => {
-                          onSelectDate(date);
-                          if (!habit.is_archived) {
-                            onToggle(habit.id, date, active ? "0" : "1");
-                          }
-                        }}
-                        className="flex h-7 w-7 items-center justify-center sm:h-5 sm:w-5"
-                      >
+                <span aria-hidden="true">{day}</span>
+                {enabled && listedHabits.length > 0 && (
+                  <span className="mt-2 flex flex-wrap gap-1">
+                    {listedHabits.map((habit) => {
+                      const active = lookup[`${habit.id}-${date}`] === true;
+                      return (
                         <span
+                          key={habit.id}
                           className={
                             active
-                              ? "h-2.5 w-2.5 rounded-full bg-violet-400"
+                              ? `h-2.5 w-2.5 rounded-full ${habitMarkClass(habit.id)}`
                               : "h-2.5 w-2.5 rounded-full bg-neutral-700"
                           }
                         />
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {enabled && listedHabits.length > 0 && (
-                <span className="sr-only">
-                  {completed} of {listedHabits.length} complete
-                </span>
-              )}
+                      );
+                    })}
+                  </span>
+                )}
+              </button>
             </div>
           );
         })}
@@ -128,7 +119,9 @@ function HabitGrid({
         <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-2">
           {listedHabits.map((habit) => (
             <li key={habit.id} className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-violet-400" />
+              <span
+                className={`h-2 w-2 rounded-full ${habitMarkClass(habit.id)}`}
+              />
               {onSelectHabit ? (
                 <button
                   type="button"

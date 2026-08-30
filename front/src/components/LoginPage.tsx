@@ -170,12 +170,13 @@ function LoginPage() {
                   }
                   className="w-full min-h-11 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
                   placeholder="••••••"
+                  minLength={mode === "register" ? 8 : undefined}
                   required
                 />
               </div>
             )}
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
             <button
               type="submit"

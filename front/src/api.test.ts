@@ -104,6 +104,27 @@ describe("cookie-authenticated API requests", () => {
     );
   });
 
+  it("surfaces FastAPI validation messages when status text is empty", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse(
+        {
+          detail: [
+            {
+              loc: ["body", "password"],
+              msg: "String should have at least 8 characters",
+              type: "string_too_short",
+            },
+          ],
+        },
+        { status: 422, statusText: "" },
+      ),
+    );
+
+    await expect(request("/api/auth/register")).rejects.toThrow(
+      "password: String should have at least 8 characters",
+    );
+  });
+
   it("falls back to status text when an error body is not JSON", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("not-json", {

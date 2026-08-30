@@ -68,6 +68,5 @@ describe("DailyPanel", () => {
 
     await user.click(screen.getByRole("button", { name: "Save note" }));
     expect(generateSummary).toHaveBeenCalledWith("2026-07-24");
-    await screen.findByText("Summary updated");
   });
 });

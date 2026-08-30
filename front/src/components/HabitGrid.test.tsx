@@ -4,39 +4,41 @@ import { describe, expect, it, vi } from "vitest";
 
 import HabitGrid from "./HabitGrid";
 
+const twoHabits = [
+  { id: 1, name: "Exercise", is_archived: false },
+  { id: 2, name: "Coding", is_archived: false },
+];
+
 describe("HabitGrid", () => {
-  it("exposes habit cells as keyboard-operable pressed buttons", async () => {
+  it("opens a day from the date cell instead of toggling a dot", async () => {
     const user = userEvent.setup();
-    const onToggle = vi.fn();
     const onSelectDate = vi.fn();
 
     render(
       <HabitGrid
-        habits={[{ id: 1, name: "Read", is_archived: false }]}
+        habits={twoHabits}
         days={[21]}
         month="2026-07"
         lookup={{}}
-        onToggle={onToggle}
         selectedDate={null}
         onSelectDate={onSelectDate}
       />,
     );
 
-    const cell = screen.getByRole("button", {
-      name: "Read on 2026-07-21: not completed",
-    });
-    expect(cell.getAttribute("aria-pressed")).toBe("false");
+    expect(
+      screen.queryByRole("button", {
+        name: "Exercise on 2026-07-21: not completed",
+      }),
+    ).toBeNull();
 
-    cell.focus();
-    await user.keyboard("{Enter}");
-
+    await user.click(
+      screen.getByRole("button", { name: "2026-07-21, 0 of 2 complete" }),
+    );
     expect(onSelectDate).toHaveBeenCalledWith("2026-07-21");
-    expect(onToggle).toHaveBeenCalledWith(1, "2026-07-21", "1");
   });
 
-  it("keeps archived history selectable without changing it", async () => {
+  it("keeps archived history selectable from the date cell", async () => {
     const user = userEvent.setup();
-    const onToggle = vi.fn();
     const onSelectDate = vi.fn();
 
     render(
@@ -45,20 +47,15 @@ describe("HabitGrid", () => {
         days={[21]}
         month="2026-07"
         lookup={{ "1-2026-07-21": true }}
-        onToggle={onToggle}
         selectedDate={null}
         onSelectDate={onSelectDate}
       />,
     );
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Read on 2026-07-21: completed, archived",
-      }),
+      screen.getByRole("button", { name: "2026-07-21, 1 of 1 complete" }),
     );
-
     expect(onSelectDate).toHaveBeenCalledWith("2026-07-21");
-    expect(onToggle).not.toHaveBeenCalled();
   });
 
   it("opens history from a habit name", async () => {
@@ -71,7 +68,6 @@ describe("HabitGrid", () => {
         days={[21]}
         month="2026-07"
         lookup={{}}
-        onToggle={vi.fn()}
         selectedDate={null}
         onSelectDate={vi.fn()}
         onSelectHabit={onSelectHabit}
@@ -80,5 +76,23 @@ describe("HabitGrid", () => {
 
     await user.click(screen.getByRole("button", { name: "Open Read history" }));
     expect(onSelectHabit).toHaveBeenCalledWith(1);
+  });
+
+  it("gives neighboring habits different legend marks", () => {
+    const { container } = render(
+      <HabitGrid
+        habits={twoHabits}
+        days={[21]}
+        month="2026-07"
+        lookup={{}}
+        selectedDate={null}
+        onSelectDate={vi.fn()}
+      />,
+    );
+
+    const marks = container.querySelectorAll("li span:first-child");
+    expect(marks[0].className).toContain("habit-mark-1");
+    expect(marks[1].className).toContain("habit-mark-2");
+    expect(marks[0].className).not.toBe(marks[1].className);
   });
 });
