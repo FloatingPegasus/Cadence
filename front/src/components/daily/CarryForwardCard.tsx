@@ -79,7 +79,7 @@ export default function CarryForwardCard({
 
   return (
     <details className="py-2">
-      <summary className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200">
+      <summary className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200">
         Follow-ups
       </summary>
       <form onSubmit={addItem} className="mt-4 flex gap-2">

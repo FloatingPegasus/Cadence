@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { useTheme } from "../contexts/ThemeContext";
+import ThemeToggle from "./ThemeToggle";
 
 function Header() {
   const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
   async function handleLogout() {
@@ -25,13 +24,7 @@ function Header() {
       </h1>
       {user && (
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            className="cadence-chip"
-          >
-            {theme === "light" ? "Dark" : "Light"}
-          </button>
+          <ThemeToggle />
           <span className="hidden text-sm text-neutral-500 sm:inline">
             {user.username}
           </span>

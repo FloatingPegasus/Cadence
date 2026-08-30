@@ -186,7 +186,6 @@ html.dark body::before {
 
 .cadence-chip {
   border: 0;
-  cursor: pointer;
   font-family: inherit;
   border-radius: 0.55rem;
   background: var(--n-900);
@@ -210,6 +209,21 @@ html.dark body::before {
   color: var(--n-200);
 }
 
+.cadence-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .cadence-chip-icon {
+    width: 2.15rem;
+    min-height: 2.15rem;
+  }
+}
+
 .cadence-chip-accent {
   color: var(--v-300);
 }
@@ -218,9 +232,18 @@ html.dark body::before {
   color: var(--v-200);
 }
 
+a[href] {
+  cursor: pointer;
+}
+
 button,
 summary {
+  cursor: default;
   touch-action: manipulation;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
 
 @media (max-width: 639px) {

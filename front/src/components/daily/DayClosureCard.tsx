@@ -68,7 +68,7 @@ export default function DayClosureCard({
     <details className="py-2">
       <summary
         id="day-closure-title"
-        className="cursor-pointer text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+        className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
       >
         Finish the day
       </summary>

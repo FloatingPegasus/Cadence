@@ -63,7 +63,7 @@ export default function DevAIModels() {
 
   return (
     <details>
-      <summary className="cursor-pointer text-sm text-neutral-500 hover:text-neutral-300">
+      <summary className="text-sm text-neutral-500 hover:text-neutral-300">
         Developer · NVIDIA models
       </summary>
       <div className="pt-5">
