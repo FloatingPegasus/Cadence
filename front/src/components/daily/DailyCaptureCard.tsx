@@ -66,22 +66,32 @@ export default function DailyCaptureCard({
   const [error, setError] = useState<string | null>(null);
   const saveChain = useRef(Promise.resolve());
   const lastNote = useRef("");
+  const loadedDate = useRef<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
+    if (loadedDate.current === null) setIsLoading(true);
     setError(null);
     Promise.all([fetchDay(date), fetchCheckin(date)])
       .then(([day, values]) => {
+        if (cancelled) return;
+        loadedDate.current = date;
         setNote(day.daily_note);
         setCheckin(values);
         lastNote.current = day.daily_note;
       })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error ? caught.message : "Could not load the day",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [date]);
 
   useEffect(() => {
@@ -188,7 +198,7 @@ export default function DailyCaptureCard({
         </span>
       </div>
 
-      {isLoading ? (
+      {isLoading && loadedDate.current === null ? (
         <p className="text-sm text-neutral-600">Loading day…</p>
       ) : (
         <>

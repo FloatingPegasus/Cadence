@@ -17,6 +17,7 @@ from .continuity_embedding import (
 )
 from .hour_log import HourLog
 from .user_goal import GOAL_KINDS, UserGoal
+from .task import Task
 
 __all__ = [
     "Habit",
@@ -37,4 +38,5 @@ __all__ = [
     "HourLog",
     "GOAL_KINDS",
     "UserGoal",
+    "Task",
 ]

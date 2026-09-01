@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   fetchMonthlyContinuity,
@@ -39,6 +39,7 @@ export default function MonthlyContinuity({
   const [data, setData] = useState<MonthlyContinuityData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadedMonth = useRef<string | null>(null);
 
   useEffect(() => {
     setMonth(anchorDate.slice(0, 7));
@@ -49,19 +50,29 @@ export default function MonthlyContinuity({
   }, [month]);
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
+    if (loadedMonth.current === null) setIsLoading(true);
     setError(null);
-    setData(null);
     fetchMonthlyContinuity(month)
-      .then(setData)
+      .then((result) => {
+        if (cancelled) return;
+        loadedMonth.current = month;
+        setData(result);
+      })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load the month",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [month, refreshKey]);
 
   if (isLoading && !data) {

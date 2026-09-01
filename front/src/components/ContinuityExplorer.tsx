@@ -6,6 +6,7 @@ import ContinuitySearch from "./ContinuitySearch";
 import MonthlyContinuity from "./MonthlyContinuity";
 import WeeklyContinuity from "./WeeklyContinuity";
 import ContinuityPatterns from "./ContinuityPatterns";
+import ViewPane from "./ViewPane";
 
 type ExplorerView = "contexts" | "search" | "week" | "month" | "patterns";
 
@@ -33,6 +34,19 @@ export default function ContinuityExplorer({
   refreshKey,
 }: ContinuityExplorerProps) {
   const [view, setView] = useState<ExplorerView>("week");
+  const [opened, setOpened] = useState<Set<ExplorerView>>(
+    () => new Set(["week"]),
+  );
+
+  function openView(nextView: ExplorerView) {
+    setView(nextView);
+    setOpened((current) => {
+      if (current.has(nextView)) return current;
+      const nextOpened = new Set(current);
+      nextOpened.add(nextView);
+      return nextOpened;
+    });
+  }
 
   function handleTabKey(
     event: KeyboardEvent<HTMLButtonElement>,
@@ -53,9 +67,8 @@ export default function ContinuityExplorer({
     }
 
     event.preventDefault();
-    const nextView = views[nextIndex].id;
-    setView(nextView);
-    document.getElementById(`continuity-tab-${nextView}`)?.focus();
+    openView(views[nextIndex].id);
+    document.getElementById(`continuity-tab-${views[nextIndex].id}`)?.focus();
   }
 
   return (
@@ -78,7 +91,7 @@ export default function ContinuityExplorer({
               aria-selected={view === item.id}
               aria-controls="continuity-explorer-panel"
               tabIndex={view === item.id ? 0 : -1}
-              onClick={() => setView(item.id)}
+              onClick={() => openView(item.id)}
               onKeyDown={(event) => handleTabKey(event, item.id)}
               className={
                 view === item.id
@@ -98,44 +111,54 @@ export default function ContinuityExplorer({
         aria-labelledby={`continuity-tab-${view}`}
         className="cadence-surface mt-8 sm:mt-12"
       >
-        {view === "contexts" && (
-          <ContextHub
-            contexts={contexts}
-            onSelectDate={onSelectDate}
-            refreshKey={refreshKey}
-            embedded
-          />
+        {opened.has("contexts") && (
+          <ViewPane active={view === "contexts"}>
+            <ContextHub
+              contexts={contexts}
+              onSelectDate={onSelectDate}
+              refreshKey={refreshKey}
+              embedded
+            />
+          </ViewPane>
         )}
-        {view === "search" && (
-          <ContinuitySearch
-            contexts={contexts}
-            onSelectDate={onSelectDate}
-            embedded
-          />
+        {opened.has("search") && (
+          <ViewPane active={view === "search"}>
+            <ContinuitySearch
+              contexts={contexts}
+              onSelectDate={onSelectDate}
+              embedded
+            />
+          </ViewPane>
         )}
-        {view === "week" && (
-          <WeeklyContinuity
-            anchorDate={anchorDate}
-            selectedDate={selectedDate}
-            onSelectDate={onSelectDate}
-            refreshKey={refreshKey}
-            embedded
-          />
+        {opened.has("week") && (
+          <ViewPane active={view === "week"}>
+            <WeeklyContinuity
+              anchorDate={anchorDate}
+              selectedDate={selectedDate}
+              onSelectDate={onSelectDate}
+              refreshKey={refreshKey}
+              embedded
+            />
+          </ViewPane>
         )}
-        {view === "month" && (
-          <MonthlyContinuity
-            anchorDate={anchorDate}
-            selectedDate={selectedDate}
-            onSelectDate={onSelectDate}
-            refreshKey={refreshKey}
-            embedded
-          />
+        {opened.has("month") && (
+          <ViewPane active={view === "month"}>
+            <MonthlyContinuity
+              anchorDate={anchorDate}
+              selectedDate={selectedDate}
+              onSelectDate={onSelectDate}
+              refreshKey={refreshKey}
+              embedded
+            />
+          </ViewPane>
         )}
-        {view === "patterns" && (
-          <ContinuityPatterns
-            anchorDate={anchorDate}
-            refreshKey={refreshKey}
-          />
+        {opened.has("patterns") && (
+          <ViewPane active={view === "patterns"}>
+            <ContinuityPatterns
+              anchorDate={anchorDate}
+              refreshKey={refreshKey}
+            />
+          </ViewPane>
         )}
       </div>
     </section>

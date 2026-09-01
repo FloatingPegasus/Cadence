@@ -17,9 +17,10 @@ from ...persistence.models.user import User
 from ...persistence.models.weekly_reflection import WeeklyReflection
 from ...persistence.models.hour_log import HourLog
 from ...persistence.models.user_goal import UserGoal
+from ...persistence.models.task import Task
 
 EXPORT_FORMAT = "cadence-export"
-EXPORT_SCHEMA_VERSION = 2
+EXPORT_SCHEMA_VERSION = 3
 
 
 def _serialize(value: Any) -> Any:
@@ -78,6 +79,15 @@ async def export_user_data(
                 select(UserGoal)
                 .where(UserGoal.user_id == user.id)
                 .order_by(UserGoal.sort_order, UserGoal.id)
+            )
+        ).all()
+    )
+    tasks = list(
+        (
+            await db.scalars(
+                select(Task)
+                .where(Task.user_id == user.id)
+                .order_by(Task.id)
             )
         ).all()
     )
@@ -317,6 +327,21 @@ async def export_user_data(
                     ),
                 )
                 for goal in goals
+            ],
+            "tasks": [
+                _record(
+                    task,
+                    (
+                        "id",
+                        "title",
+                        "due_date",
+                        "is_completed",
+                        "completed_at",
+                        "created_at",
+                        "updated_at",
+                    ),
+                )
+                for task in tasks
             ],
         },
     }

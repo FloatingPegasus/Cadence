@@ -53,11 +53,11 @@ class MigrationIntegrationTests(unittest.TestCase):
                         "AND tablename IN ("
                         "'users', 'days', 'continuity_embeddings', "
                         "'summary_artifacts', 'weekly_reflections', "
-                        "'hour_logs', 'user_goals'"
+                        "'hour_logs', 'user_goals', 'tasks'"
                         ")"
                     )
                 )
-                self.assertEqual(table_count, 7)
+                self.assertEqual(table_count, 8)
                 index_names = set(
                     (
                         await connection.execute(

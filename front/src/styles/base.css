@@ -244,6 +244,115 @@ html.dark body::before {
   color: var(--v-200);
 }
 
+select.cadence-chip-select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 1.75rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%235c534c' d='M1.2 1.4 6 6.2 10.8 1.4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 0.7rem;
+}
+
+html.dark select.cadence-chip-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23a89c8e' d='M1.2 1.4 6 6.2 10.8 1.4'/%3E%3C/svg%3E");
+}
+
+select.cadence-chip-select-wide {
+  min-width: 11.75rem;
+}
+
+.cadence-chip-count {
+  width: 3.6rem;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.cadence-chip-count::-webkit-outer-spin-button,
+.cadence-chip-count::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.cadence-timer-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--n-950);
+}
+
+.cadence-timer-float {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 28rem;
+  max-width: calc(100vw - 2rem);
+  border-radius: 1.35rem;
+  background: color-mix(in srgb, var(--n-950) 58%, transparent);
+  padding: 1.25rem 1.4rem 1.35rem;
+  box-shadow: var(--shadow-page);
+  backdrop-filter: blur(10px);
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.cadence-timer-float .cadence-chip-select {
+  min-width: 8rem;
+}
+
+.cadence-timer-float .cadence-timer-controls {
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 30rem) {
+  .cadence-timer-float .cadence-timer-controls {
+    flex-wrap: wrap;
+  }
+}
+
+.cadence-timer-music {
+  min-width: 7.75rem;
+  text-align: center;
+}
+
+.cadence-timer-status {
+  margin-top: 0.5rem;
+  min-height: 1rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: var(--red-400);
+}
+
+.cadence-timer-float-dragging {
+  cursor: grabbing;
+}
+
+.cadence-timer-drag {
+  cursor: grab;
+  touch-action: none;
+}
+
+.cadence-timer-float-dragging,
+.cadence-timer-float-dragging .cadence-timer-drag {
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cadence-scene-drift {
+    animation: cadence-scene-drift 18s var(--ease-out) alternate infinite;
+  }
+}
+
+@keyframes cadence-scene-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.07);
+  }
+}
+
 a[href] {
   cursor: pointer;
 }
@@ -298,6 +407,10 @@ button:disabled {
   transition: opacity 400ms var(--ease-out);
 }
 
+.cadence-scene-crossfade {
+  transition: opacity 2.4s ease-in-out;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .cadence-enter {
     animation: cadence-enter var(--motion-ui) var(--ease-out) both;
@@ -309,7 +422,8 @@ button:disabled {
     animation: cadence-fade var(--motion-micro) ease both;
   }
 
-  .cadence-fade {
+  .cadence-fade,
+  .cadence-scene-crossfade {
     transition-duration: var(--motion-micro);
   }
 }

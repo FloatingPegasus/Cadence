@@ -23,18 +23,26 @@ export default function CarryForwardCard({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
     setError(null);
     fetchCarryForward(date)
-      .then(setItems)
+      .then((rows) => {
+        if (!cancelled) setItems(rows);
+      })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load follow-ups",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [date]);
 
   async function addItem(event: FormEvent<HTMLFormElement>) {
@@ -102,7 +110,7 @@ export default function CarryForwardCard({
       </form>
 
       <div className="mt-4">
-        {isLoading ? (
+        {isLoading && items.length === 0 ? (
           <p className="text-xs text-neutral-600">Loading follow-ups…</p>
         ) : items.length === 0 ? null : (
           <ul className="space-y-2">

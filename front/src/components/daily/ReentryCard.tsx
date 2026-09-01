@@ -30,7 +30,7 @@ export default function ReentryCard({
 
   useEffect(() => {
     let cancelled = false;
-    const initial = loadedDate.current !== date;
+    const initial = loadedDate.current === null;
     if (initial) setIsLoading(true);
     setError(null);
     fetchDayReentry(date)
@@ -77,7 +77,7 @@ export default function ReentryCard({
         Pick up where you left off
       </h2>
 
-      {isLoading ? (
+      {isLoading && !reentry ? (
         <p className="mt-4 text-sm text-neutral-600">
           Loading earlier activity...
         </p>

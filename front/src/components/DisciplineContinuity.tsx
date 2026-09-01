@@ -34,7 +34,6 @@ function DisciplineContinuity({
 
   useEffect(() => {
     let active = true;
-    setData(null);
     setError(null);
     fetchDisciplineMonthlyContinuity(disciplineId, month)
       .then((result) => {

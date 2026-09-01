@@ -2,6 +2,7 @@ import type { KeyboardEvent } from "react";
 
 export type DashboardView =
   | "today"
+  | "tasks"
   | "hours"
   | "focus"
   | "calendar"
@@ -15,6 +16,7 @@ interface DashboardNavProps {
 
 const views: Array<{ id: DashboardView; label: string }> = [
   { id: "today", label: "Today" },
+  { id: "tasks", label: "Tasks" },
   { id: "hours", label: "Hours" },
   { id: "focus", label: "Focus" },
   { id: "calendar", label: "Calendar" },
@@ -46,7 +48,7 @@ export default function DashboardNav({
 
   return (
     <nav aria-label="Primary" className="cadence-rail mb-8 sm:mb-12">
-      <div className="grid grid-cols-3 gap-1 pb-2 sm:flex sm:gap-7 sm:overflow-x-auto sm:pb-3">
+      <div className="grid grid-cols-4 gap-1 pb-2 sm:flex sm:gap-7 sm:overflow-x-auto sm:pb-3">
         {views.map((item) => (
           <button
             key={item.id}

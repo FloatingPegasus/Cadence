@@ -67,4 +67,44 @@ describe("WeeklyContinuity", () => {
     );
     await screen.findByText("Jul 13 to Jul 19");
   });
+
+  it("keeps the week on screen while a refresh is in flight", async () => {
+    let finishRefresh: (value: WeeklyContinuityData) => void = () => {};
+    vi.mocked(fetchWeeklyContinuity)
+      .mockResolvedValueOnce(week("2026-07-20", "2026-07-26"))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishRefresh = resolve;
+          }),
+      );
+
+    const { rerender } = render(
+      <WeeklyContinuity
+        anchorDate="2026-07-23"
+        selectedDate={null}
+        onSelectDate={vi.fn()}
+        refreshKey={0}
+        embedded
+      />,
+    );
+
+    await screen.findByText("Jul 20 to Jul 26");
+    rerender(
+      <WeeklyContinuity
+        anchorDate="2026-07-23"
+        selectedDate={null}
+        onSelectDate={vi.fn()}
+        refreshKey={1}
+        embedded
+      />,
+    );
+
+    expect(screen.getByText("Jul 20 to Jul 26")).toBeTruthy();
+    expect(screen.queryByText("Loading week...")).toBeNull();
+    finishRefresh(week("2026-07-20", "2026-07-26"));
+    await waitFor(() =>
+      expect(fetchWeeklyContinuity).toHaveBeenCalledTimes(2),
+    );
+  });
 });

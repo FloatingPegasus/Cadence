@@ -33,7 +33,7 @@ export default function DailyHabitsCard({
   useEffect(() => {
     let cancelled = false;
     setError(null);
-    const initial = loadedDate.current !== date;
+    const initial = loadedDate.current === null;
     if (initial) setIsLoading(true);
     fetchDayHabits(date)
       .then((rows) => {
@@ -112,7 +112,7 @@ export default function DailyHabitsCard({
         Habits
       </h2>
 
-      {isLoading ? (
+      {isLoading && dailyHabits.length === 0 ? (
         <p className="mt-4 text-sm text-neutral-600">Loading habits...</p>
       ) : dailyHabits.length > 0 ? (
         <div className="mt-6 space-y-1">
