@@ -1,13 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 
-import { LofiEngine } from "../focus/lofi";
+import {
+  AMBIENCE_OPTIONS,
+  LofiEngine,
+  type AmbienceKind,
+} from "../focus/lofi";
 import PomodoroTimer from "../focus/PomodoroTimer";
+import { useStudyScene } from "../focus/scenes";
 import StudyScene from "../focus/StudyScene";
 
 export default function FocusPage() {
   const engine = useRef<LofiEngine | null>(null);
+  const { index: sceneIndex, cycle: cycleScene } = useStudyScene();
   const [playing, setPlaying] = useState(false);
-  const [rain, setRain] = useState(false);
+  const [ambience, setAmbience] = useState<AmbienceKind>("off");
   const [audioError, setAudioError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,17 +32,16 @@ export default function FocusPage() {
         return;
       }
       await player.start();
-      player.setRain(rain);
+      player.setAmbience(ambience);
       setPlaying(true);
     } catch {
       setAudioError("Could not start audio in this browser.");
     }
   }
 
-  function toggleRain() {
-    const next = !rain;
-    setRain(next);
-    engine.current?.setRain(next);
+  function changeAmbience(kind: AmbienceKind) {
+    setAmbience(kind);
+    engine.current?.setAmbience(kind);
   }
 
   return (
@@ -53,13 +58,20 @@ export default function FocusPage() {
           >
             {playing ? "Pause music" : "Play lo-fi"}
           </button>
-          <button
-            type="button"
-            onClick={toggleRain}
-            className="cadence-chip"
+          <select
+            aria-label="Background noise"
+            value={ambience}
+            onChange={(event) =>
+              changeAmbience(event.target.value as AmbienceKind)
+            }
+            className="cadence-chip cadence-chip-select cadence-chip-select-wide"
           >
-            {rain ? "Rain on" : "Rain off"}
-          </button>
+            {AMBIENCE_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       {audioError && (
@@ -68,10 +80,18 @@ export default function FocusPage() {
         </p>
       )}
       <div className="mt-10 overflow-hidden rounded-3xl shadow-[var(--shadow-page)]">
-        <StudyScene />
+        <StudyScene index={sceneIndex} onCycle={cycleScene} />
       </div>
       <div className="cadence-surface mt-6">
-        <PomodoroTimer />
+        <PomodoroTimer
+          sceneIndex={sceneIndex}
+          onCycleScene={cycleScene}
+          playing={playing}
+          ambience={ambience}
+          audioError={audioError}
+          onToggleMusic={() => void toggleMusic()}
+          onChangeAmbience={changeAmbience}
+        />
       </div>
     </div>
   );

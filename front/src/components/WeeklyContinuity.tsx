@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   fetchWeeklyContinuity,
@@ -36,26 +36,36 @@ export default function WeeklyContinuity({
   const [reflectionVersion, setReflectionVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadedAnchor = useRef<string | null>(null);
 
   useEffect(() => {
     setWeekAnchor(anchorDate);
   }, [anchorDate]);
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
+    if (loadedAnchor.current === null) setIsLoading(true);
     setError(null);
-    setWeek(null);
     fetchWeeklyContinuity(weekAnchor)
-      .then(setWeek)
+      .then((result) => {
+        if (cancelled) return;
+        loadedAnchor.current = weekAnchor;
+        setWeek(result);
+      })
       .catch((caught) => {
-        setWeek(null);
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load the week",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [weekAnchor, refreshKey]);
 
   if (!week) {

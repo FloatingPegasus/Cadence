@@ -6,6 +6,7 @@ import {
   fetchContexts,
   fetchHabits,
   fetchMonthData,
+  fetchTasks,
 } from "../api";
 import { useAuth } from "../contexts/AuthContext";
 import DashboardPage from "./DashboardPage";
@@ -14,7 +15,10 @@ vi.mock("../api", () => ({
   fetchContexts: vi.fn(),
   fetchHabits: vi.fn(),
   fetchMonthData: vi.fn(),
+  fetchTasks: vi.fn(),
   toggleHabit: vi.fn(),
+  createTask: vi.fn(),
+  updateTask: vi.fn(),
 }));
 vi.mock("../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
 vi.mock("./Header", () => ({ default: () => <div>Header</div> }));
@@ -26,6 +30,7 @@ vi.mock("./DisciplineContinuity", () => ({ default: () => <div>Discipline detail
 vi.mock("./ContinuityExplorer", () => ({ default: () => <div>Continuity workspace</div> }));
 vi.mock("./SettingsPanel", () => ({ default: () => <div>Settings workspace</div> }));
 vi.mock("./HoursPage", () => ({ default: () => <div>Hours workspace</div> }));
+vi.mock("./TasksPage", () => ({ default: () => <div>Tasks workspace</div> }));
 vi.mock("./FocusPage", () => ({ default: () => <div>Focus workspace</div> }));
 
 describe("DashboardPage progressive disclosure", () => {
@@ -59,24 +64,43 @@ describe("DashboardPage progressive disclosure", () => {
       habits: [{ id: 1, name: "Read", is_archived: false }],
       lookup: {},
     });
+    vi.mocked(fetchTasks).mockResolvedValue([]);
 
     render(<DashboardPage />);
     screen.getByText("Daily workspace");
+    expect(
+      screen.getByText("Tasks workspace").closest("[hidden]"),
+    ).not.toBeNull();
     expect(screen.queryByText("Continuity workspace")).toBeNull();
     expect(screen.queryByText("Settings workspace")).toBeNull();
     expect(fetchMonthData).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Hours" }));
-    screen.getByText("Hours workspace");
-    expect(screen.queryByText("Daily workspace")).toBeNull();
+    expect(
+      screen.getByText("Hours workspace").closest("[hidden]"),
+    ).toBeNull();
+    expect(
+      screen.getByText("Daily workspace").closest("[hidden]"),
+    ).not.toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Calendar" }));
     await waitFor(() => expect(fetchMonthData).toHaveBeenCalledOnce());
     await screen.findByText("Habit calendar");
-    expect(screen.queryByText("Daily workspace")).toBeNull();
+    expect(
+      screen.getByText("Daily workspace").closest("[hidden]"),
+    ).not.toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Settings" }));
-    screen.getByText("Settings workspace");
-    expect(screen.queryByText("Habit calendar")).toBeNull();
+    expect(
+      screen.getByText("Settings workspace").closest("[hidden]"),
+    ).toBeNull();
+    expect(
+      screen.getByText("Habit calendar").closest("[hidden]"),
+    ).not.toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Today" }));
+    expect(
+      screen.getByText("Daily workspace").closest("[hidden]"),
+    ).toBeNull();
   });
 });

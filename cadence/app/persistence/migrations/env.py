@@ -26,6 +26,7 @@ from cadence.app.persistence.models import (
     User,
     UserGoal,
     WeeklyReflection,
+    Task,
 )
 
 config = context.config

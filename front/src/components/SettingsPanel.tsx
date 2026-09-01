@@ -5,6 +5,7 @@ import DataExportButton from "./DataExportButton";
 import DevAIModels from "./DevAIModels";
 import GoalsSettings from "./GoalsSettings";
 import HabitManager from "./HabitManager";
+import LogoutButton from "./LogoutButton";
 
 interface SettingsPanelProps {
   habits: Habit[];
@@ -45,6 +46,14 @@ export default function SettingsPanel({
           </h2>
           <div className="mt-4">
             <DataExportButton />
+          </div>
+        </section>
+        <section aria-labelledby="account-title" className="cadence-surface">
+          <h2 id="account-title" className="cadence-kicker">
+            Account
+          </h2>
+          <div className="mt-4">
+            <LogoutButton />
           </div>
         </section>
         {isDeveloper && (

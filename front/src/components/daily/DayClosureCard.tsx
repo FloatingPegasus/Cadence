@@ -30,7 +30,7 @@ export default function DayClosureCard({
 
   useEffect(() => {
     let cancelled = false;
-    const initial = loadedDate.current !== date;
+    const initial = loadedDate.current === null;
     if (initial) {
       setIsLoading(true);
       setIsReviewing(false);
@@ -99,7 +99,7 @@ export default function DayClosureCard({
         </button>
       )}
 
-      {isLoading ? (
+      {isLoading && !preview ? (
         <p className="mt-4 text-sm text-neutral-600">
           Loading review…
         </p>

@@ -1,8 +1,37 @@
+export type AmbienceKind =
+  | "off"
+  | "brown"
+  | "white"
+  | "rain"
+  | "train"
+  | "airplane";
+
+export const AMBIENCE_OPTIONS: Array<{
+  id: AmbienceKind;
+  label: string;
+}> = [
+  { id: "off", label: "Background noise" },
+  { id: "brown", label: "Brown noise" },
+  { id: "white", label: "White noise" },
+  { id: "rain", label: "Rain" },
+  { id: "train", label: "Train" },
+  { id: "airplane", label: "Airplane" },
+];
+
+const AMBIENCE_LEVELS: Record<Exclude<AmbienceKind, "off">, number> = {
+  brown: 0.05,
+  white: 0.014,
+  rain: 0.03,
+  train: 0.04,
+  airplane: 0.038,
+};
+
 export class LofiEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private music: GainNode | null = null;
-  private rainGain: GainNode | null = null;
+  private ambienceGains = new Map<Exclude<AmbienceKind, "off">, GainNode>();
+  private ambienceKind: AmbienceKind = "off";
   private timer: number | null = null;
   private voices: AudioScheduledSourceNode[] = [];
   private playing = false;
@@ -46,29 +75,21 @@ export class LofiEngine {
     music.connect(compressor);
     this.connectDelay(ctx, music, master);
 
-    const rainGain = ctx.createGain();
-    rainGain.gain.value = 0;
-    rainGain.connect(master);
-
     this.master = master;
     this.music = music;
-    this.rainGain = rainGain;
     this.playing = true;
     this.step = 0;
     this.nextTime = ctx.currentTime + 0.06;
 
     this.vinyl(ctx, master);
-    this.rainBed(ctx, rainGain);
+    this.buildAmbience(ctx, master);
+    this.applyAmbience();
     this.schedule();
   }
 
-  setRain(on: boolean) {
-    if (!this.rainGain || !this.ctx) return;
-    this.rainGain.gain.setTargetAtTime(
-      on ? 0.03 : 0,
-      this.ctx.currentTime,
-      0.25,
-    );
+  setAmbience(kind: AmbienceKind) {
+    this.ambienceKind = kind;
+    this.applyAmbience();
   }
 
   stop() {
@@ -88,7 +109,7 @@ export class LofiEngine {
     this.master?.disconnect();
     this.master = null;
     this.music = null;
-    this.rainGain = null;
+    this.ambienceGains.clear();
     const ctx = this.ctx;
     this.ctx = null;
     if (ctx && ctx.state !== "closed") {
@@ -356,6 +377,58 @@ export class LofiEngine {
     source.start();
   }
 
+  private applyAmbience() {
+    const ctx = this.ctx;
+    if (!ctx || this.ambienceGains.size === 0) return;
+    const now = ctx.currentTime;
+    for (const [kind, gain] of this.ambienceGains) {
+      const target =
+        kind === this.ambienceKind ? AMBIENCE_LEVELS[kind] : 0;
+      gain.gain.setTargetAtTime(target, now, 0.28);
+    }
+  }
+
+  private buildAmbience(ctx: AudioContext, dest: AudioNode) {
+    const kinds = Object.keys(AMBIENCE_LEVELS) as Array<
+      Exclude<AmbienceKind, "off">
+    >;
+    for (const kind of kinds) {
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      gain.connect(dest);
+      this.ambienceGains.set(kind, gain);
+      if (kind === "brown") this.brownBed(ctx, gain);
+      else if (kind === "white") this.whiteBed(ctx, gain);
+      else if (kind === "rain") this.rainBed(ctx, gain);
+      else if (kind === "train") this.trainBed(ctx, gain);
+      else this.airplaneBed(ctx, gain);
+    }
+  }
+
+  private brownBed(ctx: AudioContext, dest: AudioNode) {
+    const source = this.track(ctx.createBufferSource());
+    source.buffer = this.brownBuffer(ctx, 2.5);
+    source.loop = true;
+    const low = ctx.createBiquadFilter();
+    low.type = "lowpass";
+    low.frequency.value = 400;
+    source.connect(low);
+    low.connect(dest);
+    source.start();
+  }
+
+  private whiteBed(ctx: AudioContext, dest: AudioNode) {
+    const source = this.track(ctx.createBufferSource());
+    source.buffer = this.noiseBuffer(ctx, 2, false);
+    source.loop = true;
+    const low = ctx.createBiquadFilter();
+    low.type = "lowpass";
+    low.frequency.value = 9000;
+    source.connect(low);
+    low.connect(dest);
+    source.start();
+  }
+
   private rainBed(ctx: AudioContext, dest: AudioNode) {
     const source = this.track(ctx.createBufferSource());
     source.buffer = this.noiseBuffer(ctx, 2, true);
@@ -370,5 +443,97 @@ export class LofiEngine {
     high.connect(low);
     low.connect(dest);
     source.start();
+  }
+
+  private trainBed(ctx: AudioContext, dest: AudioNode) {
+    const rumble = this.track(ctx.createBufferSource());
+    rumble.buffer = this.brownBuffer(ctx, 2.5);
+    rumble.loop = true;
+    const rumbleFilter = ctx.createBiquadFilter();
+    rumbleFilter.type = "lowpass";
+    rumbleFilter.frequency.value = 160;
+    const rumbleGain = ctx.createGain();
+    rumbleGain.gain.value = 1;
+    rumble.connect(rumbleFilter);
+    rumbleFilter.connect(rumbleGain);
+    rumbleGain.connect(dest);
+    rumble.start();
+
+    const clacks = this.track(ctx.createBufferSource());
+    clacks.buffer = this.trainClackBuffer(ctx);
+    clacks.loop = true;
+    const clackFilter = ctx.createBiquadFilter();
+    clackFilter.type = "bandpass";
+    clackFilter.frequency.value = 780;
+    clackFilter.Q.value = 1.1;
+    const clackGain = ctx.createGain();
+    clackGain.gain.value = 0.55;
+    clacks.connect(clackFilter);
+    clackFilter.connect(clackGain);
+    clackGain.connect(dest);
+    clacks.start();
+  }
+
+  private airplaneBed(ctx: AudioContext, dest: AudioNode) {
+    const engines = this.track(ctx.createBufferSource());
+    engines.buffer = this.brownBuffer(ctx, 3);
+    engines.loop = true;
+    const engineFilter = ctx.createBiquadFilter();
+    engineFilter.type = "lowpass";
+    engineFilter.frequency.value = 110;
+    const engineGain = ctx.createGain();
+    engineGain.gain.value = 1;
+    engines.connect(engineFilter);
+    engineFilter.connect(engineGain);
+    engineGain.connect(dest);
+    engines.start();
+
+    const cabin = this.track(ctx.createBufferSource());
+    cabin.buffer = this.noiseBuffer(ctx, 2, true);
+    cabin.loop = true;
+    const cabinHigh = ctx.createBiquadFilter();
+    cabinHigh.type = "highpass";
+    cabinHigh.frequency.value = 180;
+    const cabinLow = ctx.createBiquadFilter();
+    cabinLow.type = "lowpass";
+    cabinLow.frequency.value = 900;
+    const cabinGain = ctx.createGain();
+    cabinGain.gain.value = 0.22;
+    cabin.connect(cabinHigh);
+    cabinHigh.connect(cabinLow);
+    cabinLow.connect(cabinGain);
+    cabinGain.connect(dest);
+    cabin.start();
+  }
+
+  private brownBuffer(ctx: AudioContext, seconds: number) {
+    const buffer = ctx.createBuffer(
+      1,
+      Math.floor(ctx.sampleRate * seconds),
+      ctx.sampleRate,
+    );
+    const data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < data.length; i += 1) {
+      const white = Math.random() * 2 - 1;
+      last = (last + 0.02 * white) * 0.996;
+      data[i] = last * 3.6;
+    }
+    return buffer;
+  }
+
+  private trainClackBuffer(ctx: AudioContext) {
+    const seconds = 3.36;
+    const rate = ctx.sampleRate;
+    const buffer = ctx.createBuffer(1, Math.floor(rate * seconds), rate);
+    const data = buffer.getChannelData(0);
+    const width = Math.floor(rate * 0.016);
+    for (let t = 0.1; t < seconds; t += 0.42) {
+      const start = Math.floor(t * rate);
+      for (let i = 0; i < width && start + i < data.length; i += 1) {
+        data[start + i] = (Math.random() * 2 - 1) * Math.exp(-i / (rate * 0.005));
+      }
+    }
+    return buffer;
   }
 }

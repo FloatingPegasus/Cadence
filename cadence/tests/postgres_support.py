@@ -35,6 +35,7 @@ from cadence.app.extensions import (
     get_db,
 )
 from cadence.app.persistence.models.habit import Habit
+from cadence.app.persistence.models.task import Task
 from cadence.app.persistence.models.user import User
 from cadence.app.web.routes.auth import _create_token
 

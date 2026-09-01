@@ -32,19 +32,26 @@ export default function ContextMonthlyDetail({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
-    setData(null);
+    let cancelled = false;
     setError(null);
     fetchContextMonthlyContinuity(contextId, month)
-      .then(setData)
+      .then((result) => {
+        if (!cancelled) setData(result);
+      })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load area activity",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [contextId, month, refreshKey]);
 
   return (
@@ -71,7 +78,7 @@ export default function ContextMonthlyDetail({
         </button>
       </div>
 
-      {isLoading ? (
+      {isLoading && !data ? (
         <p className="mt-4 text-sm text-neutral-600">
           Loading area activity...
         </p>

@@ -19,7 +19,10 @@ describe("DayHabitsDialog", () => {
         date="2026-07-21"
         habits={habits}
         lookup={{}}
+        tasks={[]}
         onToggle={onToggle}
+        onToggleTask={vi.fn()}
+        onAddTask={vi.fn()}
         onOpenDay={vi.fn()}
         onClose={vi.fn()}
       />,
@@ -44,7 +47,10 @@ describe("DayHabitsDialog", () => {
         date="2026-07-21"
         habits={habits}
         lookup={{}}
+        tasks={[]}
         onToggle={vi.fn()}
+        onToggleTask={vi.fn()}
+        onAddTask={vi.fn()}
         onOpenDay={onOpenDay}
         onClose={onClose}
       />,
@@ -63,7 +69,10 @@ describe("DayHabitsDialog", () => {
         date="2026-07-21"
         habits={habits}
         lookup={{}}
+        tasks={[]}
         onToggle={vi.fn()}
+        onToggleTask={vi.fn()}
+        onAddTask={vi.fn()}
         onOpenDay={vi.fn()}
         onClose={vi.fn()}
       />,
@@ -72,5 +81,43 @@ describe("DayHabitsDialog", () => {
     const marks = container.querySelectorAll("label span span:first-child");
     expect(marks[0].className).toContain("habit-mark-1");
     expect(marks[1].className).toContain("habit-mark-2");
+  });
+
+  it("keeps habits and tasks in separate lists", async () => {
+    const user = userEvent.setup();
+    const onToggleTask = vi.fn();
+    const onAddTask = vi.fn();
+
+    render(
+      <DayHabitsDialog
+        date="2026-07-21"
+        habits={habits}
+        lookup={{}}
+        tasks={[
+          {
+            id: 9,
+            title: "Send the notes",
+            due_date: "2026-07-21",
+            is_completed: false,
+            completed_at: null,
+          },
+        ]}
+        onToggle={vi.fn()}
+        onToggleTask={onToggleTask}
+        onAddTask={onAddTask}
+        onOpenDay={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    screen.getByRole("heading", { name: "Habits" });
+    screen.getByRole("heading", { name: "Tasks" });
+    await user.click(
+      screen.getByRole("checkbox", { name: "Mark Send the notes complete" }),
+    );
+    expect(onToggleTask).toHaveBeenCalledOnce();
+    await user.type(screen.getByLabelText("Add a task"), "Call Maya");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(onAddTask).toHaveBeenCalledWith("Call Maya");
   });
 });

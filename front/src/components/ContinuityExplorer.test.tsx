@@ -47,7 +47,8 @@ describe("ContinuityExplorer", () => {
     weekTab.focus();
 
     await user.keyboard("{ArrowRight}");
-    screen.getByText("Month panel");
+    expect(screen.getByText("Month panel").closest("[hidden]")).toBeNull();
+    expect(screen.getByText("Week panel").closest("[hidden]")).not.toBeNull();
 
     await user.keyboard("{End}");
     screen.getByText("Patterns panel");

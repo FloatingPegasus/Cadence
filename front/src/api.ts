@@ -103,6 +103,14 @@ export interface DailyHabit extends Habit {
   completed: boolean;
 }
 
+export interface TaskItem {
+  id: number;
+  title: string;
+  due_date: string | null;
+  is_completed: boolean;
+  completed_at: string | null;
+}
+
 export interface HourSlot {
   hour: number;
   content: string;
@@ -637,6 +645,48 @@ export async function toggleHabit(
     method: "POST",
     body: JSON.stringify({ habit_id: habitId, date, value }),
   });
+}
+
+export function fetchTasks(filters?: {
+  dueOn?: string;
+  month?: string;
+}): Promise<TaskItem[]> {
+  const params = new URLSearchParams();
+  if (filters?.dueOn) params.set("due_on", filters.dueOn);
+  if (filters?.month) params.set("month", filters.month);
+  const query = params.toString();
+  return request<TaskItem[]>(query ? `/api/tasks?${query}` : "/api/tasks");
+}
+
+export function createTask(
+  title: string,
+  dueDate?: string | null,
+): Promise<TaskItem> {
+  return request<TaskItem>("/api/tasks", {
+    method: "POST",
+    body: JSON.stringify({
+      title,
+      due_date: dueDate ?? null,
+    }),
+  });
+}
+
+export function updateTask(
+  taskId: number,
+  patch: {
+    title?: string;
+    due_date?: string | null;
+    is_completed?: boolean;
+  },
+): Promise<TaskItem> {
+  return request<TaskItem>(`/api/tasks/${taskId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export function deleteTask(taskId: number): Promise<void> {
+  return request(`/api/tasks/${taskId}`, { method: "DELETE" });
 }
 
 export function fetchDay(date: string): Promise<DayDetail> {

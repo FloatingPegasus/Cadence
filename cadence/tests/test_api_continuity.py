@@ -524,6 +524,11 @@ class CadenceContinuityApiTests(ApiTestCase):
             headers=self.alpha_headers,
             json={"kind": "ultimate", "title": "Stay consistent"},
         )
+        self.client.post(
+            "/api/tasks",
+            headers=self.alpha_headers,
+            json={"title": "Ship the tasks tab", "due_date": "2026-07-24"},
+        )
         self.client.put(
             "/api/days/2026-07-24",
             headers=self.beta_headers,
@@ -543,7 +548,7 @@ class CadenceContinuityApiTests(ApiTestCase):
         exported = response.json()
         resources = exported["resources"]
         self.assertEqual(exported["format"], "cadence-export")
-        self.assertEqual(exported["schema_version"], 2)
+        self.assertEqual(exported["schema_version"], 3)
         self.assertEqual(exported["account"]["username"], "alpha")
         self.assertEqual(
             [habit["name"] for habit in resources["habits"]],
@@ -564,6 +569,7 @@ class CadenceContinuityApiTests(ApiTestCase):
             "Wrote the hourly logger",
         )
         self.assertEqual(resources["goals"][0]["title"], "Stay consistent")
+        self.assertEqual(resources["tasks"][0]["title"], "Ship the tasks tab")
         self.assertNotIn("hashed_password", str(exported))
         self.assertNotIn("Private beta trace", str(exported))
 

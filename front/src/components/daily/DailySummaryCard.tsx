@@ -29,7 +29,7 @@ export default function DailySummaryCard({
 
   useEffect(() => {
     let cancelled = false;
-    const initial = loadedDate.current !== date;
+    const initial = loadedDate.current === null;
     if (initial) setIsLoading(true);
     setError(null);
     fetchSummary(date)

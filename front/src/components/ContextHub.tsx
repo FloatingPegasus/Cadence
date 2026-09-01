@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   fetchContextContinuity,
@@ -30,6 +30,7 @@ export default function ContextHub({
   const [continuity, setContinuity] = useState<ContextContinuity | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadedId = useRef<number | null>(null);
 
   useEffect(() => {
     if (contexts.length === 0) {
@@ -44,20 +45,30 @@ export default function ContextHub({
 
   useEffect(() => {
     if (selectedId == null) return;
-    setIsLoading(true);
+    let cancelled = false;
+    if (loadedId.current === null) setIsLoading(true);
     setError(null);
-    setContinuity(null);
     fetchContextContinuity(selectedId)
-      .then(setContinuity)
+      .then((result) => {
+        if (!cancelled) {
+          loadedId.current = selectedId;
+          setContinuity(result);
+        }
+      })
       .catch((caught) => {
-        setContinuity(null);
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load area history",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedId, refreshKey]);
 
   return (
@@ -89,7 +100,7 @@ export default function ContextHub({
           Add an area in Settings to group related days.
         </p>
       )}
-      {isLoading && (
+      {isLoading && !continuity && (
         <p className="mt-4 text-sm text-neutral-600">
           Loading area...
         </p>

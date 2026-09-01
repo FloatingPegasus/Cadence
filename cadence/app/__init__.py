@@ -21,6 +21,7 @@ from .web.routes.contexts import router as context_router
 from .web.routes.dev_ai import router as dev_ai_router
 from .web.routes.data_portability import router as data_portability_router
 from .web.routes.goals import router as goal_router
+from .web.routes.tasks import router as task_router
 from .services.rate_limit import auth_rate_limiter
 from .extensions import async_engine, sync_engine
 
@@ -138,6 +139,7 @@ def create_app() -> FastAPI:
     app.include_router(dev_ai_router, prefix="/api")
     app.include_router(data_portability_router, prefix="/api")
     app.include_router(goal_router, prefix="/api")
+    app.include_router(task_router, prefix="/api")
 
     @app.get("/healthz", response_model=None, include_in_schema=False)
     async def health_check():

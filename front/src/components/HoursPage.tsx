@@ -23,26 +23,34 @@ export default function HoursPage({
   const [savingHour, setSavingHour] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const currentHour = new Date().getHours();
-  const isToday = date === todayAsLocalDate();
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
     setError(null);
     fetchHourLog(date)
       .then((rows) => {
+        if (cancelled) return;
         setSlots(rows);
         setDrafts(
           Object.fromEntries(rows.map((row) => [row.hour, row.content])),
         );
       })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error ? caught.message : "Could not load hours",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [date]);
+
+  const currentHour = new Date().getHours();
+  const isToday = date === todayAsLocalDate();
 
   async function saveHour(hour: number) {
     const content = (drafts[hour] ?? "").trim();

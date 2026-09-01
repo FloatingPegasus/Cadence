@@ -27,21 +27,28 @@ export default function WeeklyReflectionCard({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
+    let cancelled = false;
     setError(null);
     fetchWeeklyReflection(anchorDate)
       .then((weeklyReflection) => {
+        if (cancelled) return;
         setReflection(weeklyReflection);
         setContent(weeklyReflection?.content ?? "");
       })
       .catch((caught) => {
+        if (cancelled) return;
         setError(
           caught instanceof Error
             ? caught.message
             : "Could not load the weekly review",
         );
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [anchorDate, refreshKey]);
 
   async function save() {
