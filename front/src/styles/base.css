@@ -363,6 +363,32 @@ summary {
   touch-action: manipulation;
 }
 
+button,
+summary {
+  min-height: 1.5rem;
+}
+
+button {
+  min-width: 1.5rem;
+}
+
+summary {
+  padding-block: 0.25rem;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-style: solid;
+  outline-width: 2px;
+  outline-color: var(--v-400);
+  outline-offset: 2px;
+}
+
+label:has(> input[type="checkbox"]) {
+  min-height: 1.5rem;
+}
+
 button:disabled {
   cursor: not-allowed;
 }
