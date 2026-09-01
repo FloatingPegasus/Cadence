@@ -231,7 +231,7 @@ function TaskRow({
         checked={task.is_completed}
         onChange={onToggle}
         aria-label={`Mark ${task.title} complete`}
-        className="h-6 w-6 shrink-0 accent-violet-500"
+        className="h-6 w-6 shrink-0 accent-done"
       />
       <span
         className={

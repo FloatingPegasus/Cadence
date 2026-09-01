@@ -228,7 +228,7 @@ export default function DailyCaptureCard({
                       checked={selectedContextIds.includes(context.id)}
                       disabled={context.is_archived}
                       onChange={() => toggleContext(context.id)}
-                      className="accent-violet-500"
+                      className="accent-done"
                     />
                     <span>
                       {context.name}

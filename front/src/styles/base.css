@@ -18,6 +18,7 @@
   --v-300: #a04831;
   --v-400: #c45c3e;
   --v-500: #c45c3e;
+  --done: #4f7a4a;
   --red-300: #9a2f2a;
   --red-400: #b42318;
   --red-900: #edd5d1;
@@ -58,6 +59,7 @@ html.dark {
   --v-300: #e09a84;
   --v-400: #d98970;
   --v-500: #c45c3e;
+  --done: #8fad88;
   --red-300: #f0b4ae;
   --red-400: #e88980;
   --red-900: #5c2a26;
@@ -93,6 +95,7 @@ html.dark {
   --color-violet-300: var(--v-300);
   --color-violet-400: var(--v-400);
   --color-violet-500: var(--v-500);
+  --color-done: var(--done);
   --color-red-300: var(--red-300);
   --color-red-400: var(--red-400);
   --color-red-900: var(--red-900);
