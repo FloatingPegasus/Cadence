@@ -51,7 +51,7 @@ export default function AIPrivacySettings() {
             type="checkbox"
             checked={consent}
             onChange={(event) => setConsent(event.target.checked)}
-            className="mt-0.5 accent-violet-400"
+            className="mt-0.5 accent-done"
           />
           <span>
             Allow automatic summaries to use today’s notes
@@ -66,7 +66,7 @@ export default function AIPrivacySettings() {
             type="checkbox"
             checked={redaction}
             onChange={(event) => setRedaction(event.target.checked)}
-            className="mt-0.5 accent-violet-400"
+            className="mt-0.5 accent-done"
           />
           <span>
             Redact common email addresses and phone-like numbers

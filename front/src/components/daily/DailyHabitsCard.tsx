@@ -127,7 +127,7 @@ export default function DailyHabitsCard({
                 checked={habit.completed}
                 onChange={() => toggle(habit)}
                 aria-label={`Mark ${habit.name} complete for ${date}`}
-                className="h-6 w-6 accent-violet-500"
+                className="h-6 w-6 accent-done"
               />
             </label>
           ))}
