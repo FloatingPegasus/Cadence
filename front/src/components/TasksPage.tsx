@@ -9,9 +9,17 @@ import {
 } from "../api";
 import { todayAsLocalDate } from "../time";
 
+const UNDO_WINDOW_MS = 6000;
+
 interface TasksPageProps {
   refreshKey: number;
   onChanged: () => void;
+}
+
+interface PendingRemoval {
+  task: TaskItem;
+  index: number;
+  timer: number;
 }
 
 export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
@@ -21,7 +29,20 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [removed, setRemoved] = useState<TaskItem | null>(null);
   const loaded = useRef(false);
+  const pendingRemoval = useRef<PendingRemoval | null>(null);
+
+  useEffect(
+    () => () => {
+      const pending = pendingRemoval.current;
+      if (!pending) return;
+      window.clearTimeout(pending.timer);
+      pendingRemoval.current = null;
+      void deleteTask(pending.task.id).catch(() => undefined);
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -116,18 +137,55 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
     }
   }
 
-  async function remove(task: TaskItem) {
-    setError(null);
-    setTasks((current) => current.filter((item) => item.id !== task.id));
+  function flushPendingRemoval() {
+    const pending = pendingRemoval.current;
+    if (!pending) return;
+    window.clearTimeout(pending.timer);
+    void commitRemoval(pending.task, pending.index);
+  }
+
+  async function commitRemoval(task: TaskItem, index: number) {
+    pendingRemoval.current = null;
+    setRemoved(null);
     try {
       await deleteTask(task.id);
       onChanged();
     } catch (caught) {
-      setTasks((current) => [...current, task]);
+      setTasks((current) => {
+        const next = [...current];
+        next.splice(Math.min(index, next.length), 0, task);
+        return next;
+      });
       setError(
         caught instanceof Error ? caught.message : "Could not remove the task",
       );
     }
+  }
+
+  function remove(task: TaskItem) {
+    setError(null);
+    flushPendingRemoval();
+    const index = tasks.findIndex((item) => item.id === task.id);
+    setTasks((current) => current.filter((item) => item.id !== task.id));
+    const timer = window.setTimeout(() => {
+      void commitRemoval(task, index);
+    }, UNDO_WINDOW_MS);
+    pendingRemoval.current = { task, index, timer };
+    setRemoved(task);
+  }
+
+  function undoRemove() {
+    const pending = pendingRemoval.current;
+    if (!pending) return;
+    window.clearTimeout(pending.timer);
+    pendingRemoval.current = null;
+    setRemoved(null);
+    setTasks((current) => {
+      if (current.some((item) => item.id === pending.task.id)) return current;
+      const next = [...current];
+      next.splice(Math.min(pending.index, next.length), 0, pending.task);
+      return next;
+    });
   }
 
   const open = tasks.filter((task) => !task.is_completed);
@@ -143,6 +201,20 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
           {error}
         </p>
       )}
+      <div role="status" aria-live="polite">
+        {removed && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+            <span>Removed &ldquo;{removed.title}&rdquo;</span>
+            <button
+              type="button"
+              onClick={undoRemove}
+              className="min-h-6 px-1 text-xs text-violet-300 hover:text-violet-200"
+            >
+              Undo
+            </button>
+          </div>
+        )}
+      </div>
       <div className="cadence-surface mt-10">
         {isLoading && tasks.length === 0 ? (
           <p className="text-sm text-neutral-600">Loading tasks...</p>
@@ -255,6 +327,7 @@ function TaskRow({
       <button
         type="button"
         onClick={onRemove}
+        aria-label={`Remove ${task.title}`}
         className="text-xs text-neutral-500 hover:text-neutral-200"
       >
         Remove

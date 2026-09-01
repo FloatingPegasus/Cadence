@@ -1,8 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { createTask, fetchTasks, updateTask } from "../api";
+import { createTask, deleteTask, fetchTasks, updateTask } from "../api";
 import { todayAsLocalDate } from "../time";
 import TasksPage from "./TasksPage";
 
@@ -49,5 +49,63 @@ describe("TasksPage", () => {
       }),
     );
     expect(updateTask).toHaveBeenCalledWith(4, { is_completed: true });
+  });
+
+  it("keeps a removed task until the undo window closes", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({
+      advanceTimers: vi.advanceTimersByTime.bind(vi),
+    });
+    vi.mocked(fetchTasks).mockResolvedValue([
+      {
+        id: 9,
+        title: "Water the plants",
+        due_date: todayAsLocalDate(),
+        is_completed: false,
+        completed_at: null,
+      },
+    ]);
+    vi.mocked(deleteTask).mockResolvedValue(undefined as never);
+
+    render(<TasksPage refreshKey={0} onChanged={vi.fn()} />);
+    await user.click(
+      await screen.findByRole("button", { name: "Remove Water the plants" }),
+    );
+
+    expect(screen.queryByText("Water the plants")).toBeNull();
+    expect(deleteTask).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(screen.getByText("Water the plants")).toBeTruthy();
+    vi.advanceTimersByTime(10000);
+    expect(deleteTask).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("deletes a removed task once the undo window closes", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({
+      advanceTimers: vi.advanceTimersByTime.bind(vi),
+    });
+    vi.mocked(fetchTasks).mockResolvedValue([
+      {
+        id: 9,
+        title: "Water the plants",
+        due_date: todayAsLocalDate(),
+        is_completed: false,
+        completed_at: null,
+      },
+    ]);
+    vi.mocked(deleteTask).mockResolvedValue(undefined as never);
+
+    render(<TasksPage refreshKey={0} onChanged={vi.fn()} />);
+    await user.click(
+      await screen.findByRole("button", { name: "Remove Water the plants" }),
+    );
+
+    vi.advanceTimersByTime(6000);
+    await waitFor(() => expect(deleteTask).toHaveBeenCalledWith(9));
+    vi.useRealTimers();
   });
 });
