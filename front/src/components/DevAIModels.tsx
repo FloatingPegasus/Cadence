@@ -107,7 +107,7 @@ export default function DevAIModels() {
               key={model.id}
               className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-3 rounded-lg bg-neutral-950/60 px-3 py-2"
             >
-              <span className="text-xs text-neutral-700">#{index + 1}</span>
+              <span className="text-xs text-neutral-500">#{index + 1}</span>
               <div className="min-w-0">
                 <p className="truncate text-xs text-neutral-300">
                   {model.model_id}
