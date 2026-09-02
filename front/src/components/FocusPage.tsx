@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import FocusCat from "../focus/FocusCat";
 import {
   AMBIENCE_OPTIONS,
   LofiEngine,
@@ -15,6 +16,7 @@ export default function FocusPage() {
   const [playing, setPlaying] = useState(false);
   const [ambience, setAmbience] = useState<AmbienceKind>("off");
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [timer, setTimer] = useState({ clock: "25:00", running: false });
 
   useEffect(() => {
     engine.current = new LofiEngine();
@@ -82,8 +84,9 @@ export default function FocusPage() {
           {audioError}
         </p>
       )}
-      <div className="mt-10 overflow-hidden rounded-3xl shadow-[var(--shadow-page)]">
+      <div className="relative mt-10 overflow-hidden rounded-3xl shadow-[var(--shadow-page)]">
         <StudyScene index={sceneIndex} onCycle={cycleScene} />
+        <FocusCat clock={timer.clock} running={timer.running} />
       </div>
       <div className="cadence-surface mt-6">
         <PomodoroTimer
@@ -94,6 +97,7 @@ export default function FocusPage() {
           audioError={audioError}
           onToggleMusic={() => void toggleMusic()}
           onChangeAmbience={changeAmbience}
+          onStatusChange={setTimer}
         />
       </div>
     </div>

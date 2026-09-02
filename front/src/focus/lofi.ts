@@ -10,7 +10,7 @@ export const AMBIENCE_OPTIONS: Array<{
   id: AmbienceKind;
   label: string;
 }> = [
-  { id: "off", label: "Background noise" },
+  { id: "off", label: "No background noise" },
   { id: "brown", label: "Brown noise" },
   { id: "white", label: "White noise" },
   { id: "rain", label: "Rain" },

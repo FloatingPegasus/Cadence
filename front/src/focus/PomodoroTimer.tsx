@@ -7,6 +7,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import FocusCat from "./FocusCat";
 import { AMBIENCE_OPTIONS, type AmbienceKind } from "./lofi";
 import StudyScene from "./StudyScene";
 
@@ -189,6 +190,7 @@ interface PomodoroTimerProps {
   audioError: string | null;
   onToggleMusic: () => void;
   onChangeAmbience: (kind: AmbienceKind) => void;
+  onStatusChange?: (status: { clock: string; running: boolean }) => void;
 }
 
 export default function PomodoroTimer({
@@ -199,6 +201,7 @@ export default function PomodoroTimer({
   audioError,
   onToggleMusic,
   onChangeAmbience,
+  onStatusChange,
 }: PomodoroTimerProps) {
   const [kind, setKind] = useState<TimerKind>("pomodoro");
   const [mode, setMode] = useState<"work" | "break">("work");
@@ -266,6 +269,10 @@ export default function PomodoroTimer({
       setPos(null);
     }
   }, [expanded]);
+
+  useEffect(() => {
+    onStatusChange?.({ clock: formatClock(remaining), running });
+  }, [remaining, running, onStatusChange]);
 
   useLayoutEffect(() => {
     if (!expanded) return;
@@ -598,6 +605,7 @@ export default function PomodoroTimer({
               index={sceneIndex}
               onCycle={onCycleScene}
             />
+            <FocusCat clock={clock} running={running} />
           </div>
           <div
             ref={panelRef}
