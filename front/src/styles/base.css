@@ -213,7 +213,7 @@ html.dark body::before {
   touch-action: manipulation;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 640px) and (hover: hover) and (pointer: fine) {
   .cadence-chip {
     min-height: 0;
     padding: 0.35rem 0.7rem;
@@ -232,7 +232,7 @@ html.dark body::before {
   padding: 0;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 640px) and (hover: hover) and (pointer: fine) {
   .cadence-chip-icon {
     width: 2.15rem;
     min-height: 2.15rem;
@@ -262,7 +262,8 @@ html.dark select.cadence-chip-select {
 }
 
 select.cadence-chip-select-wide {
-  min-width: 11.75rem;
+  min-width: min(11.75rem, 100%);
+  max-width: 100%;
 }
 
 .cadence-chip-count {
@@ -281,7 +282,13 @@ select.cadence-chip-select-wide {
   position: fixed;
   inset: 0;
   z-index: 80;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: var(--n-950);
+  --timer-safe-top: env(safe-area-inset-top, 0px);
+  --timer-safe-right: env(safe-area-inset-right, 0px);
+  --timer-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --timer-safe-left: env(safe-area-inset-left, 0px);
 }
 
 .cadence-timer-float {
@@ -289,18 +296,31 @@ select.cadence-chip-select-wide {
   z-index: 1;
   box-sizing: border-box;
   width: 28rem;
-  max-width: calc(100vw - 2rem);
+  max-width: calc(100% - 2rem);
+  max-height: calc(
+    100% - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+  );
+  overflow-x: hidden;
+  overflow-y: auto;
   border-radius: 1.35rem;
   background: color-mix(in srgb, var(--n-950) 58%, transparent);
   padding: 1.25rem 1.4rem 1.35rem;
   box-shadow: var(--shadow-page);
   backdrop-filter: blur(10px);
-  touch-action: none;
   user-select: none;
   cursor: grab;
 }
 
-.cadence-timer-float .cadence-chip-select {
+.cadence-timer-float .cadence-chip {
+  min-height: 2.75rem;
+}
+
+.cadence-timer-float .cadence-chip-icon {
+  width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.cadence-timer-float .cadence-chip-select:not(.cadence-chip-select-wide) {
   min-width: 8rem;
 }
 
@@ -329,6 +349,7 @@ select.cadence-chip-select-wide {
 
 .cadence-timer-float-dragging {
   cursor: grabbing;
+  touch-action: none;
 }
 
 .cadence-timer-drag {
@@ -343,16 +364,16 @@ select.cadence-chip-select-wide {
 
 @media (prefers-reduced-motion: no-preference) {
   .cadence-scene-drift {
-    animation: cadence-scene-drift 18s var(--ease-out) alternate infinite;
+    animation: cadence-scene-drift 40s ease-in-out alternate infinite;
   }
 }
 
 @keyframes cadence-scene-drift {
   from {
-    transform: scale(1);
+    transform: scale(1.03);
   }
   to {
-    transform: scale(1.07);
+    transform: scale(1.08);
   }
 }
 
@@ -366,13 +387,19 @@ summary {
   touch-action: manipulation;
 }
 
-button,
-summary {
-  min-height: 1.5rem;
-}
+@layer base {
+  button,
+  summary {
+    min-height: 1.5rem;
+  }
 
-button {
-  min-width: 1.5rem;
+  button {
+    min-width: 1.5rem;
+  }
+
+  label:has(> input[type="checkbox"]) {
+    min-height: 1.5rem;
+  }
 }
 
 summary {
@@ -386,10 +413,6 @@ textarea:focus-visible {
   outline-width: 2px;
   outline-color: var(--v-400);
   outline-offset: 2px;
-}
-
-label:has(> input[type="checkbox"]) {
-  min-height: 1.5rem;
 }
 
 button:disabled {
@@ -437,7 +460,7 @@ button:disabled {
 }
 
 .cadence-scene-crossfade {
-  transition: opacity 2.4s ease-in-out;
+  transition: opacity 6.5s cubic-bezier(0.37, 0, 0.63, 1);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -460,11 +483,9 @@ button:disabled {
 @keyframes cadence-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 

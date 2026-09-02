@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { createPortal } from "react-dom";
 
 import { AMBIENCE_OPTIONS, type AmbienceKind } from "./lofi";
 import StudyScene from "./StudyScene";
@@ -10,6 +17,23 @@ const NUDGE = 16;
 type TimerKind = "pomodoro" | "timer";
 type Point = { x: number; y: number };
 
+type StageInset = { top: number; right: number; bottom: number; left: number };
+
+function readPx(styles: CSSStyleDeclaration, name: string) {
+  const value = parseFloat(styles.getPropertyValue(name));
+  return Number.isFinite(value) ? value : 0;
+}
+
+function stageInset(stage: HTMLElement): StageInset {
+  const styles = getComputedStyle(stage);
+  return {
+    top: EDGE + readPx(styles, "--timer-safe-top"),
+    right: EDGE + readPx(styles, "--timer-safe-right"),
+    bottom: EDGE + readPx(styles, "--timer-safe-bottom"),
+    left: EDGE + readPx(styles, "--timer-safe-left"),
+  };
+}
+
 function clampPanel(
   x: number,
   y: number,
@@ -17,18 +41,24 @@ function clampPanel(
   panelH: number,
   stageW: number,
   stageH: number,
+  inset: StageInset = {
+    top: EDGE,
+    right: EDGE,
+    bottom: EDGE,
+    left: EDGE,
+  },
 ): Point {
-  const maxX = stageW - panelW - EDGE;
-  const maxY = stageH - panelH - EDGE;
+  const maxX = stageW - panelW - inset.right;
+  const maxY = stageH - panelH - inset.bottom;
   return {
     x:
-      maxX < EDGE
+      maxX < inset.left
         ? Math.max(0, (stageW - panelW) / 2)
-        : Math.min(maxX, Math.max(EDGE, x)),
+        : Math.min(maxX, Math.max(inset.left, x)),
     y:
-      maxY < EDGE
+      maxY < inset.top
         ? Math.max(0, (stageH - panelH) / 2)
-        : Math.min(maxY, Math.max(EDGE, y)),
+        : Math.min(maxY, Math.max(inset.top, y)),
   };
 }
 
@@ -221,30 +251,49 @@ export default function PomodoroTimer({
   }, [expanded]);
 
   useEffect(() => {
-    if (!expanded) {
-      dragRef.current = null;
-      setDragging(false);
-    }
+    if (!expanded) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
   }, [expanded]);
 
   useEffect(() => {
+    if (!expanded) {
+      dragRef.current = null;
+      setDragging(false);
+      setPos(null);
+    }
+  }, [expanded]);
+
+  useLayoutEffect(() => {
     if (!expanded) return;
-    function onResize() {
+    function place(forceCenter: boolean) {
       const stage = stageRef.current;
       const panel = panelRef.current;
       if (!stage || !panel) return;
       const bounds = stage.getBoundingClientRect();
-      setPos((current) => {
-        if (!current) return current;
-        return clampPanel(
-          current.x,
-          current.y,
+      const inset = stageInset(stage);
+      setPos((current) =>
+        clampPanel(
+          forceCenter || !current
+            ? (bounds.width - panel.offsetWidth) / 2
+            : current.x,
+          forceCenter || !current
+            ? (bounds.height - panel.offsetHeight) / 2
+            : current.y,
           panel.offsetWidth,
           panel.offsetHeight,
           bounds.width,
           bounds.height,
-        );
-      });
+          inset,
+        ),
+      );
+    }
+    place(true);
+    function onResize() {
+      place(false);
     }
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
@@ -316,6 +365,7 @@ export default function PomodoroTimer({
         panel.offsetHeight,
         bounds.width,
         bounds.height,
+        stageInset(stage),
       ),
     );
   }
@@ -393,6 +443,7 @@ export default function PomodoroTimer({
         panel.offsetHeight,
         bounds.width,
         bounds.height,
+        stageInset(stage),
       ),
     );
   }
@@ -527,15 +578,20 @@ export default function PomodoroTimer({
         </p>
         {renderControls()}
       </div>
-      {expanded && (
-        <div
-          ref={stageRef}
-          className="cadence-timer-stage"
-          role="dialog"
-          aria-label="Timer"
-        >
+      {expanded &&
+        createPortal(
           <div
-            className={dragging ? "pointer-events-none" : undefined}
+            ref={stageRef}
+            className="cadence-timer-stage"
+            role="dialog"
+            aria-label="Timer"
+          >
+          <div
+            className={
+              dragging
+                ? "pointer-events-none absolute inset-0"
+                : "absolute inset-0"
+            }
           >
             <StudyScene
               variant="stage"
@@ -632,7 +688,8 @@ export default function PomodoroTimer({
               {audioError ?? "\u00a0"}
             </p>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

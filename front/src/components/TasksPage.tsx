@@ -208,7 +208,7 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
             <button
               type="button"
               onClick={undoRemove}
-              className="min-h-6 px-1 text-xs text-violet-300 hover:text-violet-200"
+              className="min-h-11 min-w-11 px-2 text-xs text-violet-300 hover:text-violet-200"
             >
               Undo
             </button>
@@ -244,7 +244,7 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Add a task"
             maxLength={200}
-            className="min-h-11 min-w-0 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 sm:min-h-0 sm:text-sm"
+            className="min-h-11 min-w-0 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 sm:text-sm"
           />
           <label htmlFor="new-task-date" className="sr-only">
             Due
@@ -254,7 +254,7 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
             type="date"
             value={dueDate}
             onChange={(event) => setDueDate(event.target.value)}
-            className="min-h-11 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-300 outline-none focus:border-neutral-600 sm:min-h-0 sm:text-sm"
+            className="min-h-11 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-300 outline-none focus:border-neutral-600 sm:text-sm"
           />
           <button
             type="submit"
@@ -297,7 +297,7 @@ function TaskRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 py-3">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 sm:flex-nowrap">
       <input
         type="checkbox"
         checked={task.is_completed}
@@ -314,24 +314,26 @@ function TaskRow({
       >
         {task.title}
       </span>
-      <label className="sr-only" htmlFor={`task-due-${task.id}`}>
-        Due {task.title}
-      </label>
-      <input
-        id={`task-due-${task.id}`}
-        type="date"
-        value={task.due_date ?? ""}
-        onChange={(event) => onDueChange(event.target.value)}
-        className="w-[9.5rem] rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-xs text-neutral-400 outline-none focus:border-neutral-600"
-      />
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Remove ${task.title}`}
-        className="text-xs text-neutral-500 hover:text-neutral-200"
-      >
-        Remove
-      </button>
+      <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+        <label className="sr-only" htmlFor={`task-due-${task.id}`}>
+          Due {task.title}
+        </label>
+        <input
+          id={`task-due-${task.id}`}
+          type="date"
+          value={task.due_date ?? ""}
+          onChange={(event) => onDueChange(event.target.value)}
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-base text-neutral-400 outline-none focus:border-neutral-600 sm:w-[9.5rem] sm:flex-none"
+        />
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove ${task.title}`}
+          className="min-h-11 shrink-0 px-2 text-xs text-neutral-500 hover:text-neutral-200"
+        >
+          Remove
+        </button>
+      </div>
     </div>
   );
 }

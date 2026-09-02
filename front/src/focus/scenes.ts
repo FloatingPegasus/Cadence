@@ -48,7 +48,7 @@ export function useStudyScene() {
     if (reduced) return;
     const id = window.setInterval(() => {
       setIndex((current) => (current + 1) % STUDY_SCENES.length);
-    }, 14000);
+    }, 24000);
     return () => window.clearInterval(id);
   }, []);
 

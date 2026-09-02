@@ -41,6 +41,7 @@ describe("FocusPage", () => {
     expect(screen.getByLabelText("Minutes")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Full screen" }));
     const stage = screen.getByRole("dialog", { name: "Timer" });
+    expect(stage.parentElement).toBe(document.body);
     expect(
       within(stage).getByRole("button", { name: "Play lo-fi" }),
     ).toBeTruthy();

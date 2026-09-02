@@ -30,10 +30,8 @@ export default function StudyScene({
           src={cat.src}
           alt={photoIndex === index ? cat.alt : ""}
           className={[
-            "cadence-scene-crossfade absolute inset-0 h-full w-full object-cover",
-            photoIndex === index
-              ? "cadence-scene-drift opacity-100"
-              : "opacity-0",
+            "cadence-scene-crossfade cadence-scene-drift absolute inset-0 h-full w-full object-cover",
+            photoIndex === index ? "z-[1] opacity-100" : "z-0 opacity-0",
           ].join(" ")}
         />
       ))}
