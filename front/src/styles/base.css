@@ -32,9 +32,10 @@
   --habit-4: #b07a2c;
   --habit-5: #7a5a6e;
   --habit-6: #6b7344;
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.33, 0, 0.2, 1);
   --motion-ui: 280ms;
   --motion-micro: 180ms;
+  --motion-overlay: 200ms;
   --shadow-page:
     inset 0 1px 0 rgba(255, 255, 255, 0.62),
     0 1px 1px rgba(28, 25, 22, 0.04),
@@ -486,6 +487,20 @@ button:disabled {
   }
   to {
     opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cadence-overlay,
+  .cadence-dialog {
+    animation: cadence-fade var(--motion-overlay) var(--ease-out) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cadence-overlay,
+  .cadence-dialog {
+    animation: cadence-fade var(--motion-micro) ease both;
   }
 }
 

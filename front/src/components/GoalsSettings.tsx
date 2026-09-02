@@ -98,7 +98,7 @@ export default function GoalsSettings() {
           maxLength={200}
           className="min-w-0 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
         />
-        <button className="rounded-lg bg-neutral-800 px-3 py-2 text-xs text-neutral-200 transition-colors duration-200 hover:bg-neutral-700">
+        <button className="rounded-lg bg-neutral-800 px-3 py-2 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700">
           Add
         </button>
       </form>
@@ -126,7 +126,7 @@ export default function GoalsSettings() {
                       <button
                         type="button"
                         onClick={() => void removeGoal(goal.id)}
-                        className="text-xs text-neutral-600 transition-colors duration-200 hover:text-red-400"
+                        className="text-xs text-neutral-600 transition-colors duration-150 hover:text-red-400"
                       >
                         Remove
                       </button>

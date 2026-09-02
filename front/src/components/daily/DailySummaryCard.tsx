@@ -121,7 +121,7 @@ export default function DailySummaryCard({
           type="button"
           onClick={save}
           disabled={isLoading || isBusy}
-          className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-200 hover:bg-neutral-700 disabled:opacity-40"
+          className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:opacity-40"
         >
           Save review
         </button>
