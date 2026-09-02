@@ -18,7 +18,7 @@ export default function FocusPage() {
 
   useEffect(() => {
     engine.current = new LofiEngine();
-    return () => engine.current?.stop();
+    return () => engine.current?.dispose();
   }, []);
 
   async function toggleMusic() {
@@ -32,7 +32,7 @@ export default function FocusPage() {
         return;
       }
       await player.start();
-      player.setAmbience(ambience);
+      await player.setAmbience(ambience);
       setPlaying(true);
     } catch {
       setAudioError("Could not start audio in this browser.");
@@ -41,7 +41,10 @@ export default function FocusPage() {
 
   function changeAmbience(kind: AmbienceKind) {
     setAmbience(kind);
-    engine.current?.setAmbience(kind);
+    setAudioError(null);
+    void engine.current?.setAmbience(kind).catch(() => {
+      setAudioError("Could not start audio in this browser.");
+    });
   }
 
   return (

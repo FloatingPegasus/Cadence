@@ -19,21 +19,23 @@ export const AMBIENCE_OPTIONS: Array<{
 ];
 
 const AMBIENCE_LEVELS: Record<Exclude<AmbienceKind, "off">, number> = {
-  brown: 0.05,
-  white: 0.014,
-  rain: 0.03,
-  train: 0.04,
-  airplane: 0.038,
+  brown: 0.14,
+  white: 0.08,
+  rain: 0.16,
+  train: 0.14,
+  airplane: 0.14,
 };
 
 export class LofiEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private compressor: DynamicsCompressorNode | null = null;
   private music: GainNode | null = null;
   private ambienceGains = new Map<Exclude<AmbienceKind, "off">, GainNode>();
   private ambienceKind: AmbienceKind = "off";
   private timer: number | null = null;
-  private voices: AudioScheduledSourceNode[] = [];
+  private musicVoices: AudioScheduledSourceNode[] = [];
+  private ambienceVoices: AudioScheduledSourceNode[] = [];
   private playing = false;
   private nextTime = 0;
   private step = 0;
@@ -54,7 +56,77 @@ export class LofiEngine {
   }
 
   async start() {
+    await this.ensureContext();
     if (this.playing) return;
+    const ctx = this.ctx;
+    const compressor = this.compressor;
+    const master = this.master;
+    if (!ctx || !compressor || !master) return;
+
+    const music = ctx.createGain();
+    music.gain.value = 1;
+    music.connect(compressor);
+    this.connectDelay(ctx, music, master);
+    this.music = music;
+    this.playing = true;
+    this.step = 0;
+    this.nextTime = ctx.currentTime + 0.06;
+    this.vinyl(ctx, music);
+    this.schedule();
+  }
+
+  async setAmbience(kind: AmbienceKind) {
+    this.ambienceKind = kind;
+    if (kind === "off") {
+      this.applyAmbience();
+      if (!this.playing) this.dispose();
+      return;
+    }
+    await this.ensureContext();
+    this.applyAmbience();
+  }
+
+  stop() {
+    this.playing = false;
+    if (this.timer != null) {
+      window.clearTimeout(this.timer);
+      this.timer = null;
+    }
+    this.stopVoices(this.musicVoices);
+    this.musicVoices = [];
+    this.music?.disconnect();
+    this.music = null;
+    if (this.ambienceKind === "off") this.dispose();
+  }
+
+  dispose() {
+    this.playing = false;
+    if (this.timer != null) {
+      window.clearTimeout(this.timer);
+      this.timer = null;
+    }
+    this.stopVoices(this.musicVoices);
+    this.stopVoices(this.ambienceVoices);
+    this.musicVoices = [];
+    this.ambienceVoices = [];
+    this.ambienceGains.clear();
+    this.master?.disconnect();
+    this.master = null;
+    this.music = null;
+    this.compressor = null;
+    const ctx = this.ctx;
+    this.ctx = null;
+    if (ctx && ctx.state !== "closed") {
+      void ctx.close();
+    }
+  }
+
+  private async ensureContext() {
+    if (typeof AudioContext === "undefined") return;
+    if (this.ctx) {
+      if (this.ctx.state === "suspended") await this.ctx.resume();
+      return;
+    }
     const ctx = new AudioContext();
     this.ctx = ctx;
     await ctx.resume();
@@ -69,52 +141,10 @@ export class LofiEngine {
     compressor.release.value = 0.25;
     compressor.connect(master);
     master.connect(ctx.destination);
-
-    const music = ctx.createGain();
-    music.gain.value = 1;
-    music.connect(compressor);
-    this.connectDelay(ctx, music, master);
-
     this.master = master;
-    this.music = music;
-    this.playing = true;
-    this.step = 0;
-    this.nextTime = ctx.currentTime + 0.06;
-
-    this.vinyl(ctx, master);
+    this.compressor = compressor;
     this.buildAmbience(ctx, master);
     this.applyAmbience();
-    this.schedule();
-  }
-
-  setAmbience(kind: AmbienceKind) {
-    this.ambienceKind = kind;
-    this.applyAmbience();
-  }
-
-  stop() {
-    this.playing = false;
-    if (this.timer != null) {
-      window.clearTimeout(this.timer);
-      this.timer = null;
-    }
-    for (const voice of this.voices) {
-      try {
-        voice.stop();
-      } catch {
-        // already stopped
-      }
-    }
-    this.voices = [];
-    this.master?.disconnect();
-    this.master = null;
-    this.music = null;
-    this.ambienceGains.clear();
-    const ctx = this.ctx;
-    this.ctx = null;
-    if (ctx && ctx.state !== "closed") {
-      void ctx.close();
-    }
   }
 
   private connectDelay(ctx: AudioContext, source: AudioNode, dest: AudioNode) {
@@ -190,9 +220,23 @@ export class LofiEngine {
     }
   }
 
-  private track<T extends AudioScheduledSourceNode>(source: T): T {
-    this.voices.push(source);
+  private track<T extends AudioScheduledSourceNode>(
+    source: T,
+    group: "music" | "ambience" = "music",
+  ): T {
+    if (group === "ambience") this.ambienceVoices.push(source);
+    else this.musicVoices.push(source);
     return source;
+  }
+
+  private stopVoices(voices: AudioScheduledSourceNode[]) {
+    for (const voice of voices) {
+      try {
+        voice.stop();
+      } catch {
+        // already stopped
+      }
+    }
   }
 
   private noiseBuffer(ctx: AudioContext, seconds: number, pink: boolean) {
@@ -406,7 +450,7 @@ export class LofiEngine {
   }
 
   private brownBed(ctx: AudioContext, dest: AudioNode) {
-    const source = this.track(ctx.createBufferSource());
+    const source = this.track(ctx.createBufferSource(), "ambience");
     source.buffer = this.brownBuffer(ctx, 2.5);
     source.loop = true;
     const low = ctx.createBiquadFilter();
@@ -418,7 +462,7 @@ export class LofiEngine {
   }
 
   private whiteBed(ctx: AudioContext, dest: AudioNode) {
-    const source = this.track(ctx.createBufferSource());
+    const source = this.track(ctx.createBufferSource(), "ambience");
     source.buffer = this.noiseBuffer(ctx, 2, false);
     source.loop = true;
     const low = ctx.createBiquadFilter();
@@ -430,15 +474,15 @@ export class LofiEngine {
   }
 
   private rainBed(ctx: AudioContext, dest: AudioNode) {
-    const source = this.track(ctx.createBufferSource());
+    const source = this.track(ctx.createBufferSource(), "ambience");
     source.buffer = this.noiseBuffer(ctx, 2, true);
     source.loop = true;
     const high = ctx.createBiquadFilter();
     high.type = "highpass";
-    high.frequency.value = 5000;
+    high.frequency.value = 800;
     const low = ctx.createBiquadFilter();
     low.type = "lowpass";
-    low.frequency.value = 11000;
+    low.frequency.value = 8000;
     source.connect(high);
     high.connect(low);
     low.connect(dest);
@@ -446,7 +490,7 @@ export class LofiEngine {
   }
 
   private trainBed(ctx: AudioContext, dest: AudioNode) {
-    const rumble = this.track(ctx.createBufferSource());
+    const rumble = this.track(ctx.createBufferSource(), "ambience");
     rumble.buffer = this.brownBuffer(ctx, 2.5);
     rumble.loop = true;
     const rumbleFilter = ctx.createBiquadFilter();
@@ -459,7 +503,7 @@ export class LofiEngine {
     rumbleGain.connect(dest);
     rumble.start();
 
-    const clacks = this.track(ctx.createBufferSource());
+    const clacks = this.track(ctx.createBufferSource(), "ambience");
     clacks.buffer = this.trainClackBuffer(ctx);
     clacks.loop = true;
     const clackFilter = ctx.createBiquadFilter();
@@ -475,7 +519,7 @@ export class LofiEngine {
   }
 
   private airplaneBed(ctx: AudioContext, dest: AudioNode) {
-    const engines = this.track(ctx.createBufferSource());
+    const engines = this.track(ctx.createBufferSource(), "ambience");
     engines.buffer = this.brownBuffer(ctx, 3);
     engines.loop = true;
     const engineFilter = ctx.createBiquadFilter();
@@ -488,7 +532,7 @@ export class LofiEngine {
     engineGain.connect(dest);
     engines.start();
 
-    const cabin = this.track(ctx.createBufferSource());
+    const cabin = this.track(ctx.createBufferSource(), "ambience");
     cabin.buffer = this.noiseBuffer(ctx, 2, true);
     cabin.loop = true;
     const cabinHigh = ctx.createBiquadFilter();
