@@ -11,7 +11,30 @@ describe("FocusPage", () => {
     screen.getByRole("button", { name: "Study scene" });
     screen.getByRole("button", { name: "Play lo-fi" });
     screen.getByRole("button", { name: "Start" });
+    screen.getByRole("button", { name: "Cat, sleeping" });
     expect(screen.getByText("25:00")).toBeTruthy();
+  });
+
+  it("lets you pet the cat without changing the study scene", async () => {
+    const user = userEvent.setup();
+    render(<FocusPage />);
+    expect(
+      screen.getByRole("img", { name: "Tabby cat sleeping on a keyboard" }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cat, sleeping" }));
+    screen.getByRole("button", { name: "Cat, purring" });
+    expect(
+      screen.getByRole("img", { name: "Tabby cat sleeping on a keyboard" }),
+    ).toBeTruthy();
+  });
+
+  it("wakes the cat and shows the remaining time when a session starts", async () => {
+    const user = userEvent.setup();
+    render(<FocusPage />);
+    await user.click(screen.getByRole("button", { name: "Start" }));
+    expect(
+      await screen.findByRole("button", { name: "Cat, 25:00" }),
+    ).toBeTruthy();
   });
 
   it("lets you pick a background noise", async () => {
@@ -19,6 +42,7 @@ describe("FocusPage", () => {
     render(<FocusPage />);
     const picker = screen.getByRole("combobox", { name: "Background noise" });
     expect((picker as HTMLSelectElement).value).toBe("off");
+    expect(screen.getByRole("option", { name: "No background noise" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Brown noise" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "White noise" })).toBeTruthy();
     expect(screen.getByRole("option", { name: "Rain" })).toBeTruthy();
@@ -42,6 +66,7 @@ describe("FocusPage", () => {
     await user.click(screen.getByRole("button", { name: "Full screen" }));
     const stage = screen.getByRole("dialog", { name: "Timer" });
     expect(stage.parentElement).toBe(document.body);
+    expect(within(stage).getByRole("button", { name: /Cat/ })).toBeTruthy();
     expect(
       within(stage).getByRole("button", { name: "Play lo-fi" }),
     ).toBeTruthy();

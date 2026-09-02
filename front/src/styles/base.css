@@ -512,3 +512,155 @@ button:disabled {
     opacity: 1;
   }
 }
+
+.cadence-focus-cat-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cadence-focus-cat {
+  position: absolute;
+  z-index: 8;
+  display: block;
+  width: 5.0625rem;
+  height: 5.4375rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.cadence-focus-cat:focus-visible {
+  outline: 2px solid var(--v-400);
+  outline-offset: 3px;
+  border-radius: 1.1rem;
+}
+
+.cadence-focus-cat[data-dragging="true"] {
+  cursor: grabbing;
+  touch-action: none;
+}
+
+.cadence-focus-cat-clock {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 0.45rem);
+  z-index: 1;
+  transform: translateX(-50%);
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--n-950) 72%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: var(--n-100);
+  pointer-events: none;
+}
+
+.cadence-focus-cat-motion {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.cadence-cat-figure {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 90%;
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.2));
+}
+
+.cadence-cat-figure[data-facing="left"] {
+  transform: scaleX(-1);
+}
+
+.cadence-cat-sprite {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.cadence-cat-zzz {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.35rem;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--n-200);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.cadence-cat-hearts {
+  position: absolute;
+  inset: 0 auto auto 58%;
+  display: flex;
+  gap: 0.15rem;
+  transform: translateX(-50%);
+  color: var(--v-400);
+  pointer-events: none;
+}
+
+.cadence-cat-heart {
+  width: 0.8rem;
+  height: 0.7rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cadence-cat-zzz {
+    animation: cadence-cat-zzz 2.4s ease-in-out infinite;
+  }
+
+  .cadence-cat-heart {
+    animation: cadence-cat-heart 1.1s var(--ease-out) both;
+  }
+
+  .cadence-cat-heart:nth-child(2) {
+    animation-delay: 0.12s;
+  }
+
+  .cadence-cat-heart:nth-child(3) {
+    animation-delay: 0.24s;
+  }
+}
+
+@keyframes cadence-cat-zzz {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translate(0, 0);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate(5px, -6px);
+  }
+}
+
+@keyframes cadence-cat-heart {
+  from {
+    opacity: 1;
+    transform: translateY(8px) scale(0.8);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-16px) scale(1);
+  }
+}
