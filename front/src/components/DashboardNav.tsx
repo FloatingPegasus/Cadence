@@ -60,7 +60,7 @@ export default function DashboardNav({
             className={
               view === item.id
                 ? "min-h-11 rounded-lg bg-neutral-800/80 px-2 text-sm text-neutral-100 sm:rounded-none sm:border-b sm:border-violet-400 sm:bg-transparent sm:px-0 sm:pb-1"
-                : "min-h-11 rounded-lg px-2 text-sm text-neutral-500 transition-colors duration-200 hover:text-neutral-200 sm:rounded-none sm:border-b sm:border-transparent sm:px-0 sm:pb-1"
+                : "min-h-11 rounded-lg px-2 text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200 sm:rounded-none sm:border-b sm:border-transparent sm:px-0 sm:pb-1"
             }
           >
             {item.label}

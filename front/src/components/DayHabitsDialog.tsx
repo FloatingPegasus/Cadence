@@ -89,7 +89,7 @@ export default function DayHabitsDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-50/35 p-4"
+      className="cadence-overlay fixed inset-0 z-50 flex items-center justify-center bg-neutral-50/35 p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -100,7 +100,7 @@ export default function DayHabitsDialog({
         aria-modal="true"
         aria-labelledby={headingId}
         tabIndex={-1}
-        className="cadence-surface w-full max-w-sm outline-none"
+        className="cadence-dialog cadence-surface w-full max-w-sm outline-none"
       >
         <h2
           id={headingId}
