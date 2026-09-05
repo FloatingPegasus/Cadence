@@ -2,9 +2,9 @@ fastapi==0.141.1
 uvicorn==0.52.4
 sqlalchemy==2.0.52
 alembic==1.19.1
-psycopg[binary]==3.3.4
+psycopg[binary]==3.3.5
 pgvector==0.5.0
-pydantic[email]==2.13.4
+pydantic[email]==2.13.5
 pydantic-settings==2.15.0
 PyJWT==2.13.0
 bcrypt==5.0.0
