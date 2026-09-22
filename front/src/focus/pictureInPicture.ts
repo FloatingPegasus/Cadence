@@ -25,9 +25,20 @@ type LivePip = {
   video: WebkitVideo;
   image: HTMLImageElement | null;
   frame: PipFrame;
+  catX: number;
+  catDir: number;
+  catFrame: number;
+  catTick: number;
 };
 
+const WALK_SRCS = [1, 2, 3, 4].map(
+  (frame) => `/focus/companion-walk-${frame}.png`,
+);
+const walkSprites: HTMLImageElement[] = [];
+
 let live: LivePip | null = null;
+let motion = 0;
+let lastPaint = 0;
 
 export function pipApi(): PipApi | null {
   const value = (
@@ -100,6 +111,7 @@ export function presentLivePip(frame: PipFrame): boolean {
     } catch {
       // Fall through to the standard call where it exists.
     }
+    startMotion();
     if (inPip(video)) {
       video.classList.add("cadence-timer-pip-source-sent");
       return true;
@@ -112,14 +124,21 @@ export function presentLivePip(frame: PipFrame): boolean {
     void video.requestPictureInPicture()
       .then(() => {
         video.classList.add("cadence-timer-pip-source-sent");
+        startMotion();
       })
       .catch(() => {});
+    startMotion();
     return true;
   }
   return inPip(video);
 }
 
+export function isLiveInPip() {
+  return live ? inPip(live.video) : false;
+}
+
 export function closeLivePip() {
+  stopMotion();
   const session = live;
   live = null;
   if (!session) return;
@@ -150,25 +169,85 @@ function ensureLivePip() {
   video.setAttribute("webkit-playsinline", "");
   video.srcObject = stream;
   document.body.appendChild(video);
+  loadWalkSprites();
   live = {
     canvas,
     context,
     video,
     image: null,
     frame: { src: "", clock: "" },
+    catX: 36,
+    catDir: 1,
+    catFrame: 0,
+    catTick: 0,
   };
   return live;
 }
 
 function paintLive(session: LivePip) {
   const { context, canvas, image, frame } = session;
+  const drift = 1.04 + 0.04 * Math.sin(performance.now() / 12000);
   context.fillStyle = "#111";
   context.fillRect(0, 0, canvas.width, canvas.height);
-  if (image) drawCover(context, image, canvas.width, canvas.height);
+  if (image) drawCover(context, image, canvas.width, canvas.height, drift);
+  drawCat(session);
   drawClock(context, frame.clock, canvas.height);
   const track = (session.video.srcObject as MediaStream | null)
     ?.getVideoTracks?.()[0] as (MediaStreamTrack & { requestFrame?: () => void }) | undefined;
   track?.requestFrame?.();
+}
+
+function startMotion() {
+  if (motion) return;
+  const tick = (now: number) => {
+    motion = requestAnimationFrame(tick);
+    if (!live || now - lastPaint < 125) return;
+    lastPaint = now;
+    stepCat(live, now);
+    paintLive(live);
+  };
+  motion = requestAnimationFrame(tick);
+}
+
+function stopMotion() {
+  if (!motion) return;
+  cancelAnimationFrame(motion);
+  motion = 0;
+}
+
+function stepCat(session: LivePip, now: number) {
+  if (now - session.catTick < 180) return;
+  session.catTick = now;
+  session.catFrame = (session.catFrame + 1) % walkSprites.length;
+  session.catX += session.catDir * 14;
+  const limit = session.canvas.width - 120;
+  if (session.catX > limit || session.catX < 20) session.catDir *= -1;
+}
+
+function loadWalkSprites() {
+  if (walkSprites.length > 0) return;
+  for (const src of WALK_SRCS) {
+    const image = new Image();
+    image.src = src;
+    walkSprites.push(image);
+  }
+}
+
+function drawCat(session: LivePip) {
+  const sprite = walkSprites[session.catFrame];
+  if (!sprite?.complete || !sprite.naturalWidth) return;
+  const width = 96;
+  const height = 104;
+  const y = session.canvas.height - height - 6;
+  session.context.save();
+  if (session.catDir < 0) {
+    session.context.translate(session.catX + width, y);
+    session.context.scale(-1, 1);
+    session.context.drawImage(sprite, 0, 0, width, height);
+  } else {
+    session.context.drawImage(sprite, session.catX, y, width, height);
+  }
+  session.context.restore();
 }
 
 function inPip(video: WebkitVideo) {
@@ -207,8 +286,9 @@ function drawCover(
   image: HTMLImageElement,
   width: number,
   height: number,
+  zoom = 1,
 ) {
-  const scale = Math.max(width / image.width, height / image.height);
+  const scale = Math.max(width / image.width, height / image.height) * zoom;
   const drawnWidth = image.width * scale;
   const drawnHeight = image.height * scale;
   context.drawImage(

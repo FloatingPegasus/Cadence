@@ -776,9 +776,13 @@ select.cadence-chip-select-wide {
   background: #111;
 }
 
+.cadence-timer-pip .cadence-focus-cat-stage {
+  z-index: 3;
+}
+
 .cadence-timer-pip-clock {
   position: absolute;
-  z-index: 2;
+  z-index: 4;
   left: max(0.95rem, env(safe-area-inset-left, 0px));
   bottom: max(0.8rem, env(safe-area-inset-bottom, 0px));
   margin: 0;

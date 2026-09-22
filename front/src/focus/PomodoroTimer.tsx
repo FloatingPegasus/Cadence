@@ -13,6 +13,7 @@ import {
   beginLivePip,
   closeLivePip,
   copyPipStyles,
+  isLiveInPip,
   PIP_FRAME,
   pipApi,
   pipAvailable,
@@ -586,7 +587,7 @@ export default function PomodoroTimer({
   useEffect(() => {
     if (!expanded) return;
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setExpanded(false);
+      if (event.key === "Escape") collapseTimer();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -624,11 +625,11 @@ export default function PomodoroTimer({
   }, []);
 
   useEffect(() => {
-    if (!expanded || pipApi()) return;
+    if (pipApi()) return;
     const src = STUDY_SCENES[sceneIndex]?.src;
     if (!src) return;
     updateLivePip({ src, clock: formatClock(remaining) });
-  }, [sceneIndex, remaining, expanded]);
+  }, [sceneIndex, remaining]);
 
   useEffect(() => {
     onStatusChange?.({ clock: formatClock(remaining), running });
@@ -734,6 +735,11 @@ export default function PomodoroTimer({
       observer?.disconnect();
     };
   }, [expanded]);
+
+  function collapseTimer() {
+    setExpanded(false);
+    if (!isLiveInPip()) closeLivePip();
+  }
 
   async function openPip() {
     const src = STUDY_SCENES[sceneIndex]?.src;
@@ -1293,7 +1299,7 @@ export default function PomodoroTimer({
                 <button
                   type="button"
                   aria-label="Exit full screen"
-                  onClick={() => setExpanded(false)}
+                  onClick={collapseTimer}
                   className="cadence-chip cadence-chip-icon"
                 >
                   <CollapseMark />
@@ -1355,6 +1361,7 @@ export default function PomodoroTimer({
                 index={sceneIndex}
                 onCycle={onCycleScene}
               />
+              <FocusCat running={running} />
               <p className="cadence-timer-pip-clock">{clock}</p>
             </div>,
             pipWindow.document.body,
