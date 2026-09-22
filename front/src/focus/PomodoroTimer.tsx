@@ -10,11 +10,14 @@ import { createPortal } from "react-dom";
 import FocusCat from "./FocusCat";
 import { AMBIENCE_OPTIONS, type AmbienceKind } from "./lofi";
 import {
+  closePreparedPip,
   copyPipStyles,
   openVideoPip,
   PIP_FRAME,
   pipApi,
   pipAvailable,
+  presentPreparedPip,
+  primeVideoPip,
   type VideoPipSession,
 } from "./pictureInPicture";
 import { STUDY_SCENES } from "./scenes";
@@ -619,14 +622,17 @@ export default function PomodoroTimer({
     return () => {
       pipWindowRef.current?.close();
       videoPipRef.current?.close();
+      closePreparedPip();
     };
   }, []);
 
   useEffect(() => {
     const src = STUDY_SCENES[sceneIndex]?.src;
     if (!src) return;
-    videoPipRef.current?.update({ src, clock: formatClock(remaining) });
-  }, [sceneIndex, remaining]);
+    const frame = { src, clock: formatClock(remaining) };
+    videoPipRef.current?.update(frame);
+    if (expanded) primeVideoPip(frame);
+  }, [sceneIndex, remaining, expanded]);
 
   useEffect(() => {
     onStatusChange?.({ clock: formatClock(remaining), running });
@@ -750,6 +756,10 @@ export default function PomodoroTimer({
         videoPipRef.current = null;
         pipWindowRef.current = next;
         setPipWindow(next);
+        setExpanded(false);
+        return;
+      }
+      if (presentPreparedPip()) {
         setExpanded(false);
         return;
       }
