@@ -129,8 +129,10 @@ class Settings(BaseSettings):
     auth_rate_limit_window_seconds: int = 60
     auth_register_rate_limit: int = 5
     auth_login_rate_limit: int = 10
+    auth_guest_rate_limit: int = 10
     auth_verification_rate_limit: int = 20
     auth_verification_resend_rate_limit: int = 5
+    allow_guests: bool = False
     auth_rate_limit_backend: Literal["memory", "redis"] = "memory"
     redis_url: str = ""
     redis_key_prefix: str = "cadence:rate-limit"
@@ -227,6 +229,7 @@ class Settings(BaseSettings):
             "auth_rate_limit_window_seconds",
             "auth_register_rate_limit",
             "auth_login_rate_limit",
+            "auth_guest_rate_limit",
             "auth_verification_rate_limit",
             "auth_verification_resend_rate_limit",
         ):

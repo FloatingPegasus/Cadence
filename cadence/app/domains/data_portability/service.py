@@ -20,7 +20,7 @@ from ...persistence.models.user_goal import UserGoal
 from ...persistence.models.task import Task
 
 EXPORT_FORMAT = "cadence-export"
-EXPORT_SCHEMA_VERSION = 3
+EXPORT_SCHEMA_VERSION = 4
 
 
 def _serialize(value: Any) -> Any:
@@ -336,6 +336,7 @@ async def export_user_data(
                         "title",
                         "due_date",
                         "is_completed",
+                        "is_abandoned",
                         "completed_at",
                         "created_at",
                         "updated_at",

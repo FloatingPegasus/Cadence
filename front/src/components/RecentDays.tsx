@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchRecentDays, type RecentDay } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 interface RecentDaysProps {
   selectedDate: string | null;
@@ -12,11 +13,16 @@ export default function RecentDays({
   onSelect,
   refreshKey,
 }: RecentDaysProps) {
+  const { user } = useAuth();
   const [days, setDays] = useState<RecentDay[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setError(null);
+    if (!user) {
+      setDays([]);
+      return;
+    }
     fetchRecentDays(7)
       .then(setDays)
       .catch((caught) => {
@@ -26,7 +32,7 @@ export default function RecentDays({
             : "Could not load recent days",
         );
       });
-  }, [refreshKey]);
+  }, [refreshKey, user?.id]);
 
   if (days.length === 0 && !error) return null;
 

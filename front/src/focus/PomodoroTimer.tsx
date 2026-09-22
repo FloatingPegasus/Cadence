@@ -9,14 +9,20 @@ import { createPortal } from "react-dom";
 
 import FocusCat from "./FocusCat";
 import { AMBIENCE_OPTIONS, type AmbienceKind } from "./lofi";
+import { copyPipStyles, PIP_FRAME, pipApi } from "./pictureInPicture";
 import StudyScene from "./StudyScene";
 
 const MAX_MINUTES = 180;
 const EDGE = 16;
 const NUDGE = 16;
+const MIN_PANEL_W = 300;
+const MIN_PANEL_H = 260;
 
 type TimerKind = "pomodoro" | "timer";
 type Point = { x: number; y: number };
+type Size = { w: number; h: number };
+type Box = Point & Size;
+type Corner = "nw" | "ne" | "sw" | "se";
 
 type StageInset = { top: number; right: number; bottom: number; left: number };
 
@@ -67,6 +73,121 @@ function ignoreDragFrom(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
   if (target.closest("[data-timer-drag]")) return false;
   return Boolean(target.closest("button, input, select, textarea, a"));
+}
+
+function clampSize(w: number, h: number, maxW: number, maxH: number): Size {
+  return {
+    w: Math.min(maxW, Math.max(MIN_PANEL_W, Math.round(w))),
+    h: Math.min(maxH, Math.max(MIN_PANEL_H, Math.round(h))),
+  };
+}
+
+function writeBox(panel: HTMLElement, next: Box) {
+  panel.style.left = `${next.x}px`;
+  panel.style.top = `${next.y}px`;
+  panel.style.width = `${next.w}px`;
+  panel.style.height = `${next.h}px`;
+  panel.style.maxWidth = "none";
+  panel.style.maxHeight = "none";
+  panel.style.transform = "none";
+  const look = densityFromBox(next.w, next.h);
+  panel.dataset.density = look.density;
+  if (look.short) panel.setAttribute("data-short", "true");
+  else panel.removeAttribute("data-short");
+  if (look.tall) panel.setAttribute("data-tall", "true");
+  else panel.removeAttribute("data-tall");
+}
+
+function followPointer(
+  target: HTMLElement,
+  pointerId: number,
+  onMove: (event: PointerEvent) => void,
+  onUp: () => void,
+) {
+  function move(event: PointerEvent) {
+    if (event.pointerId !== pointerId) return;
+    event.preventDefault();
+    onMove(event);
+  }
+  function up(event: PointerEvent) {
+    if (event.pointerId !== pointerId) return;
+    window.removeEventListener("pointermove", move, true);
+    window.removeEventListener("pointerup", up, true);
+    window.removeEventListener("pointercancel", up, true);
+    onUp();
+  }
+  window.addEventListener("pointermove", move, {
+    capture: true,
+    passive: false,
+  });
+  window.addEventListener("pointerup", up, { capture: true });
+  window.addEventListener("pointercancel", up, { capture: true });
+  try {
+    target.setPointerCapture(pointerId);
+  } catch {
+    // Window listeners still follow the pointer.
+  }
+}
+
+function ResizeMark({ corner }: { corner: Corner }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className={`cadence-timer-resize-mark cadence-timer-resize-mark-${corner}`}
+      aria-hidden="true"
+    >
+      <path
+        d="M15 7.25 7.25 15M15 11.25 11.25 15"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ResizeHandle({
+  corner,
+  label,
+  onResizeStart,
+  onNudge,
+}: {
+  corner: Corner;
+  label: string;
+  onResizeStart: (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    corner: Corner,
+  ) => void;
+  onNudge: (corner: Corner, dx: number, dy: number) => void;
+}) {
+  return (
+    <button
+      type="button"
+      data-timer-resize={corner}
+      aria-label={label}
+      className={`cadence-timer-resize cadence-timer-resize-${corner}`}
+      onPointerDown={(event) => {
+        if (event.pointerType === "mouse" && event.button > 0) return;
+        event.stopPropagation();
+        onResizeStart(event, corner);
+      }}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? NUDGE * 3 : NUDGE;
+        let dx = 0;
+        let dy = 0;
+        if (event.key === "ArrowRight") dx = step;
+        else if (event.key === "ArrowLeft") dx = -step;
+        else if (event.key === "ArrowDown") dy = step;
+        else if (event.key === "ArrowUp") dy = -step;
+        else return;
+        event.preventDefault();
+        onNudge(corner, dx, dy);
+      }}
+    >
+      <ResizeMark corner={corner} />
+    </button>
+  );
 }
 
 function clampMinutes(value: number) {
@@ -123,6 +244,36 @@ function formatClock(total: number) {
   const minutes = Math.floor(total / 60);
   const seconds = total % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function PipMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="3.5"
+        y="4.5"
+        width="17"
+        height="15"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <rect
+        x="11.5"
+        y="11.5"
+        width="8"
+        height="7"
+        rx="1.2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
 }
 
 function ExpandMark() {
@@ -182,6 +333,163 @@ function MoveMark() {
   );
 }
 
+function PlayMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M8.2 6.4v11.2L18 12 8.2 6.4Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PauseMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M8 6.5h2.4v11H8V6.5Zm5.6 0H16v11h-2.4V6.5Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ResetMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M7.2 7.2A6.8 6.8 0 1 1 5.4 12"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7.2 4.6v3.6H3.8"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MusicMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M9.5 18.2V8.1l9-1.6v8.2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="7.6" cy="18.2" r="2.2" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="16.1" cy="14.7" r="2.2" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function WaveMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3.6 12c1.6-3.4 3.2-3.4 4.8 0s3.2 3.4 4.8 0 3.2-3.4 4.8 0 3.2 3.4 4.8 0"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function TomatoMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 8.2c4.3 0 7.2 2.6 7.2 6.2 0 3.4-3 6.1-7.2 6.1S4.8 17.8 4.8 14.4c0-3.6 2.9-6.2 7.2-6.2Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M12 8.4c-.2-2 1.1-3.8 3.4-4.2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function KindTimerMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="13" r="7" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M12 13V9.6M12 13l2.6 2.1M9.4 4.8h5.2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+type TimerDensity = "full" | "icon";
+
+function densityFromBox(width: number, height: number): {
+  density: TimerDensity;
+  short: boolean;
+  tall: boolean;
+} {
+  if (width < 1) return { density: "full", short: false, tall: false };
+  return {
+    density: width > 0 && width < 440 ? "icon" : "full",
+    short: height > 0 && height < 300,
+    tall: height >= 380,
+  };
+}
+
 interface PomodoroTimerProps {
   sceneIndex: number;
   onCycleScene: () => void;
@@ -217,8 +525,16 @@ export default function PomodoroTimer({
   const [remaining, setRemaining] = useState(25 * 60);
   const [running, setRunning] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [pipWindow, setPipWindow] = useState<Window | null>(null);
+  const pipWindowRef = useRef<Window | null>(null);
   const [pos, setPos] = useState<Point | null>(null);
+  const [size, setSize] = useState<Size | null>(null);
+  const sizeRef = useRef<Size | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [resizing, setResizing] = useState(false);
+  const [density, setDensity] = useState<TimerDensity>("full");
+  const [short, setShort] = useState(false);
+  const [tall, setTall] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
@@ -226,6 +542,19 @@ export default function PomodoroTimer({
     offsetX: number;
     offsetY: number;
   } | null>(null);
+  const geometryRef = useRef<Box | null>(null);
+  const resizeRef = useRef<{
+    pointerId: number;
+    corner: Corner;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
+
+  sizeRef.current = size;
 
   useEffect(() => {
     if (!running) return;
@@ -265,10 +594,23 @@ export default function PomodoroTimer({
   useEffect(() => {
     if (!expanded) {
       dragRef.current = null;
+      resizeRef.current = null;
+      geometryRef.current = null;
       setDragging(false);
+      setResizing(false);
+      setDensity("full");
+      setShort(false);
+      setTall(false);
       setPos(null);
+      setSize(null);
     }
   }, [expanded]);
+
+  useEffect(() => {
+    return () => {
+      pipWindowRef.current?.close();
+    };
+  }, []);
 
   useEffect(() => {
     onStatusChange?.({ clock: formatClock(remaining), running });
@@ -276,22 +618,67 @@ export default function PomodoroTimer({
 
   useLayoutEffect(() => {
     if (!expanded) return;
+    function syncViewport() {
+      const stage = stageRef.current;
+      const vv = window.visualViewport;
+      if (!stage || !vv) return;
+      stage.style.top = `${vv.offsetTop}px`;
+      stage.style.left = `${vv.offsetLeft}px`;
+      stage.style.right = "auto";
+      stage.style.bottom = "auto";
+      stage.style.width = `${vv.width}px`;
+      stage.style.height = `${vv.height}px`;
+    }
     function place(forceCenter: boolean) {
       const stage = stageRef.current;
       const panel = panelRef.current;
       if (!stage || !panel) return;
+      syncViewport();
       const bounds = stage.getBoundingClientRect();
       const inset = stageInset(stage);
+      const maxW = Math.max(MIN_PANEL_W, bounds.width - inset.left - inset.right);
+      const maxH = Math.max(MIN_PANEL_H, bounds.height - inset.top - inset.bottom);
+      const live = geometryRef.current;
+      const nextSize = live
+        ? clampSize(live.w, live.h, maxW, maxH)
+        : sizeRef.current
+          ? clampSize(sizeRef.current.w, sizeRef.current.h, maxW, maxH)
+          : null;
+      if (
+        !live &&
+        nextSize &&
+        (!sizeRef.current ||
+          nextSize.w !== sizeRef.current.w ||
+          nextSize.h !== sizeRef.current.h)
+      ) {
+        setSize(nextSize);
+      }
+      const panelW = nextSize?.w ?? panel.offsetWidth;
+      const panelH = nextSize?.h ?? panel.offsetHeight;
+      if (live) {
+        const nextPos = clampPanel(
+          forceCenter ? (bounds.width - panelW) / 2 : live.x,
+          forceCenter ? (bounds.height - panelH) / 2 : live.y,
+          panelW,
+          panelH,
+          bounds.width,
+          bounds.height,
+          inset,
+        );
+        writeBox(panel, { ...nextPos, w: panelW, h: panelH });
+        geometryRef.current = { ...nextPos, w: panelW, h: panelH };
+        return;
+      }
       setPos((current) =>
         clampPanel(
           forceCenter || !current
-            ? (bounds.width - panel.offsetWidth) / 2
+            ? (bounds.width - panelW) / 2
             : current.x,
           forceCenter || !current
-            ? (bounds.height - panel.offsetHeight) / 2
+            ? (bounds.height - panelH) / 2
             : current.y,
-          panel.offsetWidth,
-          panel.offsetHeight,
+          panelW,
+          panelH,
           bounds.width,
           bounds.height,
           inset,
@@ -303,8 +690,51 @@ export default function PomodoroTimer({
       place(false);
     }
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("scroll", onResize);
+    const panel = panelRef.current;
+    let observer: ResizeObserver | null = null;
+    if (panel && typeof ResizeObserver === "function") {
+      observer = new ResizeObserver((entries) => {
+        if (dragRef.current || resizeRef.current) return;
+        const entry = entries[0];
+        if (!entry) return;
+        const next = densityFromBox(
+          entry.contentRect.width,
+          entry.contentRect.height,
+        );
+        setDensity(next.density);
+        setShort(next.short);
+        setTall(next.tall);
+      });
+      observer.observe(panel);
+    }
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("scroll", onResize);
+      observer?.disconnect();
+    };
   }, [expanded]);
+
+  async function openPip() {
+    const api = pipApi();
+    if (!api) return;
+    try {
+      const next = await api.requestWindow(PIP_FRAME);
+      copyPipStyles(next.document);
+      next.addEventListener("pagehide", () => {
+        pipWindowRef.current = null;
+        setPipWindow(null);
+      });
+      pipWindowRef.current?.close();
+      pipWindowRef.current = next;
+      setPipWindow(next);
+      setExpanded(false);
+    } catch {
+      // The browser may reject Picture-in-Picture without a user gesture.
+    }
+  }
 
   function applyKind(next: TimerKind) {
     setKind(next);
@@ -362,24 +792,19 @@ export default function PomodoroTimer({
     const drag = dragRef.current;
     const stage = stageRef.current;
     const panel = panelRef.current;
-    if (!drag || !stage || !panel) return;
+    const live = geometryRef.current;
+    if (!drag || !stage || !panel || !live) return;
     const bounds = stage.getBoundingClientRect();
-    setPos(
-      clampPanel(
-        clientX - bounds.left - drag.offsetX,
-        clientY - bounds.top - drag.offsetY,
-        panel.offsetWidth,
-        panel.offsetHeight,
-        bounds.width,
-        bounds.height,
-        stageInset(stage),
-      ),
+    const next = clampPanel(
+      clientX - bounds.left - drag.offsetX,
+      clientY - bounds.top - drag.offsetY,
+      live.w,
+      live.h,
+      bounds.width,
+      bounds.height,
+      stageInset(stage),
     );
-  }
-
-  function endDrag() {
-    dragRef.current = null;
-    setDragging(false);
+    rememberBox({ ...next, w: live.w, h: live.h });
   }
 
   function beginDrag(event: ReactPointerEvent<HTMLElement>) {
@@ -388,48 +813,141 @@ export default function PomodoroTimer({
     const panel = panelRef.current;
     if (!stage || !panel) return;
     const stageBox = stage.getBoundingClientRect();
-    const panelBox = panel.getBoundingClientRect();
+    const box = panel.getBoundingClientRect();
     dragRef.current = {
       pointerId: event.pointerId,
-      offsetX: event.clientX - panelBox.left,
-      offsetY: event.clientY - panelBox.top,
+      offsetX: event.clientX - box.left,
+      offsetY: event.clientY - box.top,
     };
-    setPos({
-      x: panelBox.left - stageBox.left,
-      y: panelBox.top - stageBox.top,
+    rememberBox({
+      x: box.left - stageBox.left,
+      y: box.top - stageBox.top,
+      w: size?.w ?? box.width,
+      h: size?.h ?? box.height,
     });
     setDragging(true);
-
-    function onMove(moveEvent: PointerEvent | MouseEvent) {
-      if (!dragRef.current) return;
-      moveEvent.preventDefault();
-      moveTo(moveEvent.clientX, moveEvent.clientY);
-    }
-
-    function onUp() {
-      window.removeEventListener("pointermove", onMove, true);
-      window.removeEventListener("mousemove", onMove, true);
-      window.removeEventListener("pointerup", onUp, true);
-      window.removeEventListener("pointercancel", onUp, true);
-      window.removeEventListener("mouseup", onUp, true);
-      endDrag();
-    }
-
-    window.addEventListener("pointermove", onMove, {
-      capture: true,
-      passive: false,
-    });
-    window.addEventListener("mousemove", onMove, { capture: true });
-    window.addEventListener("pointerup", onUp, { capture: true });
-    window.addEventListener("pointercancel", onUp, { capture: true });
-    window.addEventListener("mouseup", onUp, { capture: true });
-
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch {
-      // Window listeners still follow the pointer.
-    }
+    followPointer(
+      event.currentTarget,
+      event.pointerId,
+      (moveEvent) => {
+        if (!dragRef.current) return;
+        moveTo(moveEvent.clientX, moveEvent.clientY);
+      },
+      finishGesture,
+    );
     event.preventDefault();
+  }
+
+  function applyResize(
+    corner: Corner,
+    start: { x: number; y: number; w: number; h: number },
+    dx: number,
+    dy: number,
+  ) {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const bounds = stage.getBoundingClientRect();
+    const inset = stageInset(stage);
+    const maxW = Math.max(MIN_PANEL_W, bounds.width - inset.left - inset.right);
+    const maxH = Math.max(MIN_PANEL_H, bounds.height - inset.top - inset.bottom);
+    let w = start.w;
+    let h = start.h;
+    let x = start.x;
+    let y = start.y;
+    if (corner === "ne" || corner === "se") w = start.w + dx;
+    if (corner === "nw" || corner === "sw") w = start.w - dx;
+    if (corner === "sw" || corner === "se") h = start.h + dy;
+    if (corner === "nw" || corner === "ne") h = start.h - dy;
+    const next = clampSize(w, h, maxW, maxH);
+    if (corner === "nw" || corner === "sw") x = start.x + start.w - next.w;
+    if (corner === "nw" || corner === "ne") y = start.y + start.h - next.h;
+    const point = clampPanel(x, y, next.w, next.h, bounds.width, bounds.height, inset);
+    rememberBox({ ...point, w: next.w, h: next.h });
+  }
+
+  function panelBox() {
+    const stage = stageRef.current;
+    const panel = panelRef.current;
+    if (!stage || !panel) return null;
+    const stageBox = stage.getBoundingClientRect();
+    const box = panel.getBoundingClientRect();
+    return {
+      x: pos?.x ?? box.left - stageBox.left,
+      y: pos?.y ?? box.top - stageBox.top,
+      w: size?.w ?? box.width,
+      h: size?.h ?? box.height,
+    };
+  }
+
+  function beginResize(
+    event: ReactPointerEvent<HTMLElement>,
+    corner: Corner,
+  ) {
+    const start = panelBox();
+    if (!start) return;
+    resizeRef.current = {
+      pointerId: event.pointerId,
+      corner,
+      ...start,
+      originX: event.clientX,
+      originY: event.clientY,
+    };
+    rememberBox(start);
+    setResizing(true);
+    followPointer(
+      event.currentTarget,
+      event.pointerId,
+      (moveEvent) => {
+        const current = resizeRef.current;
+        if (!current) return;
+        applyResize(
+          current.corner,
+          current,
+          moveEvent.clientX - current.originX,
+          moveEvent.clientY - current.originY,
+        );
+      },
+      finishGesture,
+    );
+    event.preventDefault();
+  }
+
+  function rememberBox(next: Box) {
+    const panel = panelRef.current;
+    geometryRef.current = next;
+    if (panel) writeBox(panel, next);
+  }
+
+  function finishGesture() {
+    const next = geometryRef.current;
+    dragRef.current = null;
+    resizeRef.current = null;
+    geometryRef.current = null;
+    if (next) {
+      const look = densityFromBox(next.w, next.h);
+      setPos({ x: next.x, y: next.y });
+      setSize({ w: next.w, h: next.h });
+      setDensity(look.density);
+      setShort(look.short);
+      setTall(look.tall);
+    }
+    setDragging(false);
+    setResizing(false);
+  }
+
+  function nudgeSize(corner: Corner, dx: number, dy: number) {
+    const start = panelBox();
+    if (!start) return;
+    applyResize(corner, start, dx, dy);
+    const next = geometryRef.current;
+    if (!next) return;
+    geometryRef.current = null;
+    const look = densityFromBox(next.w, next.h);
+    setPos({ x: next.x, y: next.y });
+    setSize({ w: next.w, h: next.h });
+    setDensity(look.density);
+    setShort(look.short);
+    setTall(look.tall);
   }
 
   function nudge(dx: number, dy: number) {
@@ -446,8 +964,8 @@ export default function PomodoroTimer({
       clampPanel(
         current.x + dx,
         current.y + dy,
-        panel.offsetWidth,
-        panel.offsetHeight,
+        size?.w ?? panel.offsetWidth,
+        size?.h ?? panel.offsetHeight,
         bounds.width,
         bounds.height,
         stageInset(stage),
@@ -460,30 +978,48 @@ export default function PomodoroTimer({
   const clock = formatClock(remaining);
 
   function renderControls() {
+    const startLabel = running ? "Pause" : "Start";
     return (
-      <div className="mt-6">
-        <div className="cadence-timer-controls flex flex-wrap items-center gap-2">
+      <div className="cadence-timer-controls-wrap">
+        <div className="cadence-timer-controls">
           <button
             type="button"
+            aria-label={startLabel}
             onClick={() => setRunning((value) => !value)}
-            className="cadence-chip cadence-chip-accent"
+            className="cadence-chip cadence-chip-solid cadence-timer-action"
           >
-            {running ? "Pause" : "Start"}
+            <span className="cadence-timer-action-mark">
+              {running ? <PauseMark /> : <PlayMark />}
+            </span>
+            <span className="cadence-timer-action-label">{startLabel}</span>
           </button>
-          <button type="button" onClick={reset} className="cadence-chip">
-            Reset
-          </button>
-          <select
-            aria-label="Timer"
-            value={kind}
-            disabled={running}
-            onChange={(event) => applyKind(event.target.value as TimerKind)}
-            className="cadence-chip cadence-chip-select"
+          <button
+            type="button"
+            aria-label="Reset"
+            onClick={reset}
+            className="cadence-chip cadence-timer-action"
           >
-            <option value="pomodoro">Pomodoro</option>
-            <option value="timer">Timer</option>
-          </select>
-          <div className="flex shrink-0 items-center gap-2">
+            <span className="cadence-timer-action-mark">
+              <ResetMark />
+            </span>
+            <span className="cadence-timer-action-label">Reset</span>
+          </button>
+          <div className="cadence-timer-kind">
+            <span className="cadence-timer-kind-mark" aria-hidden="true">
+              {kind === "pomodoro" ? <TomatoMark /> : <KindTimerMark />}
+            </span>
+            <select
+              aria-label="Timer"
+              value={kind}
+              disabled={running}
+              onChange={(event) => applyKind(event.target.value as TimerKind)}
+              className="cadence-chip cadence-chip-select"
+            >
+              <option value="pomodoro">Pomodoro</option>
+              <option value="timer">Timer</option>
+            </select>
+          </div>
+          <div className="cadence-timer-minutes flex shrink-0 items-center gap-2">
             {kind === "pomodoro" ? (
               <>
                 <MinutesInput
@@ -548,7 +1084,7 @@ export default function PomodoroTimer({
                 />
                 <span
                   aria-hidden="true"
-                  className="cadence-chip cadence-chip-count invisible"
+                  className="cadence-chip cadence-chip-count cadence-timer-minutes-spacer"
                 >
                   00
                 </span>
@@ -565,6 +1101,11 @@ export default function PomodoroTimer({
       </div>
     );
   }
+
+  const liveBox = geometryRef.current;
+  const look = liveBox
+    ? densityFromBox(liveBox.w, liveBox.h)
+    : { density, short, tall };
 
   return (
     <>
@@ -595,9 +1136,9 @@ export default function PomodoroTimer({
           >
           <div
             className={
-              dragging
-                ? "pointer-events-none absolute inset-0"
-                : "absolute inset-0"
+              dragging || resizing
+                ? "cadence-timer-scene pointer-events-none absolute inset-0"
+                : "cadence-timer-scene absolute inset-0"
             }
           >
             <StudyScene
@@ -605,19 +1146,49 @@ export default function PomodoroTimer({
               index={sceneIndex}
               onCycle={onCycleScene}
             />
-            <FocusCat clock={clock} running={running} />
+            <FocusCat running={running} />
           </div>
           <div
             ref={panelRef}
-            className={
-              dragging
-                ? "cadence-timer-float cadence-timer-float-dragging"
-                : "cadence-timer-float"
-            }
+            className={[
+              "cadence-timer-float",
+              dragging ? "cadence-timer-float-dragging" : "",
+              resizing ? "cadence-timer-float-resizing" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            data-density={look.density}
+            data-short={look.short ? "true" : undefined}
+            data-tall={look.tall ? "true" : undefined}
             style={
-              pos
-                ? { left: pos.x, top: pos.y }
-                : { left: "50%", top: "50%", transform: "translate(-50%, -50%)" }
+              geometryRef.current
+                ? {
+                    left: geometryRef.current.x,
+                    top: geometryRef.current.y,
+                    width: geometryRef.current.w,
+                    height: geometryRef.current.h,
+                    maxWidth: "none",
+                    maxHeight: "none",
+                    transform: "none",
+                  }
+                : pos
+                  ? {
+                      left: pos.x,
+                      top: pos.y,
+                      ...(size
+                        ? {
+                            width: size.w,
+                            height: size.h,
+                            maxWidth: "none",
+                            maxHeight: "none",
+                          }
+                        : {}),
+                    }
+                  : {
+                      left: "50%",
+                      top: "50%",
+                      transform: "translate(-50%, -50%)",
+                    }
             }
             onPointerDown={(event) => {
               if (ignoreDragFrom(event.target)) return;
@@ -628,9 +1199,34 @@ export default function PomodoroTimer({
               moveTo(event.clientX, event.clientY);
             }}
           >
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm text-neutral-300">{label}</p>
-              <div className="flex gap-2">
+            <ResizeHandle
+              corner="nw"
+              label="Resize from top left"
+              onResizeStart={beginResize}
+              onNudge={nudgeSize}
+            />
+            <ResizeHandle
+              corner="ne"
+              label="Resize from top right"
+              onResizeStart={beginResize}
+              onNudge={nudgeSize}
+            />
+            <ResizeHandle
+              corner="sw"
+              label="Resize from bottom left"
+              onResizeStart={beginResize}
+              onNudge={nudgeSize}
+            />
+            <ResizeHandle
+              corner="se"
+              label="Resize from bottom right"
+              onResizeStart={beginResize}
+              onNudge={nudgeSize}
+            />
+            <div className="cadence-timer-float-body">
+            <div className="cadence-timer-head">
+              <p className="cadence-timer-mode">{label}</p>
+              <div className="cadence-timer-head-actions">
                 <button
                   type="button"
                   data-timer-drag
@@ -652,6 +1248,16 @@ export default function PomodoroTimer({
                 >
                   <MoveMark />
                 </button>
+                {pipApi() ? (
+                  <button
+                    type="button"
+                    aria-label="Picture in picture"
+                    onClick={() => void openPip()}
+                    className="cadence-chip cadence-chip-icon"
+                  >
+                    <PipMark />
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   aria-label="Exit full screen"
@@ -662,32 +1268,41 @@ export default function PomodoroTimer({
                 </button>
               </div>
             </div>
-            <p className="mt-3 font-mono text-6xl tracking-tight text-neutral-50 sm:text-7xl">
-              {clock}
-            </p>
+            <p className="cadence-timer-float-clock">{clock}</p>
             {renderControls()}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="cadence-timer-music-row">
               <button
                 type="button"
+                aria-label={playing ? "Pause music" : "Play lo-fi"}
                 onClick={onToggleMusic}
-                className="cadence-chip cadence-chip-accent cadence-timer-music"
+                className="cadence-chip cadence-chip-accent cadence-timer-action cadence-timer-music"
               >
-                {playing ? "Pause music" : "Play lo-fi"}
+                <span className="cadence-timer-action-mark">
+                  <MusicMark />
+                </span>
+                <span className="cadence-timer-action-label">
+                  {playing ? "Pause music" : "Play lo-fi"}
+                </span>
               </button>
-              <select
-                aria-label="Background noise"
-                value={ambience}
-                onChange={(event) =>
-                  onChangeAmbience(event.target.value as AmbienceKind)
-                }
-                className="cadence-chip cadence-chip-select cadence-chip-select-wide"
-              >
-                {AMBIENCE_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className="cadence-timer-kind cadence-timer-ambience">
+                <span className="cadence-timer-kind-mark" aria-hidden="true">
+                  <WaveMark />
+                </span>
+                <select
+                  aria-label="Background noise"
+                  value={ambience}
+                  onChange={(event) =>
+                    onChangeAmbience(event.target.value as AmbienceKind)
+                  }
+                  className="cadence-chip cadence-chip-select cadence-chip-select-wide"
+                >
+                  {AMBIENCE_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <p
               className="cadence-timer-status"
@@ -695,10 +1310,24 @@ export default function PomodoroTimer({
             >
               {audioError ?? "\u00a0"}
             </p>
+            </div>
           </div>
         </div>,
         document.body,
       )}
+      {pipWindow
+        ? createPortal(
+            <div className="cadence-timer-pip">
+              <StudyScene
+                variant="stage"
+                index={sceneIndex}
+                onCycle={onCycleScene}
+              />
+              <p className="cadence-timer-pip-clock">{clock}</p>
+            </div>,
+            pipWindow.document.body,
+          )
+        : null}
     </>
   );
 }

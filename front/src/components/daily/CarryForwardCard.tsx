@@ -6,6 +6,7 @@ import {
   updateCarryForwardStatus,
   type CarryForwardItem,
 } from "../../api";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface CarryForwardCardProps {
   date: string;
@@ -16,6 +17,7 @@ export default function CarryForwardCard({
   date,
   onChanged,
 }: CarryForwardCardProps) {
+  const { user } = useAuth();
   const [items, setItems] = useState<CarryForwardItem[]>([]);
   const [draft, setDraft] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -25,6 +27,11 @@ export default function CarryForwardCard({
   useEffect(() => {
     let cancelled = false;
     setError(null);
+    if (!user) {
+      setItems([]);
+      setIsLoading(false);
+      return;
+    }
     fetchCarryForward(date)
       .then((rows) => {
         if (!cancelled) setItems(rows);
@@ -43,7 +50,7 @@ export default function CarryForwardCard({
     return () => {
       cancelled = true;
     };
-  }, [date]);
+  }, [date, user?.id]);
 
   async function addItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,11 +106,11 @@ export default function CarryForwardCard({
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           maxLength={2000}
-          className="min-h-11 min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 sm:min-h-0 sm:text-sm"
+          className="cadence-field min-w-0 flex-1"
         />
         <button
           disabled={isSubmitting || draft.trim().length === 0}
-          className="min-h-11 rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
+          className={`cadence-chip min-h-11 px-3.5 sm:text-xs ${draft.trim() ? "cadence-chip-solid" : "cadence-chip-ghost"}`}
         >
           {isSubmitting ? "Adding" : "Add"}
         </button>

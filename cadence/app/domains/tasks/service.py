@@ -21,6 +21,7 @@ def _serialize(task: Task) -> dict:
         "title": task.title,
         "due_date": task.due_date.isoformat() if task.due_date else None,
         "is_completed": bool(task.is_completed),
+        "is_abandoned": bool(task.is_abandoned),
         "completed_at": (
             task.completed_at.isoformat() if task.completed_at else None
         ),
@@ -67,6 +68,7 @@ async def create_task(
         title=title,
         due_date=due_date,
         is_completed=False,
+        is_abandoned=False,
         created_at=now,
         updated_at=now,
     )
@@ -84,6 +86,7 @@ async def update_task(
     title: str | None = None,
     due_date: date | None = None,
     is_completed: bool | None = None,
+    is_abandoned: bool | None = None,
     due_date_set: bool = False,
 ) -> dict:
     await acquire_continuity_lock(db, user_id)
@@ -99,6 +102,13 @@ async def update_task(
     if is_completed is not None and is_completed != bool(task.is_completed):
         task.is_completed = is_completed
         task.completed_at = _now() if is_completed else None
+        if is_completed:
+            task.is_abandoned = False
+    if is_abandoned is not None and is_abandoned != bool(task.is_abandoned):
+        task.is_abandoned = is_abandoned
+        if is_abandoned:
+            task.is_completed = False
+            task.completed_at = None
     task.updated_at = _now()
     await db.commit()
     await db.refresh(task)

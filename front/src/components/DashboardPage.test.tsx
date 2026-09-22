@@ -8,6 +8,7 @@ import {
   fetchMonthData,
   fetchTasks,
 } from "../api";
+import { authStub } from "../authTest";
 import { useAuth } from "../contexts/AuthContext";
 import DashboardPage from "./DashboardPage";
 
@@ -36,24 +37,7 @@ vi.mock("./FocusPage", () => ({ default: () => <div>Focus workspace</div> }));
 describe("DashboardPage progressive disclosure", () => {
   it("loads one workspace at a time and defers calendar data", async () => {
     const user = userEvent.setup();
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: 1,
-        username: "alpha",
-        email: "alpha@example.com",
-        is_verified: true,
-        is_developer: false,
-        ai_processing_consent: false,
-        ai_redaction_enabled: true,
-      },
-      isLoading: false,
-      login: vi.fn(),
-      register: vi.fn(),
-      resendVerification: vi.fn(),
-      updateAIPrivacy: vi.fn(),
-      verifyEmail: vi.fn(),
-      logout: vi.fn(),
-    });
+    vi.mocked(useAuth).mockReturnValue(authStub());
     vi.mocked(fetchHabits).mockResolvedValue([
       { id: 1, name: "Read", is_archived: false },
     ]);
@@ -102,5 +86,27 @@ describe("DashboardPage progressive disclosure", () => {
     expect(
       screen.getByText("Daily workspace").closest("[hidden]"),
     ).toBeNull();
+  });
+
+  it("shows Today and Focus without a session", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useAuth).mockReturnValue(authStub({ user: null }));
+
+    render(<DashboardPage />);
+    screen.getByText("Daily workspace");
+    expect(fetchHabits).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Focus" }));
+    expect(
+      screen.getByText("Focus workspace").closest("[hidden]"),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Calendar" }));
+    screen.getByText("Nothing here yet.");
+
+    await user.click(screen.getByRole("button", { name: "History" }));
+    expect(fetchMonthData).not.toHaveBeenCalled();
+    screen.getByRole("heading", { name: "History" });
+    expect(screen.getAllByText("Nothing here yet.")).toHaveLength(2);
   });
 });

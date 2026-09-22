@@ -25,6 +25,7 @@ class Task(Base):
     title = Column(String(200), nullable=False)
     due_date = Column(Date)
     is_completed = Column(Boolean, nullable=False, default=False)
+    is_abandoned = Column(Boolean, nullable=False, default=False)
     completed_at = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(

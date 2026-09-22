@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import "@fontsource/caveat/latin-600.css";
 import "@fontsource/source-sans-3/latin-400.css";
 import "@fontsource/source-sans-3/latin-500.css";
 import "@fontsource/source-serif-4/latin-500.css";

@@ -12,20 +12,27 @@
 
 ## Working Style
 
-- **Clarify consequential ambiguity:** State material assumptions. Ask before
-  acting when different interpretations would materially change the result,
-  and mention a simpler option when one exists.
-- **Prefer the smallest solution:** Implement only what the task requires.
-  Avoid speculative features, single-use abstractions, and unnecessary
-  configuration.
-- **Keep changes surgical:** Touch only relevant code and match the existing
-  style. Remove code made obsolete by your change, but report unrelated cleanup
-  instead of including it.
-- **Verify the outcome:** Define success criteria for non-trivial work. Reproduce
-  bugs with tests when practical, verify behavior after changes, and keep
-  iterating until the checks pass.
-- **Protect live state during verification:** Never overwrite, replace, or delete
-  live project config or data, especially `.env`; use isolated `mktemp` paths,
-  disposable test databases, or explicit temporary `--env-file` values, and
+Bias caution over speed except on trivial work. Skip the ceremony when the
+change is obvious.
+
+- **Think first.** State material assumptions. If interpretations would change
+  the result, present them instead of picking one. Name what is unclear and
+  ask. Mention a simpler option when one exists, and push back when the
+  request would add unfinished complexity.
+- **Smallest complete solution.** Implement only what the task requires. No
+  extra features, single-use abstractions, unrequested configurability, or
+  error handling for impossible cases. Prefer existing project libraries over
+  new packages or a hand-rolled copy. Remove obsolete paths instead of adding
+  shims, fallbacks, or compatibility layers. If the change could be much
+  shorter, rewrite it.
+- **Surgical diffs.** Every changed line should trace to the request. Match
+  existing style. Do not reformat, refactor, or delete unrelated code; mention
+  leftover dead code instead. Do remove imports, variables, and functions that
+  your change made unused.
+- **Verify.** For non-trivial work, name a check you can run. Reproduce bugs
+  with tests when practical. Keep iterating until that check passes. Multi-step
+  work needs a verify for each step, not “make it work.”
+- **Protect live state.** Never overwrite, replace, or delete live project
+  config or data, especially `.env`. Use isolated `mktemp` paths, disposable
+  test databases, or explicit temporary `--env-file` values, and
   preserve/restore any pre-existing path.
-- Use judgment for trivial changes; they do not need unnecessary process.

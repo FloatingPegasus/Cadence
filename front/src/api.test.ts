@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { request } from "./api";
+import { request, setWriteSessionGate } from "./api";
 
 function jsonResponse(body: unknown = { ok: true }, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -13,6 +13,10 @@ function jsonResponse(body: unknown = { ok: true }, init: ResponseInit = {}) {
 function setCsrfCookie(value = "csrf-value"): void {
   document.cookie = `cadence_csrf=${encodeURIComponent(value)}; path=/`;
 }
+
+afterEach(() => {
+  setWriteSessionGate(null);
+});
 
 describe("cookie-authenticated API requests", () => {
   it("strips supplied bearer credentials and uses the CSRF cookie", async () => {
@@ -145,5 +149,28 @@ describe("cookie-authenticated API requests", () => {
     await import("./api");
 
     expect(window.localStorage.getItem("cadence_token")).toBeNull();
+  });
+
+  it("mints a session before unsafe writes outside auth", async () => {
+    const gate = vi.fn().mockResolvedValue(undefined);
+    setWriteSessionGate(gate);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse());
+
+    await request("/api/habits", {
+      method: "POST",
+      body: JSON.stringify({ name: "Read" }),
+    });
+
+    expect(gate).toHaveBeenCalledOnce();
+  });
+
+  it("does not mint a session for auth writes", async () => {
+    const gate = vi.fn().mockResolvedValue(undefined);
+    setWriteSessionGate(gate);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse());
+
+    await request("/api/auth/guest", { method: "POST" });
+
+    expect(gate).not.toHaveBeenCalled();
   });
 });

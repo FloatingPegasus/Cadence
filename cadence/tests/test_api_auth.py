@@ -140,7 +140,7 @@ class CadenceAuthApiTests(ApiTestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json()["detail"], "Invalid token")
 
-    def test_unverified_account_is_blocked_until_emailed_token_is_used(
+    def test_unverified_account_can_sign_in_before_email_is_verified(
         self,
     ) -> None:
         settings.test_mode = False
@@ -157,12 +157,15 @@ class CadenceAuthApiTests(ApiTestCase):
             )
 
         self.assertEqual(registered.status_code, 200)
+        self.assertFalse(registered.json()["is_verified"])
+        self.assertFalse(registered.json()["is_guest"])
         user_id = registered.json()["id"]
         verification_url = send_email.call_args.kwargs["verification_url"]
         verification_token = parse_qs(
             urlparse(verification_url).query
         )["token"][0]
 
+        me_after_register = self.client.get("/api/auth/me")
         login_before = self.client.post(
             "/api/auth/login",
             json={"username": "pending", "password": "test-password"},
@@ -177,21 +180,12 @@ class CadenceAuthApiTests(ApiTestCase):
             "/api/auth/verify",
             json={"token": verification_token},
         )
-        habits_after_registration = self.client.get(
-            "/api/habits",
-            headers={"Authorization": f"Bearer {_create_token(user_id)}"},
-        )
-        login_after = self.client.post(
-            "/api/auth/login",
-            json={"username": "pending", "password": "test-password"},
-        )
 
-        self.assertEqual(login_before.status_code, 403)
-        self.assertEqual(protected_before.status_code, 403)
+        self.assertEqual(me_after_register.status_code, 200)
+        self.assertEqual(login_before.status_code, 200)
+        self.assertEqual(protected_before.status_code, 200)
         self.assertEqual(verified.status_code, 200)
-        self.assertEqual(habits_after_registration.status_code, 200)
-        self.assertEqual(habits_after_registration.json(), [])
-        self.assertEqual(login_after.status_code, 200)
+        self.assertTrue(verified.json()["is_verified"])
 
     def test_unconfigured_mail_prints_a_verify_link_instead_of_failing(
         self,
@@ -421,3 +415,91 @@ class CadenceAuthApiTests(ApiTestCase):
 
         self.assertEqual(response.status_code, 200)
         send_email.assert_called_once()
+
+    def test_auth_options_reports_guest_flag(self) -> None:
+        enabled = self.client.get("/api/auth/options")
+        settings.allow_guests = False
+        try:
+            disabled = self.client.get("/api/auth/options")
+        finally:
+            settings.allow_guests = True
+
+        self.assertEqual(enabled.status_code, 200)
+        self.assertTrue(enabled.json()["allow_guests"])
+        self.assertEqual(disabled.status_code, 200)
+        self.assertFalse(disabled.json()["allow_guests"])
+
+    def test_guest_session_is_disabled_when_the_flag_is_off(self) -> None:
+        settings.allow_guests = False
+        try:
+            response = self.client.post("/api/auth/guest")
+        finally:
+            settings.allow_guests = True
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json()["detail"],
+            "Guest sessions are disabled",
+        )
+
+    def test_guest_session_can_write_then_claim_without_leaving(self) -> None:
+        guest = self.client.post("/api/auth/guest")
+        self.assertEqual(guest.status_code, 200)
+        self.assertTrue(guest.json()["is_guest"])
+        self.assertIsNone(guest.json()["email"])
+        user_id = guest.json()["id"]
+        csrf_token = self.client.cookies.get(CSRF_COOKIE_NAME)
+
+        me = self.client.get("/api/auth/me")
+        created = self.client.post(
+            "/api/habits",
+            headers={CSRF_HEADER_NAME: csrf_token},
+            json={"name": "Read"},
+        )
+        export = self.client.get("/api/account/export")
+        ai = self.client.get("/api/account/ai-preferences")
+
+        self.assertEqual(me.status_code, 200)
+        self.assertTrue(me.json()["is_guest"])
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(export.status_code, 403)
+        self.assertEqual(ai.status_code, 403)
+
+        with patch(
+            "cadence.app.web.routes.auth.send_verification_email"
+        ) as send_email:
+            claimed = self.client.post(
+                "/api/auth/claim",
+                headers={CSRF_HEADER_NAME: csrf_token},
+                json={
+                    "username": "keeper",
+                    "email": "keeper@example.com",
+                    "password": "test-password",
+                },
+            )
+
+        self.assertEqual(claimed.status_code, 200)
+        self.assertFalse(claimed.json()["is_guest"])
+        self.assertEqual(claimed.json()["id"], user_id)
+        self.assertEqual(claimed.json()["username"], "keeper")
+        self.assertFalse(claimed.json()["is_verified"])
+        send_email.assert_called_once()
+
+        still_here = self.client.get("/api/habits")
+        export_after = self.client.get("/api/account/export")
+        self.assertEqual(still_here.status_code, 200)
+        self.assertEqual(still_here.json()[0]["name"], "Read")
+        self.assertEqual(export_after.status_code, 200)
+
+        claimed_again = self.client.post(
+            "/api/auth/claim",
+            headers={
+                CSRF_HEADER_NAME: self.client.cookies.get(CSRF_COOKIE_NAME)
+            },
+            json={
+                "username": "other",
+                "email": "other@example.com",
+                "password": "test-password",
+            },
+        )
+        self.assertEqual(claimed_again.status_code, 400)

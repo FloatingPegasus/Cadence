@@ -1,8 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "../../api";
+import { authStub } from "../../authTest";
+import { useAuth } from "../../contexts/AuthContext";
 import DailyCaptureCard from "./DailyCaptureCard";
 import QuickThreadCard from "./QuickThreadCard";
 
@@ -16,8 +18,13 @@ vi.mock("../../api", () => ({
   updateDay: vi.fn(),
   updateDayContexts: vi.fn(),
 }));
+vi.mock("../../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
 
 describe("hybrid daily capture", () => {
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue(authStub());
+  });
+
   it("saves cleared check-in fields as explicit null values", async () => {
     const user = userEvent.setup();
     vi.mocked(api.fetchDay).mockResolvedValue({

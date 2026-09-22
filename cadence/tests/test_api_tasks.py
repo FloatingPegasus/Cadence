@@ -31,6 +31,7 @@ class CadenceTasksApiTests(ApiTestCase):
         self.assertEqual(created.json()["title"], "Write the brief")
         self.assertEqual(created.json()["due_date"], "2026-07-24")
         self.assertFalse(created.json()["is_completed"])
+        self.assertFalse(created.json()["is_abandoned"])
         self.assertEqual(listed.status_code, 200)
         self.assertEqual(
             [task["title"] for task in listed.json()],
@@ -84,6 +85,30 @@ class CadenceTasksApiTests(ApiTestCase):
         self.assertIsNone(cleared.json()["completed_at"])
         self.assertEqual(deleted.status_code, 204)
         self.assertEqual(missing.json(), [])
+
+    def test_abandoned_tasks_leave_the_open_list(self) -> None:
+        created = self.client.post(
+            "/api/tasks",
+            headers=self.alpha_headers,
+            json={"title": "Skip the meetup", "due_date": "2026-07-25"},
+        )
+        task_id = created.json()["id"]
+        abandoned = self.client.patch(
+            f"/api/tasks/{task_id}",
+            headers=self.alpha_headers,
+            json={"is_abandoned": True},
+        )
+        restored = self.client.patch(
+            f"/api/tasks/{task_id}",
+            headers=self.alpha_headers,
+            json={"is_abandoned": False},
+        )
+
+        self.assertEqual(abandoned.status_code, 200)
+        self.assertTrue(abandoned.json()["is_abandoned"])
+        self.assertFalse(abandoned.json()["is_completed"])
+        self.assertEqual(restored.status_code, 200)
+        self.assertFalse(restored.json()["is_abandoned"])
 
     def test_blank_task_title_is_rejected(self) -> None:
         response = self.client.post(

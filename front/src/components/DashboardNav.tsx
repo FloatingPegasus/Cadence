@@ -47,8 +47,8 @@ export default function DashboardNav({
   }
 
   return (
-    <nav aria-label="Primary" className="cadence-rail mb-8 sm:mb-12">
-      <div className="grid grid-cols-4 gap-1 pb-2 sm:flex sm:gap-7 sm:overflow-x-auto sm:pb-3">
+    <nav aria-label="Primary" className="cadence-rail mb-6 sm:mb-10">
+      <div className="grid grid-cols-4 gap-x-2 pb-1 sm:flex sm:gap-7 sm:overflow-x-auto sm:pb-3">
         {views.map((item) => (
           <button
             key={item.id}
@@ -57,13 +57,17 @@ export default function DashboardNav({
             aria-current={view === item.id ? "page" : undefined}
             onClick={() => onChange(item.id)}
             onKeyDown={(event) => handleKey(event, item.id)}
-            className={
-              view === item.id
-                ? "min-h-11 rounded-lg bg-neutral-800/80 px-2 text-sm text-neutral-100 sm:rounded-none sm:border-b sm:border-violet-400 sm:bg-transparent sm:px-0 sm:pb-1"
-                : "min-h-11 rounded-lg px-2 text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200 sm:rounded-none sm:border-b sm:border-transparent sm:px-0 sm:pb-1"
-            }
+            className="flex min-h-11 items-center justify-center px-1 text-sm"
           >
-            {item.label}
+            <span
+              className={
+                view === item.id
+                  ? "border-b border-violet-400 pb-px font-medium text-neutral-100"
+                  : "border-b border-transparent pb-px text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+              }
+            >
+              {item.label}
+            </span>
           </button>
         ))}
       </div>

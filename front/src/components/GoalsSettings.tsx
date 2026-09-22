@@ -8,6 +8,7 @@ import {
   type UserGoal,
 } from "../api";
 import { GOAL_KIND_LABELS } from "../time";
+import { useAuth } from "../contexts/AuthContext";
 
 const kinds: GoalKind[] = [
   "ultimate",
@@ -17,6 +18,7 @@ const kinds: GoalKind[] = [
 ];
 
 export default function GoalsSettings() {
+  const { user } = useAuth();
   const [goals, setGoals] = useState<UserGoal[]>([]);
   const [kind, setKind] = useState<GoalKind>("ultimate");
   const [title, setTitle] = useState("");
@@ -24,6 +26,11 @@ export default function GoalsSettings() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) {
+      setGoals([]);
+      setIsLoading(false);
+      return;
+    }
     fetchGoals()
       .then(setGoals)
       .catch((caught) => {
@@ -32,7 +39,7 @@ export default function GoalsSettings() {
         );
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [user?.id]);
 
   async function addGoal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -79,7 +86,7 @@ export default function GoalsSettings() {
           id="goal-kind"
           value={kind}
           onChange={(event) => setKind(event.target.value as GoalKind)}
-          className="rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 outline-none focus:border-neutral-600"
+          className="cadence-chip cadence-chip-select"
         >
           {kinds.map((value) => (
             <option key={value} value={value}>
@@ -96,9 +103,11 @@ export default function GoalsSettings() {
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Add a goal"
           maxLength={200}
-          className="min-w-0 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
+          className="cadence-field min-w-0"
         />
-        <button className="rounded-lg bg-neutral-800 px-3 py-2 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700">
+        <button
+          className={`cadence-chip sm:text-xs ${title.trim() ? "cadence-chip-solid" : "cadence-chip-ghost"}`}
+        >
           Add
         </button>
       </form>

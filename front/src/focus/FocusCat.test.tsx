@@ -7,7 +7,7 @@ import FocusCat from "./FocusCat";
 function renderCat(running = false) {
   const { container } = render(
     <div style={{ position: "relative", width: 800, height: 400 }}>
-      <FocusCat clock="24:12" running={running} />
+      <FocusCat running={running} />
     </div>,
   );
   const host = container.querySelector(".cadence-focus-cat-stage");
@@ -47,10 +47,10 @@ describe("FocusCat", () => {
     );
   });
 
-  it("shows remaining time while a session is running", () => {
+  it("sits while a session is running without a clock on its head", () => {
     renderCat(true);
-    screen.getByRole("button", { name: "Cat, 24:12" });
-    expect(screen.getByText("24:12")).toBeTruthy();
+    screen.getByRole("button", { name: "Cat, sitting" });
+    expect(screen.queryByText("24:12")).toBeNull();
   });
 
   it("can be dragged to a new spot", () => {

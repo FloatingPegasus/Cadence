@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 import { STUDY_SCENES } from "./scenes";
 
 interface StudySceneProps {
@@ -12,6 +14,19 @@ export default function StudyScene({
   variant = "card",
 }: StudySceneProps) {
   const stage = variant === "stage";
+  const currentRef = useRef(index);
+  const [outgoing, setOutgoing] = useState(index);
+
+  useEffect(() => {
+    if (currentRef.current === index) return;
+    setOutgoing(currentRef.current);
+    currentRef.current = index;
+  }, [index]);
+
+  const frames =
+    outgoing === index
+      ? [index]
+      : [outgoing, index];
 
   return (
     <button
@@ -24,17 +39,24 @@ export default function StudyScene({
       aria-label="Study scene"
       onClick={onCycle}
     >
-      {STUDY_SCENES.map((cat, photoIndex) => (
-        <img
-          key={cat.src}
-          src={cat.src}
-          alt={photoIndex === index ? cat.alt : ""}
-          className={[
-            "cadence-scene-crossfade cadence-scene-drift absolute inset-0 h-full w-full object-cover",
-            photoIndex === index ? "z-[1] opacity-100" : "z-0 opacity-0",
-          ].join(" ")}
-        />
-      ))}
+      {frames.map((photoIndex) => {
+        const cat = STUDY_SCENES[photoIndex];
+        if (!cat) return null;
+        const current = photoIndex === index;
+        return (
+          <img
+            key={cat.src}
+            src={cat.src}
+            alt={current ? cat.alt : ""}
+            className={[
+              "cadence-scene-crossfade absolute inset-0 h-full w-full object-cover",
+              current
+                ? "cadence-scene-drift z-[1] opacity-100"
+                : "z-0 opacity-0",
+            ].join(" ")}
+          />
+        );
+      })}
     </button>
   );
 }

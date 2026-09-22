@@ -12,6 +12,12 @@ export function todayAsLocalDate() {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
+export function shiftLocalDate(date: string, days: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const next = new Date(year, month - 1, day + days);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
+}
+
 export function formatHourLabel(hour: number) {
   const suffix = hour < 12 ? "AM" : "PM";
   const twelve = hour % 12 === 0 ? 12 : hour % 12;

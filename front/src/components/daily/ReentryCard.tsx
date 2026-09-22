@@ -4,6 +4,7 @@ import {
   fetchDayReentry,
   type DailyReentry,
 } from "../../api";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface ReentryCardProps {
   date: string;
@@ -23,6 +24,7 @@ export default function ReentryCard({
   refreshKey,
   onSelectDate,
 }: ReentryCardProps) {
+  const { user } = useAuth();
   const [reentry, setReentry] = useState<DailyReentry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +32,11 @@ export default function ReentryCard({
 
   useEffect(() => {
     let cancelled = false;
+    if (!user) {
+      setReentry(null);
+      setIsLoading(false);
+      return;
+    }
     const initial = loadedDate.current === null;
     if (initial) setIsLoading(true);
     setError(null);
@@ -53,7 +60,7 @@ export default function ReentryCard({
     return () => {
       cancelled = true;
     };
-  }, [date, refreshKey]);
+  }, [date, refreshKey, user?.id]);
 
   const hasContext =
     reentry?.previous_trace ||

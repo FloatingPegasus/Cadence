@@ -170,6 +170,7 @@ class PostgresTestCase(unittest.TestCase):
         self.original_ai_api_key = settings.ai_api_key
         self.original_ai_enabled = settings.ai_enabled
         self.original_frontend_base_url = settings.frontend_base_url
+        self.original_allow_guests = settings.allow_guests
         self.engine = type(self).engine
         self.session_factory = type(self).session_factory
 
@@ -200,6 +201,7 @@ class PostgresTestCase(unittest.TestCase):
         settings.ai_api_key = self.original_ai_api_key
         settings.ai_enabled = self.original_ai_enabled
         settings.frontend_base_url = self.original_frontend_base_url
+        settings.allow_guests = self.original_allow_guests
         self.client.close()
         app.dependency_overrides.clear()
 

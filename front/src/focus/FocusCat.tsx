@@ -24,7 +24,6 @@ type Pose = "sleep" | "sit" | "walk" | "pet";
 type Facing = "left" | "right";
 
 export interface FocusCatProps {
-  clock: string;
   running: boolean;
 }
 
@@ -39,8 +38,7 @@ function reducedMotion() {
   );
 }
 
-function catLabel(pose: Pose, running: boolean, clock: string) {
-  if (running) return `Cat, ${clock}`;
+function catLabel(pose: Pose) {
   if (pose === "sleep") return "Cat, sleeping";
   if (pose === "pet") return "Cat, purring";
   if (pose === "walk") return "Cat, roaming";
@@ -115,7 +113,7 @@ function catSrc(pose: Pose, walkFrame: number) {
   return "/focus/companion-sit.png";
 }
 
-export default function FocusCat({ clock, running }: FocusCatProps) {
+export default function FocusCat({ running }: FocusCatProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLButtonElement>(null);
   const posRef = useRef({ x: 8, y: 8 });
@@ -334,7 +332,7 @@ export default function FocusCat({ clock, running }: FocusCatProps) {
         ref={catRef}
         type="button"
         draggable={false}
-        aria-label={catLabel(pose, running, clock)}
+        aria-label={catLabel(pose)}
         data-pose={pose}
         data-dragging={dragging ? "true" : undefined}
         className="cadence-focus-cat"
@@ -349,11 +347,6 @@ export default function FocusCat({ clock, running }: FocusCatProps) {
         onClick={onClick}
         onKeyDown={(event) => event.stopPropagation()}
       >
-        {running ? (
-          <span className="cadence-focus-cat-clock" aria-hidden="true">
-            {clock}
-          </span>
-        ) : null}
         {pose === "sleep" && !running ? (
           <span className="cadence-cat-zzz" aria-hidden="true">
             z

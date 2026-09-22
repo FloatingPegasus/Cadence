@@ -5,6 +5,7 @@ import {
   updateDayStatus,
   type DayClosurePreview,
 } from "../../api";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface DayClosureCardProps {
   date: string;
@@ -21,6 +22,7 @@ export default function DayClosureCard({
   refreshKey,
   onChanged,
 }: DayClosureCardProps) {
+  const { user } = useAuth();
   const [preview, setPreview] = useState<DayClosurePreview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -30,6 +32,11 @@ export default function DayClosureCard({
 
   useEffect(() => {
     let cancelled = false;
+    if (!user) {
+      setPreview(null);
+      setIsLoading(false);
+      return;
+    }
     const initial = loadedDate.current === null;
     if (initial) {
       setIsLoading(true);
@@ -56,7 +63,7 @@ export default function DayClosureCard({
     return () => {
       cancelled = true;
     };
-  }, [date, refreshKey]);
+  }, [date, refreshKey, user?.id]);
 
   async function setStatus(status: "open" | "closed") {
     setIsUpdating(true);
@@ -187,7 +194,7 @@ export default function DayClosureCard({
                 <button
                   type="button"
                   onClick={() => setIsReviewing(false)}
-                  className="rounded-lg border border-neutral-800 px-3 py-1.5 text-xs text-neutral-400 hover:bg-neutral-900"
+                  className="cadence-chip"
                 >
                   Keep open
                 </button>
@@ -195,7 +202,7 @@ export default function DayClosureCard({
                   type="button"
                   disabled={isUpdating}
                   onClick={() => setStatus("closed")}
-                  className="rounded-lg bg-violet-500 px-3 py-1.5 text-xs text-white transition-colors duration-150 hover:bg-violet-400 disabled:opacity-50"
+                  className="cadence-chip cadence-chip-solid sm:text-xs"
                 >
                   {isUpdating ? "Finishing" : "Finish day"}
                 </button>
@@ -205,7 +212,7 @@ export default function DayClosureCard({
             <button
               type="button"
               onClick={() => setIsReviewing(true)}
-              className="mt-5 rounded-lg border border-neutral-800 px-3 py-1.5 text-xs text-neutral-300 transition-colors duration-150 hover:bg-neutral-900"
+              className="cadence-chip mt-5 sm:text-xs"
             >
               Review and finish
             </button>

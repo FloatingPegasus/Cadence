@@ -1,15 +1,22 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchDayReentry } from "../../api";
+import { authStub } from "../../authTest";
+import { useAuth } from "../../contexts/AuthContext";
 import ReentryCard from "./ReentryCard";
 
 vi.mock("../../api", () => ({
   fetchDayReentry: vi.fn(),
 }));
+vi.mock("../../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
 
 describe("ReentryCard", () => {
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue(authStub());
+  });
+
   it("surfaces bounded prior context with direct date re-entry", async () => {
     const user = userEvent.setup();
     const onSelectDate = vi.fn();

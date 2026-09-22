@@ -51,11 +51,11 @@ export default function FocusPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
+      <div>
         <h1 className="cadence-title text-2xl font-medium text-neutral-100">
           Focus
         </h1>
-        <div className="flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => void toggleMusic()}
@@ -84,11 +84,13 @@ export default function FocusPage() {
           {audioError}
         </p>
       )}
-      <div className="relative mt-10 overflow-hidden rounded-3xl shadow-[var(--shadow-page)]">
-        <StudyScene index={sceneIndex} onCycle={cycleScene} />
-        <FocusCat clock={timer.clock} running={timer.running} />
+      <div className="cadence-polaroid mt-8">
+        <div className="relative overflow-hidden rounded-[0.28rem]">
+          <StudyScene index={sceneIndex} onCycle={cycleScene} />
+          <FocusCat running={timer.running} />
+        </div>
       </div>
-      <div className="cadence-surface mt-6">
+      <div className="cadence-surface cadence-surface-quiet mt-6">
         <PomodoroTimer
           sceneIndex={sceneIndex}
           onCycleScene={cycleScene}

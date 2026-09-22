@@ -1,36 +1,61 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createTask, deleteTask, fetchTasks, updateTask } from "../api";
-import { todayAsLocalDate } from "../time";
+import { createTask, fetchTasks, updateTask } from "../api";
+import { authStub } from "../authTest";
+import { useAuth } from "../contexts/AuthContext";
+import { shiftLocalDate, todayAsLocalDate } from "../time";
 import TasksPage from "./TasksPage";
 
 vi.mock("../api", () => ({
   createTask: vi.fn(),
-  deleteTask: vi.fn(),
   fetchTasks: vi.fn(),
   updateTask: vi.fn(),
 }));
+vi.mock("../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
+
+function task(overrides: Partial<{
+  id: number;
+  title: string;
+  due_date: string | null;
+  is_completed: boolean;
+  is_abandoned: boolean;
+  completed_at: string | null;
+}> = {}) {
+  return {
+    id: 9,
+    title: "Water the plants",
+    due_date: todayAsLocalDate(),
+    is_completed: false,
+    is_abandoned: false,
+    completed_at: null,
+    ...overrides,
+  };
+}
 
 describe("TasksPage", () => {
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue(authStub());
+  });
+
   it("adds a dated task and can mark it complete", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchTasks).mockResolvedValue([]);
-    vi.mocked(createTask).mockResolvedValue({
-      id: 4,
-      title: "Send the notes",
-      due_date: todayAsLocalDate(),
-      is_completed: false,
-      completed_at: null,
-    });
-    vi.mocked(updateTask).mockResolvedValue({
-      id: 4,
-      title: "Send the notes",
-      due_date: todayAsLocalDate(),
-      is_completed: true,
-      completed_at: "2026-07-24T12:00:00",
-    });
+    vi.mocked(createTask).mockResolvedValue(
+      task({
+        id: 4,
+        title: "Send the notes",
+      }),
+    );
+    vi.mocked(updateTask).mockResolvedValue(
+      task({
+        id: 4,
+        title: "Send the notes",
+        is_completed: true,
+        completed_at: "2026-07-24T12:00:00",
+      }),
+    );
 
     render(<TasksPage refreshKey={0} onChanged={vi.fn()} />);
     screen.getByRole("heading", { name: "Tasks" });
@@ -51,61 +76,36 @@ describe("TasksPage", () => {
     expect(updateTask).toHaveBeenCalledWith(4, { is_completed: true });
   });
 
-  it("keeps a removed task until the undo window closes", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const user = userEvent.setup({
-      advanceTimers: vi.advanceTimersByTime.bind(vi),
-    });
-    vi.mocked(fetchTasks).mockResolvedValue([
-      {
-        id: 9,
-        title: "Water the plants",
-        due_date: todayAsLocalDate(),
-        is_completed: false,
-        completed_at: null,
-      },
-    ]);
-    vi.mocked(deleteTask).mockResolvedValue(undefined as never);
+  it("carries a task to the next day", async () => {
+    const user = userEvent.setup();
+    const current = task();
+    const next = shiftLocalDate(todayAsLocalDate(), 1);
+    vi.mocked(fetchTasks).mockResolvedValue([current]);
+    vi.mocked(updateTask).mockResolvedValue({ ...current, due_date: next });
 
     render(<TasksPage refreshKey={0} onChanged={vi.fn()} />);
     await user.click(
-      await screen.findByRole("button", { name: "Remove Water the plants" }),
+      await screen.findByRole("button", { name: "Carry forward" }),
     );
-
-    expect(screen.queryByText("Water the plants")).toBeNull();
-    expect(deleteTask).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("button", { name: "Undo" }));
-
-    expect(screen.getByText("Water the plants")).toBeTruthy();
-    vi.advanceTimersByTime(10000);
-    expect(deleteTask).not.toHaveBeenCalled();
-    vi.useRealTimers();
+    expect(updateTask).toHaveBeenCalledWith(9, { due_date: next });
   });
 
-  it("deletes a removed task once the undo window closes", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const user = userEvent.setup({
-      advanceTimers: vi.advanceTimersByTime.bind(vi),
-    });
-    vi.mocked(fetchTasks).mockResolvedValue([
-      {
-        id: 9,
-        title: "Water the plants",
-        due_date: todayAsLocalDate(),
-        is_completed: false,
-        completed_at: null,
-      },
-    ]);
-    vi.mocked(deleteTask).mockResolvedValue(undefined as never);
+  it("abandons a task and can restore it", async () => {
+    const user = userEvent.setup();
+    const current = task();
+    vi.mocked(fetchTasks).mockResolvedValue([current]);
+    vi.mocked(updateTask)
+      .mockResolvedValueOnce({ ...current, is_abandoned: true })
+      .mockResolvedValueOnce({ ...current, is_abandoned: false });
 
     render(<TasksPage refreshKey={0} onChanged={vi.fn()} />);
     await user.click(
-      await screen.findByRole("button", { name: "Remove Water the plants" }),
+      await screen.findByRole("button", { name: "Abandon Water the plants" }),
     );
-
-    vi.advanceTimersByTime(6000);
-    await waitFor(() => expect(deleteTask).toHaveBeenCalledWith(9));
-    vi.useRealTimers();
+    expect(updateTask).toHaveBeenCalledWith(9, { is_abandoned: true });
+    await user.click(
+      await screen.findByRole("button", { name: "Restore Water the plants" }),
+    );
+    expect(updateTask).toHaveBeenCalledWith(9, { is_abandoned: false });
   });
 });

@@ -99,6 +99,7 @@ describe("DayHabitsDialog", () => {
             title: "Send the notes",
             due_date: "2026-07-21",
             is_completed: false,
+            is_abandoned: false,
             completed_at: null,
           },
         ]}

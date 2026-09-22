@@ -8,8 +8,9 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     username = Column(String(80), unique=True, nullable=False, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=True, index=True)
     hashed_password = Column(String(128), nullable=False)
     is_verified = Column(Boolean, nullable=False, default=False)
+    is_guest = Column(Boolean, nullable=False, default=False)
     ai_processing_consent = Column(Boolean, nullable=False, default=False)
     ai_redaction_enabled = Column(Boolean, nullable=False, default=True)

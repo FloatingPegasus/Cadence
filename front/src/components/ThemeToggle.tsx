@@ -52,7 +52,7 @@ export default function ThemeToggle() {
       type="button"
       aria-label={next === "dark" ? "Dark" : "Light"}
       onClick={() => setTheme(next)}
-      className="cadence-chip cadence-chip-icon"
+      className="cadence-chip cadence-chip-icon cadence-chip-ghost"
     >
       {next === "dark" ? <MoonMark /> : <SunMark />}
     </button>

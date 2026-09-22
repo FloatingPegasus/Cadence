@@ -24,6 +24,18 @@ function getCsrfCookie(): string | null {
 }
 
 const FALLBACK_ERROR = "Something went wrong";
+const AUTH_API = "/api/auth/";
+
+let writeSessionGate: (() => Promise<void>) | null = null;
+
+export function setWriteSessionGate(gate: (() => Promise<void>) | null) {
+  writeSessionGate = gate;
+}
+
+function isAuthApi(input: RequestInfo): boolean {
+  const url = typeof input === "string" ? input : input.url;
+  return url.includes(AUTH_API);
+}
 
 function messageFromErrorBody(data: unknown, fallback: string): string {
   if (!data || typeof data !== "object" || !("detail" in data)) {
@@ -63,6 +75,13 @@ export async function request<T = unknown>(
     headers.set("Content-Type", "application/json");
   }
   const method = (init.method ?? "GET").toUpperCase();
+  if (
+    writeSessionGate &&
+    UNSAFE_METHODS.has(method) &&
+    !isAuthApi(input)
+  ) {
+    await writeSessionGate();
+  }
   if (UNSAFE_METHODS.has(method)) {
     headers.delete(CSRF_HEADER_NAME);
     const csrfToken = getCsrfCookie();
@@ -108,6 +127,7 @@ export interface TaskItem {
   title: string;
   due_date: string | null;
   is_completed: boolean;
+  is_abandoned: boolean;
   completed_at: string | null;
 }
 
@@ -677,6 +697,7 @@ export function updateTask(
     title?: string;
     due_date?: string | null;
     is_completed?: boolean;
+    is_abandoned?: boolean;
   },
 ): Promise<TaskItem> {
   return request<TaskItem>(`/api/tasks/${taskId}`, {

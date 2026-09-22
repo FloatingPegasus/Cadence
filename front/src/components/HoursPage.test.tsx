@@ -3,16 +3,20 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { fetchHourLog, upsertHourLog } from "../api";
+import { authStub } from "../authTest";
+import { useAuth } from "../contexts/AuthContext";
 import HoursPage from "./HoursPage";
 
 vi.mock("../api", () => ({
   fetchHourLog: vi.fn(),
   upsertHourLog: vi.fn(),
 }));
+vi.mock("../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
 
 describe("HoursPage", () => {
   it("saves an hour when the field is left", async () => {
     const user = userEvent.setup();
+    vi.mocked(useAuth).mockReturnValue(authStub());
     vi.mocked(fetchHourLog).mockResolvedValue(
       Array.from({ length: 24 }, (_, hour) => ({ hour, content: "" })),
     );

@@ -190,11 +190,17 @@ def _decode_token(token: str, *, purpose: str) -> dict:
     return payload
 
 
+def _email_matches(user_email: str | None, expected: str) -> bool:
+    if not user_email or not expected:
+        return False
+    return secrets.compare_digest(user_email.casefold(), expected)
+
+
 def is_developer(user: User) -> bool:
     return (
         settings.dev_mode
         and bool(settings.dev_email)
-        and secrets.compare_digest(user.email.casefold(), settings.dev_email)
+        and _email_matches(user.email, settings.dev_email)
         and getattr(user, "_cadence_developer_session", False) is True
     )
 
@@ -204,7 +210,7 @@ def _mark_developer_session(user: User, enabled: bool) -> None:
         enabled
         and settings.dev_mode
         and bool(settings.dev_email)
-        and secrets.compare_digest(user.email.casefold(), settings.dev_email)
+        and _email_matches(user.email, settings.dev_email)
     )
 
 
@@ -383,11 +389,6 @@ async def _authenticate_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
     _mark_developer_session(user, payload.get("developer") is True)
-    if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email not verified. Request a new verification email.",
-        )
     return user
 
 
@@ -407,23 +408,63 @@ async def require_current_user(
     return await _authenticate_current_user(request, credentials, db)
 
 
+def require_claimed_account(user: User) -> None:
+    if user.is_guest:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Keep this first",
+        )
+
+
+def _public_user(user: User) -> dict:
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "is_verified": user.is_verified,
+        "is_guest": bool(user.is_guest),
+        "is_developer": is_developer(user),
+        "ai_processing_consent": user.ai_processing_consent,
+        "ai_redaction_enabled": user.ai_redaction_enabled,
+    }
+
+
+def _establish_session(
+    response: Response,
+    user: User,
+    *,
+    developer: bool = False,
+) -> dict:
+    csrf_token = secrets.token_urlsafe(32)
+    _mark_developer_session(user, developer)
+    token = _create_token(
+        user.id,
+        csrf_token=csrf_token,
+        developer=developer,
+    )
+    _set_auth_cookies(
+        response,
+        session_token=token,
+        csrf_token=csrf_token,
+    )
+    return {"user_id": user.id, **_public_user(user)}
+
+
+@router.get("/auth/options")
+async def auth_options():
+    return {"allow_guests": settings.allow_guests}
+
+
 @router.get("/auth/me")
 async def me(current_user: User = Depends(require_current_user)):
-    return {
-        "id": current_user.id,
-        "username": current_user.username,
-        "email": current_user.email,
-        "is_verified": current_user.is_verified,
-        "is_developer": is_developer(current_user),
-        "ai_processing_consent": current_user.ai_processing_consent,
-        "ai_redaction_enabled": current_user.ai_redaction_enabled,
-    }
+    return _public_user(current_user)
 
 
 @router.post("/auth/register")
 async def register(
     body: RegisterBody,
     request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     await enforce_auth_rate_limit(
@@ -475,16 +516,14 @@ async def register(
             ),
         )
 
+    session = _establish_session(response, user)
     return {
-        "id": recipient[0],
-        "username": recipient[2],
-        "email": recipient[1],
-        "is_verified": False,
+        **session,
         "message": (
             "Account created. Mail is not configured, so the verification "
             "link is in the Cadence server log."
             if not settings.mail_is_configured
-            else "Account created. Check your email to verify your address before logging in."
+            else "Account created. Check your email to verify your address."
         ),
     }
 
@@ -536,7 +575,12 @@ async def resend_verification(
         select(User).where(func.lower(User.email) == body.email)
     )
     recipient = None
-    if user is not None and not user.is_verified:
+    if (
+        user is not None
+        and not user.is_verified
+        and user.email
+        and not user.is_guest
+    ):
         recipient = (user.id, user.email, user.username)
     await db.rollback()
     if recipient is not None:
@@ -600,6 +644,134 @@ async def verify(
     }
 
 
+async def _existing_session_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None,
+    db: AsyncSession,
+) -> User | None:
+    try:
+        return await _authenticate_current_user(request, credentials, db)
+    except HTTPException as error:
+        if error.status_code == status.HTTP_401_UNAUTHORIZED:
+            return None
+        raise
+    except InvalidSessionError:
+        return None
+
+
+async def _create_guest_user(db: AsyncSession) -> User:
+    hashed_password = await run_in_threadpool(
+        lambda: _bcrypt.hashpw(
+            secrets.token_urlsafe(48).encode(), _bcrypt.gensalt()
+        ).decode()
+    )
+    for _ in range(8):
+        username = f"guest-{secrets.token_hex(8)}"
+        user = User(
+            username=username,
+            email=None,
+            hashed_password=hashed_password,
+            is_verified=False,
+            is_guest=True,
+        )
+        db.add(user)
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            continue
+        await db.refresh(user)
+        return user
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Could not start a guest session",
+    )
+
+
+@router.post("/auth/guest")
+async def create_guest(
+    request: Request,
+    response: Response,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    db: AsyncSession = Depends(get_db),
+):
+    if not settings.allow_guests:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Guest sessions are disabled",
+        )
+    await enforce_auth_rate_limit(
+        request,
+        scope="guest",
+        identity="guest",
+        limit=settings.auth_guest_rate_limit,
+    )
+    existing = await _existing_session_user(request, credentials, db)
+    if existing is not None:
+        return _establish_session(response, existing)
+    user = await _create_guest_user(db)
+    return _establish_session(response, user)
+
+
+@router.post("/auth/claim")
+async def claim_guest(
+    body: RegisterBody,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_current_user),
+):
+    if not current_user.is_guest:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This session already has an account",
+        )
+    taken = await db.scalar(
+        select(User.id).where(
+            User.id != current_user.id,
+            (User.username == body.username)
+            | (func.lower(User.email) == body.email),
+        )
+    )
+    if taken is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username or email already taken",
+        )
+    hashed_password = await run_in_threadpool(
+        lambda: _bcrypt.hashpw(body.password.encode(), _bcrypt.gensalt()).decode()
+    )
+    current_user.username = body.username
+    current_user.email = body.email
+    current_user.hashed_password = hashed_password
+    current_user.is_guest = False
+    current_user.is_verified = False
+    try:
+        await db.commit()
+    except IntegrityError as error:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username or email already taken",
+        ) from error
+    await db.refresh(current_user)
+    try:
+        await _send_user_verification(
+            current_user.id,
+            body.email,
+            current_user.username,
+        )
+    except EmailDeliveryError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Account kept, but the verification email could not be "
+                "sent. Check the mail configuration, then request a new one."
+            ),
+        )
+    return _establish_session(response, current_user)
+
+
 @router.post("/auth/login")
 async def login(
     body: LoginBody,
@@ -647,37 +819,13 @@ async def login(
             body.password.encode(),
             password_hash,
         )
-        if not user or not password_matches:
+        if not user or not password_matches or user.is_guest:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
             )
 
-    if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email not verified. Check your inbox for the verification link.",
-        )
-
-    csrf_token = secrets.token_urlsafe(32)
-    _mark_developer_session(user, developer_login)
-    token = _create_token(
-        user.id,
-        csrf_token=csrf_token,
-        developer=developer_login,
-    )
-    _set_auth_cookies(
-        response,
-        session_token=token,
-        csrf_token=csrf_token,
-    )
-    return {
-        "user_id": user.id,
-        "is_verified": user.is_verified,
-        "is_developer": is_developer(user),
-        "ai_processing_consent": user.ai_processing_consent,
-        "ai_redaction_enabled": user.ai_redaction_enabled,
-    }
+    return _establish_session(response, user, developer=developer_login)
 
 
 @router.post("/auth/logout")

@@ -1,13 +1,24 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import ThemeToggle from "./ThemeToggle";
 
-function LoginPage() {
-  const { login, register, resendVerification } = useAuth();
+interface LoginPageProps {
+  intent?: "login" | "claim";
+  headingId?: string;
+  onFinished?: () => void;
+}
+
+function LoginPage({
+  intent = "login",
+  headingId,
+  onFinished,
+}: LoginPageProps) {
+  const { login, register, claim, resendVerification } = useAuth();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "register" | "resend">("login");
+  const [mode, setMode] = useState<"login" | "register" | "resend" | "claim">(
+    intent === "claim" ? "claim" : "login",
+  );
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -15,6 +26,8 @@ function LoginPage() {
 
   const checkEmail = Boolean(successMsg) && (mode === "register" || mode === "resend");
   const mailInServerLog = Boolean(successMsg?.includes("server log"));
+  const title =
+    mode === "claim" ? "Keep this" : mode === "register" ? "Register" : "Cadence";
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -25,12 +38,13 @@ function LoginPage() {
     try {
       if (mode === "login") {
         await login(username, password);
+        onFinished?.();
+      } else if (mode === "claim") {
+        await claim(username, email, password);
+        onFinished?.();
       } else if (mode === "register") {
-        const res = await register(username, email, password);
-        setSuccessMsg(
-          res.message ||
-            "Account created. Check your email to verify before logging in.",
-        );
+        await register(username, email, password);
+        onFinished?.();
       } else {
         setSuccessMsg(await resendVerification(email));
       }
@@ -54,24 +68,20 @@ function LoginPage() {
     }
   }
 
+  const brand = checkEmail || title === "Cadence";
+
   return (
-    <div className="px-4 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-6">
-      <div className="flex justify-end">
-        <ThemeToggle />
-      </div>
-      <div className="cadence-surface mx-auto mt-10 max-w-sm">
-      <h1 className={`cadence-mark text-center text-xl font-semibold tracking-tight text-neutral-100 ${checkEmail ? "mb-6" : "mb-2"}`}>
-        Cadence
+    <div className="cadence-surface">
+      <h1
+        id={headingId}
+        className={`${brand ? "cadence-mark cadence-wordmark" : "cadence-title"} text-center text-xl text-neutral-100 ${checkEmail ? "mb-6" : "mb-8"}`}
+      >
+        {checkEmail ? "Cadence" : title}
       </h1>
-      {!checkEmail ? (
-        <p className="mb-8 text-center text-sm text-neutral-500">
-          Habits, hours, and a focus room.
-        </p>
-      ) : null}
 
       {successMsg ? (
         <div className="text-center space-y-4">
-          <h2 className="cadence-mark text-lg font-semibold tracking-tight text-neutral-100">
+          <h2 className="cadence-title text-lg font-semibold tracking-tight text-neutral-100">
             {mailInServerLog ? "Account created" : "Check your email"}
           </h2>
           <p className="text-sm text-neutral-400 break-words">
@@ -87,7 +97,7 @@ function LoginPage() {
               type="button"
               onClick={() => void handleSendAgain()}
               disabled={loading}
-              className="w-full min-h-11 px-4 py-2.5 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="cadence-chip cadence-chip-solid w-full"
             >
               {loading ? "Please wait..." : sentAgain ? "Sent again" : "Send again"}
             </button>
@@ -122,7 +132,7 @@ function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
-                  className="w-full min-h-11 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
+                  className="cadence-field"
                   placeholder={
                     mode === "login" ? "you@example.com" : "your name"
                   }
@@ -145,7 +155,7 @@ function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
-                className="w-full min-h-11 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
+                className="cadence-field"
                 placeholder="you@example.com"
                   required
                 />
@@ -168,9 +178,9 @@ function LoginPage() {
                   autoComplete={
                     mode === "login" ? "current-password" : "new-password"
                   }
-                  className="w-full min-h-11 px-3 py-2.5 rounded-lg border border-neutral-800 bg-neutral-900 text-sm text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-colors"
+                  className="cadence-field"
                   placeholder="••••••"
-                  minLength={mode === "register" ? 8 : undefined}
+                  minLength={mode === "login" ? undefined : 8}
                   required
                 />
               </div>
@@ -181,58 +191,61 @@ function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full min-h-11 px-4 py-2.5 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="cadence-chip cadence-chip-solid w-full"
             >
               {loading
                 ? "Please wait..."
                 : mode === "login"
                   ? "Log in"
-                  : mode === "register"
-                    ? "Register"
-                    : "Resend verification"}
+                  : mode === "claim"
+                    ? "Keep this"
+                    : mode === "register"
+                      ? "Register"
+                      : "Resend verification"}
             </button>
           </form>
 
-          <div className="mt-4 space-y-2">
-            {mode === "login" ? (
-              <>
+          {mode !== "claim" ? (
+            <div className="mt-4 space-y-2">
+              {mode === "login" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("register");
+                      setError(null);
+                    }}
+                    className="w-full min-h-11 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+                  >
+                    Need an account? Register
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("resend");
+                      setError(null);
+                    }}
+                    className="w-full min-h-11 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+                  >
+                    Resend verification email
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
                   onClick={() => {
-                    setMode("register");
+                    setMode("login");
                     setError(null);
                   }}
                   className="w-full min-h-11 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
                 >
-                  Need an account? Register
+                  Back to login
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode("resend");
-                    setError(null);
-                  }}
-                  className="w-full min-h-11 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
-                >
-                  Resend verification email
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("login");
-                  setError(null);
-                }}
-                className="w-full min-h-11 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
-              >
-                Back to login
-              </button>
-            )}
-          </div>
+              )}
+            </div>
+          ) : null}
         </>
       )}
-      </div>
     </div>
   );
 }

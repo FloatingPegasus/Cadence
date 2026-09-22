@@ -1,12 +1,13 @@
 import DashboardPage from "./components/DashboardPage";
-import LoginPage from "./components/LoginPage";
 import VerifyPage from "./components/VerifyPage";
 import { useAuth } from "./contexts/AuthContext";
 
 function App() {
-  const { user, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
-  const isVerifyPage = window.location.pathname === "/verify" || !!new URLSearchParams(window.location.search).get("token");
+  const isVerifyPage =
+    window.location.pathname === "/verify" ||
+    !!new URLSearchParams(window.location.search).get("token");
 
   if (isVerifyPage) {
     return <VerifyPage />;
@@ -18,10 +19,6 @@ function App() {
         Loading your session...
       </div>
     );
-  }
-
-  if (!user) {
-    return <LoginPage />;
   }
 
   return <DashboardPage />;

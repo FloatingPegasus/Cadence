@@ -12,6 +12,7 @@ else:
 configure_test_environment()
 
 import httpx
+from fastapi import Response
 
 import cadence.app as app_module
 from cadence.app.config import Settings, settings
@@ -359,6 +360,7 @@ class AIExternalIOHardeningTests(unittest.TestCase):
                         password="test-password",
                     ),
                     object(),
+                    Response(),
                     database,
                 )
 
@@ -406,6 +408,7 @@ class AIExternalIOHardeningTests(unittest.TestCase):
                     email="person@example.com",
                     username="person",
                     is_verified=False,
+                    is_guest=False,
                 )
 
             async def rollback(self):

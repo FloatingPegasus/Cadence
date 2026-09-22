@@ -29,6 +29,7 @@ services:
       # Compose runs the app inside its own network. Keep migrations on the
       # db service hostname even when .env contains host-side localhost URLs.
       CADENCE_MIGRATION_DATABASE_URL: ${CADENCE_COMPOSE_MIGRATION_DATABASE_URL:-${CADENCE_COMPOSE_DATABASE_URL:-postgresql+psycopg://${CADENCE_POSTGRES_USER:-cadence}:${CADENCE_POSTGRES_PASSWORD:-cadence-local-password}@db:5432/${CADENCE_POSTGRES_DB:-cadence}}}
+      CADENCE_ALLOW_GUESTS: ${CADENCE_ALLOW_GUESTS:-false}
       CADENCE_SERVE_FRONTEND: "true"
       CADENCE_FRONTEND_BASE_URL: ${CADENCE_FRONTEND_BASE_URL:-http://localhost:8000}
       CADENCE_CORS_ORIGINS: ${CADENCE_CORS_ORIGINS:-http://localhost:8000}

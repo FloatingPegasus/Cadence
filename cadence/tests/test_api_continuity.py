@@ -548,7 +548,7 @@ class CadenceContinuityApiTests(ApiTestCase):
         exported = response.json()
         resources = exported["resources"]
         self.assertEqual(exported["format"], "cadence-export")
-        self.assertEqual(exported["schema_version"], 3)
+        self.assertEqual(exported["schema_version"], 4)
         self.assertEqual(exported["account"]["username"], "alpha")
         self.assertEqual(
             [habit["name"] for habit in resources["habits"]],

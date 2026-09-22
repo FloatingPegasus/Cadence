@@ -6,6 +6,7 @@ import {
   type HourSlot,
 } from "../api";
 import { formatHourLabel, todayAsLocalDate } from "../time";
+import { useAuth } from "../contexts/AuthContext";
 
 interface HoursPageProps {
   date: string;
@@ -18,6 +19,7 @@ export default function HoursPage({
   onSelectDate,
   onChanged,
 }: HoursPageProps) {
+  const { user } = useAuth();
   const [slots, setSlots] = useState<HourSlot[]>([]);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [savingHour, setSavingHour] = useState<number | null>(null);
@@ -27,6 +29,12 @@ export default function HoursPage({
   useEffect(() => {
     let cancelled = false;
     setError(null);
+    if (!user) {
+      setSlots([]);
+      setDrafts({});
+      setIsLoading(false);
+      return;
+    }
     fetchHourLog(date)
       .then((rows) => {
         if (cancelled) return;
@@ -47,7 +55,7 @@ export default function HoursPage({
     return () => {
       cancelled = true;
     };
-  }, [date]);
+  }, [date, user?.id]);
 
   const currentHour = new Date().getHours();
   const isToday = date === todayAsLocalDate();
@@ -81,22 +89,17 @@ export default function HoursPage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="cadence-title text-2xl font-medium text-neutral-100">
-            Hourly log
-          </h1>
-          <p className="mt-2 text-sm text-neutral-500">
-            Don't lose track of any time.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <h1 className="cadence-title text-2xl font-medium text-neutral-100">
+          Hours
+        </h1>
         <label className="text-xs text-neutral-500">
-          Day
+          <span className="sr-only">Day</span>
           <input
             type="date"
             value={date}
             onChange={(event) => onSelectDate(event.target.value)}
-            className="ml-2 min-h-11 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-2 text-base text-neutral-300 outline-none transition-colors duration-150 focus:border-neutral-600 sm:min-h-0 sm:py-1.5 sm:text-xs"
+            className="cadence-chip min-h-11 px-2 py-2 text-base text-neutral-300 outline-none sm:min-h-0 sm:py-1.5 sm:text-xs"
           />
         </label>
       </div>
@@ -105,21 +108,21 @@ export default function HoursPage({
           {error}
         </p>
       )}
-      <ol className="cadence-surface mt-10 space-y-1">
+      <ol className="cadence-surface mt-6">
         {(slots.length ? slots : Array.from({ length: 24 }, (_, hour) => ({
           hour,
           content: "",
         }))).map((slot) => {
           const active = isToday && slot.hour === currentHour;
           return (
-            <li key={slot.hour}>
+            <li key={slot.hour} data-hour={slot.hour} className="cadence-hours-row">
               <form
                 onSubmit={(event) => handleSubmit(event, slot.hour)}
                 aria-busy={savingHour === slot.hour}
                 className={
                   active
-                    ? "grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-2 rounded-lg bg-violet-500/10 py-1.5 sm:grid-cols-[4.5rem_minmax(0,1fr)_auto] sm:gap-3 sm:py-2 sm:pr-1"
-                    : "grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-2 rounded-lg py-1.5 hover:bg-neutral-950/40 sm:grid-cols-[4.5rem_minmax(0,1fr)_auto] sm:gap-3 sm:py-2 sm:pr-1"
+                    ? "mx-1 grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3 rounded-xl bg-violet-500/10 px-4 py-2.5 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]"
+                    : "mx-1 grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3 rounded-xl px-4 py-2.5 hover:bg-neutral-950/40 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]"
                 }
               >
                 <label

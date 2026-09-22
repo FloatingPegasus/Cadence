@@ -39,14 +39,14 @@ export default function DailyPanel({
   }
 
   return (
-    <div className="mt-6 sm:mt-12">
-      <div className="grid gap-5">
+    <div className="mt-5 sm:mt-8">
+      <div className="grid gap-4">
         <ReentryCard
           date={date}
           refreshKey={refreshKey}
           onSelectDate={onSelectDate}
         />
-        <div className="cadence-surface">
+        <div className="cadence-surface cadence-note">
           <DailyHabitsCard
             date={date}
             habits={habits}
@@ -55,14 +55,14 @@ export default function DailyPanel({
             onSourceChanged={() => sourceChanged(true)}
           />
         </div>
-        <div className="cadence-surface">
+        <div className="cadence-surface cadence-surface-quiet">
           <DailyCaptureCard
             date={date}
             contexts={contexts}
             onChanged={sourceChanged}
           />
         </div>
-        <div className="cadence-surface space-y-1">
+        <div className="cadence-surface cadence-surface-quiet space-y-1">
           <CarryForwardCard date={date} onChanged={onChanged} />
           <DailySummaryCard
             date={date}

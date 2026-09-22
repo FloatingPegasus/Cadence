@@ -29,6 +29,12 @@ export default function DailySummaryCard({
 
   useEffect(() => {
     let cancelled = false;
+    if (!user) {
+      setSummary(null);
+      setContent("");
+      setIsLoading(false);
+      return;
+    }
     const initial = loadedDate.current === null;
     if (initial) setIsLoading(true);
     setError(null);
@@ -53,7 +59,7 @@ export default function DailySummaryCard({
     return () => {
       cancelled = true;
     };
-  }, [date, refreshKey]);
+  }, [date, refreshKey, user?.id]);
 
   async function save() {
     setIsBusy(true);
@@ -113,7 +119,7 @@ export default function DailySummaryCard({
           disabled={
             isLoading || isBusy || !user?.ai_processing_consent
           }
-          className="rounded-lg border border-violet-500/50 bg-violet-500/5 px-3 py-1.5 text-xs text-violet-300 transition-colors duration-150 hover:bg-violet-500/10 disabled:opacity-40"
+          className="cadence-chip cadence-chip-accent sm:text-xs"
         >
           Generate review
         </button>
@@ -121,7 +127,7 @@ export default function DailySummaryCard({
           type="button"
           onClick={save}
           disabled={isLoading || isBusy}
-          className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:opacity-40"
+          className="cadence-chip cadence-chip-solid sm:text-xs"
         >
           Save review
         </button>
@@ -146,7 +152,7 @@ export default function DailySummaryCard({
         disabled={isLoading}
         onChange={(event) => setContent(event.target.value)}
         placeholder={isLoading ? "Loading review…" : undefined}
-        className="mt-4 min-h-32 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 disabled:opacity-60"
+        className="cadence-field mt-4 min-h-32 resize-none disabled:opacity-60"
       />
 
       {summary?.is_stale && (

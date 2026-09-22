@@ -1,4 +1,5 @@
 import type { ContinuityContext, Habit } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 import AIPrivacySettings from "./AIPrivacySettings";
 import ContextManager from "./ContextManager";
 import DataExportButton from "./DataExportButton";
@@ -22,6 +23,9 @@ export default function SettingsPanel({
   onHabitsChanged,
   onContextsChanged,
 }: SettingsPanelProps) {
+  const { user } = useAuth();
+  const claimed = Boolean(user && !user.is_guest);
+
   return (
     <div>
       <h1 className="cadence-title mb-10 text-2xl font-medium text-neutral-100">
@@ -31,31 +35,39 @@ export default function SettingsPanel({
         <div className="cadence-surface">
           <GoalsSettings />
         </div>
-        <div className="cadence-surface">
-          <HabitManager habits={habits} onChanged={onHabitsChanged} />
-        </div>
+        {habits.length > 0 ? (
+          <div className="cadence-surface">
+            <HabitManager habits={habits} onChanged={onHabitsChanged} />
+          </div>
+        ) : null}
         <div className="cadence-surface">
           <ContextManager contexts={contexts} onChanged={onContextsChanged} />
         </div>
-        <div className="cadence-surface">
-          <AIPrivacySettings />
-        </div>
-        <section aria-labelledby="data-export-title" className="cadence-surface">
-          <h2 id="data-export-title" className="cadence-kicker">
-            Your data
-          </h2>
-          <div className="mt-4">
-            <DataExportButton />
+        {claimed ? (
+          <div className="cadence-surface">
+            <AIPrivacySettings />
           </div>
-        </section>
-        <section aria-labelledby="account-title" className="cadence-surface">
-          <h2 id="account-title" className="cadence-kicker">
-            Account
-          </h2>
-          <div className="mt-4">
-            <LogoutButton />
-          </div>
-        </section>
+        ) : null}
+        {claimed ? (
+          <section aria-labelledby="data-export-title" className="cadence-surface">
+            <h2 id="data-export-title" className="cadence-kicker">
+              Your data
+            </h2>
+            <div className="mt-4">
+              <DataExportButton />
+            </div>
+          </section>
+        ) : null}
+        {user ? (
+          <section aria-labelledby="account-title" className="cadence-surface">
+            <h2 id="account-title" className="cadence-kicker">
+              Account
+            </h2>
+            <div className="mt-4">
+              <LogoutButton />
+            </div>
+          </section>
+        ) : null}
         {isDeveloper && (
           <div className="cadence-surface">
             <DevAIModels />

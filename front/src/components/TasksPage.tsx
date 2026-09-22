@@ -2,51 +2,36 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import {
   createTask,
-  deleteTask,
   fetchTasks,
   updateTask,
   type TaskItem,
 } from "../api";
-import { todayAsLocalDate } from "../time";
-
-const UNDO_WINDOW_MS = 6000;
+import { shiftLocalDate, todayAsLocalDate } from "../time";
+import { useAuth } from "../contexts/AuthContext";
 
 interface TasksPageProps {
   refreshKey: number;
   onChanged: () => void;
 }
 
-interface PendingRemoval {
-  task: TaskItem;
-  index: number;
-  timer: number;
-}
-
 export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState(todayAsLocalDate);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [removed, setRemoved] = useState<TaskItem | null>(null);
   const loaded = useRef(false);
-  const pendingRemoval = useRef<PendingRemoval | null>(null);
-
-  useEffect(
-    () => () => {
-      const pending = pendingRemoval.current;
-      if (!pending) return;
-      window.clearTimeout(pending.timer);
-      pendingRemoval.current = null;
-      void deleteTask(pending.task.id).catch(() => undefined);
-    },
-    [],
-  );
 
   useEffect(() => {
     let cancelled = false;
     setError(null);
+    if (!user) {
+      setTasks([]);
+      setIsLoading(false);
+      return;
+    }
     const initial = !loaded.current;
     if (initial) setIsLoading(true);
     fetchTasks()
@@ -67,7 +52,7 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [refreshKey]);
+  }, [refreshKey, user?.id]);
 
   async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,16 +74,23 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
     }
   }
 
-  async function toggle(task: TaskItem) {
-    const next = !task.is_completed;
+  async function patch(task: TaskItem, next: Partial<TaskItem>) {
     setError(null);
     setTasks((current) =>
       current.map((item) =>
-        item.id === task.id ? { ...item, is_completed: next } : item,
+        item.id === task.id ? { ...item, ...next } : item,
       ),
     );
+    const fields: {
+      due_date?: string | null;
+      is_completed?: boolean;
+      is_abandoned?: boolean;
+    } = {};
+    if (next.due_date !== undefined) fields.due_date = next.due_date;
+    if (next.is_completed !== undefined) fields.is_completed = next.is_completed;
+    if (next.is_abandoned !== undefined) fields.is_abandoned = next.is_abandoned;
     try {
-      const saved = await updateTask(task.id, { is_completed: next });
+      const saved = await updateTask(task.id, fields);
       setTasks((current) =>
         current.map((item) => (item.id === saved.id ? saved : item)),
       );
@@ -113,83 +105,11 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
     }
   }
 
-  async function changeDue(task: TaskItem, next: string) {
-    const due_date = next || null;
-    setError(null);
-    setTasks((current) =>
-      current.map((item) =>
-        item.id === task.id ? { ...item, due_date } : item,
-      ),
-    );
-    try {
-      const saved = await updateTask(task.id, { due_date });
-      setTasks((current) =>
-        current.map((item) => (item.id === saved.id ? saved : item)),
-      );
-      onChanged();
-    } catch (caught) {
-      setTasks((current) =>
-        current.map((item) => (item.id === task.id ? task : item)),
-      );
-      setError(
-        caught instanceof Error ? caught.message : "Could not update the task",
-      );
-    }
-  }
-
-  function flushPendingRemoval() {
-    const pending = pendingRemoval.current;
-    if (!pending) return;
-    window.clearTimeout(pending.timer);
-    void commitRemoval(pending.task, pending.index);
-  }
-
-  async function commitRemoval(task: TaskItem, index: number) {
-    pendingRemoval.current = null;
-    setRemoved(null);
-    try {
-      await deleteTask(task.id);
-      onChanged();
-    } catch (caught) {
-      setTasks((current) => {
-        const next = [...current];
-        next.splice(Math.min(index, next.length), 0, task);
-        return next;
-      });
-      setError(
-        caught instanceof Error ? caught.message : "Could not remove the task",
-      );
-    }
-  }
-
-  function remove(task: TaskItem) {
-    setError(null);
-    flushPendingRemoval();
-    const index = tasks.findIndex((item) => item.id === task.id);
-    setTasks((current) => current.filter((item) => item.id !== task.id));
-    const timer = window.setTimeout(() => {
-      void commitRemoval(task, index);
-    }, UNDO_WINDOW_MS);
-    pendingRemoval.current = { task, index, timer };
-    setRemoved(task);
-  }
-
-  function undoRemove() {
-    const pending = pendingRemoval.current;
-    if (!pending) return;
-    window.clearTimeout(pending.timer);
-    pendingRemoval.current = null;
-    setRemoved(null);
-    setTasks((current) => {
-      if (current.some((item) => item.id === pending.task.id)) return current;
-      const next = [...current];
-      next.splice(Math.min(pending.index, next.length), 0, pending.task);
-      return next;
-    });
-  }
-
-  const open = tasks.filter((task) => !task.is_completed);
-  const done = tasks.filter((task) => task.is_completed);
+  const open = tasks.filter(
+    (task) => !task.is_completed && !task.is_abandoned,
+  );
+  const done = tasks.filter((task) => task.is_completed && !task.is_abandoned);
+  const abandoned = tasks.filter((task) => task.is_abandoned);
 
   return (
     <div>
@@ -201,21 +121,7 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
           {error}
         </p>
       )}
-      <div role="status" aria-live="polite">
-        {removed && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-            <span>Removed &ldquo;{removed.title}&rdquo;</span>
-            <button
-              type="button"
-              onClick={undoRemove}
-              className="min-h-11 min-w-11 px-2 text-xs text-violet-300 hover:text-violet-200"
-            >
-              Undo
-            </button>
-          </div>
-        )}
-      </div>
-      <div className="cadence-surface mt-10">
+      <div className="cadence-surface mt-6">
         {isLoading && tasks.length === 0 ? (
           <p className="text-sm text-neutral-600">Loading tasks...</p>
         ) : (
@@ -224,28 +130,46 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
               <TaskRow
                 key={task.id}
                 task={task}
-                onToggle={() => void toggle(task)}
-                onDueChange={(value) => void changeDue(task, value)}
-                onRemove={() => void remove(task)}
+                onToggle={() =>
+                  void patch(task, { is_completed: !task.is_completed })
+                }
+                onDueChange={(value) =>
+                  void patch(task, { due_date: value || null })
+                }
+                onCarryForward={() =>
+                  void patch(task, {
+                    due_date: shiftLocalDate(
+                      task.due_date ?? todayAsLocalDate(),
+                      1,
+                    ),
+                  })
+                }
+                onAbandon={() => void patch(task, { is_abandoned: true })}
               />
             ))}
           </div>
         )}
-        <form
-          onSubmit={addTask}
-          className="mt-5 grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]"
-        >
-          <label htmlFor="new-task" className="sr-only">
-            Add a task
-          </label>
-          <input
-            id="new-task"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Add a task"
-            maxLength={200}
-            className="min-h-11 min-w-0 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 sm:text-sm"
-          />
+        <form onSubmit={addTask} className="mt-5 flex flex-col items-start gap-2">
+          <div className="flex w-full gap-2">
+            <label htmlFor="new-task" className="sr-only">
+              Add a task
+            </label>
+            <input
+              id="new-task"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Add a task"
+              maxLength={200}
+              className="cadence-field min-w-0 flex-1"
+            />
+            <button
+              type="submit"
+              disabled={isSaving || title.trim().length === 0}
+              className={`cadence-chip min-h-11 px-3.5 sm:text-xs ${title.trim() ? "cadence-chip-solid" : "cadence-chip-ghost"}`}
+            >
+              {isSaving ? "Adding" : "Add"}
+            </button>
+          </div>
           <label htmlFor="new-task-date" className="sr-only">
             Due
           </label>
@@ -254,15 +178,8 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
             type="date"
             value={dueDate}
             onChange={(event) => setDueDate(event.target.value)}
-            className="min-h-11 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-300 outline-none focus:border-neutral-600 sm:text-sm"
+            className="cadence-chip min-h-11 px-2 py-2 text-base text-neutral-300 outline-none sm:min-h-0 sm:py-1.5 sm:text-xs"
           />
-          <button
-            type="submit"
-            disabled={isSaving || title.trim().length === 0}
-            className="min-h-11 rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
-          >
-            {isSaving ? "Adding" : "Add"}
-          </button>
         </form>
       </div>
       {done.length > 0 ? (
@@ -273,9 +190,26 @@ export default function TasksPage({ refreshKey, onChanged }: TasksPageProps) {
               <TaskRow
                 key={task.id}
                 task={task}
-                onToggle={() => void toggle(task)}
-                onDueChange={(value) => void changeDue(task, value)}
-                onRemove={() => void remove(task)}
+                onToggle={() =>
+                  void patch(task, { is_completed: !task.is_completed })
+                }
+                onDueChange={(value) =>
+                  void patch(task, { due_date: value || null })
+                }
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {abandoned.length > 0 ? (
+        <div className="cadence-surface mt-6">
+          <h2 className="cadence-kicker">Abandoned</h2>
+          <div className="mt-4 space-y-1">
+            {abandoned.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                onRestore={() => void patch(task, { is_abandoned: false })}
               />
             ))}
           </div>
@@ -289,50 +223,81 @@ function TaskRow({
   task,
   onToggle,
   onDueChange,
-  onRemove,
+  onCarryForward,
+  onAbandon,
+  onRestore,
 }: {
   task: TaskItem;
-  onToggle: () => void;
-  onDueChange: (value: string) => void;
-  onRemove: () => void;
+  onToggle?: () => void;
+  onDueChange?: (value: string) => void;
+  onCarryForward?: () => void;
+  onAbandon?: () => void;
+  onRestore?: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 sm:flex-nowrap">
-      <input
-        type="checkbox"
-        checked={task.is_completed}
-        onChange={onToggle}
-        aria-label={`Mark ${task.title} complete`}
-        className="h-6 w-6 shrink-0 accent-done"
-      />
+      {onToggle ? (
+        <input
+          type="checkbox"
+          checked={task.is_completed}
+          onChange={onToggle}
+          aria-label={`Mark ${task.title} complete`}
+          className="cadence-check"
+        />
+      ) : null}
       <span
         className={
-          task.is_completed
+          task.is_abandoned || task.is_completed
             ? "min-w-0 flex-1 truncate text-sm text-neutral-500 line-through"
             : "min-w-0 flex-1 truncate text-sm text-neutral-200"
         }
       >
         {task.title}
       </span>
-      <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-        <label className="sr-only" htmlFor={`task-due-${task.id}`}>
-          Due {task.title}
-        </label>
-        <input
-          id={`task-due-${task.id}`}
-          type="date"
-          value={task.due_date ?? ""}
-          onChange={(event) => onDueChange(event.target.value)}
-          className="min-h-11 min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-base text-neutral-400 outline-none focus:border-neutral-600 sm:w-[9.5rem] sm:flex-none"
-        />
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label={`Remove ${task.title}`}
-          className="min-h-11 shrink-0 px-2 text-xs text-neutral-500 hover:text-neutral-200"
-        >
-          Remove
-        </button>
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+        {onDueChange ? (
+          <>
+            <label className="sr-only" htmlFor={`task-due-${task.id}`}>
+              Due {task.title}
+            </label>
+            <input
+              id={`task-due-${task.id}`}
+              type="date"
+              value={task.due_date ?? ""}
+              onChange={(event) => onDueChange(event.target.value)}
+              className="cadence-chip min-h-11 min-w-0 flex-1 px-2 py-1.5 text-base text-neutral-400 outline-none sm:w-[9.5rem] sm:flex-none sm:min-h-0 sm:text-xs"
+            />
+          </>
+        ) : null}
+        {onCarryForward ? (
+          <button
+            type="button"
+            onClick={onCarryForward}
+            className="min-h-11 shrink-0 px-2 text-xs text-neutral-500 hover:text-neutral-200"
+          >
+            Carry forward
+          </button>
+        ) : null}
+        {onAbandon ? (
+          <button
+            type="button"
+            onClick={onAbandon}
+            aria-label={`Abandon ${task.title}`}
+            className="min-h-11 shrink-0 px-2 text-xs text-neutral-500 hover:text-neutral-200"
+          >
+            Abandon
+          </button>
+        ) : null}
+        {onRestore ? (
+          <button
+            type="button"
+            onClick={onRestore}
+            aria-label={`Restore ${task.title}`}
+            className="min-h-11 shrink-0 px-2 text-xs text-neutral-500 hover:text-neutral-200"
+          >
+            Restore
+          </button>
+        ) : null}
       </div>
     </div>
   );

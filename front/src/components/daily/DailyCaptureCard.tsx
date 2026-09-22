@@ -10,6 +10,7 @@ import {
   type Checkin,
   type ContinuityContext,
 } from "../../api";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface DailyCaptureCardProps {
   date: string;
@@ -54,6 +55,7 @@ export default function DailyCaptureCard({
   contexts,
   onChanged,
 }: DailyCaptureCardProps) {
+  const { user } = useAuth();
   const [note, setNote] = useState("");
   const [checkin, setCheckin] = useState<Checkin>({});
   const [attachedContexts, setAttachedContexts] = useState<
@@ -70,6 +72,10 @@ export default function DailyCaptureCard({
 
   useEffect(() => {
     let cancelled = false;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
     if (loadedDate.current === null) setIsLoading(true);
     setError(null);
     Promise.all([fetchDay(date), fetchCheckin(date)])
@@ -92,9 +98,10 @@ export default function DailyCaptureCard({
     return () => {
       cancelled = true;
     };
-  }, [date]);
+  }, [date, user?.id]);
 
   useEffect(() => {
+    if (!user) return;
     fetchDayContexts(date)
       .then((dayContexts) => {
         setAttachedContexts(dayContexts);
@@ -109,7 +116,7 @@ export default function DailyCaptureCard({
             : "Could not load areas",
         );
       });
-  }, [date, contexts]);
+  }, [date, contexts, user?.id]);
 
   function save(
     nextNote = note,
@@ -186,7 +193,7 @@ export default function DailyCaptureCard({
     <section
       aria-labelledby="daily-capture-title"
     >
-      <div className="mb-5 flex items-baseline justify-between gap-4">
+      <div className="mb-4 flex items-baseline justify-between gap-4">
         <h2
           id="daily-capture-title"
           className="cadence-kicker"
@@ -211,7 +218,7 @@ export default function DailyCaptureCard({
               if (note === lastNote.current) return;
               void save();
             }}
-            className="min-h-36 w-full resize-y border-0 border-b border-neutral-800 bg-transparent p-0 pb-3 text-base leading-7 text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-500"
+            className="cadence-lines min-h-24 w-full resize-none border-0 bg-transparent p-0 text-base text-neutral-100 outline-none placeholder:text-neutral-600"
           />
 
           {contextOptions.length > 0 && (
@@ -240,7 +247,7 @@ export default function DailyCaptureCard({
             </fieldset>
           )}
 
-          <details className="mt-8">
+          <details className="cadence-fold">
             <summary className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
               Check-in
             </summary>
@@ -251,7 +258,7 @@ export default function DailyCaptureCard({
                   <select
                     value={checkin[key] ?? ""}
                     onChange={(event) => setNumber(key, event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-neutral-600"
+                    className="cadence-field mt-1"
                   >
                     <option value="">Not set</option>
                     <option value="1">1 · {low}</option>
@@ -265,7 +272,7 @@ export default function DailyCaptureCard({
             </div>
           </details>
 
-          <details className="mt-6">
+          <details className="cadence-fold">
             <summary className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
               Add more detail
             </summary>
@@ -281,7 +288,7 @@ export default function DailyCaptureCard({
                   onChange={(event) =>
                     setNumber("sleep_hours", event.target.value)
                   }
-                  className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-neutral-600"
+                  className="cadence-field mt-1"
                 />
               </label>
               <label className="text-xs text-neutral-500">
@@ -291,7 +298,7 @@ export default function DailyCaptureCard({
                   onChange={(event) =>
                     setNumber("sleep_quality", event.target.value)
                   }
-                  className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-neutral-600"
+                  className="cadence-field mt-1"
                 >
                   <option value="">Not set</option>
                   <option value="1">1 · Poor</option>
@@ -310,7 +317,7 @@ export default function DailyCaptureCard({
                   onChange={(event) =>
                     setText("emotional_state", event.target.value)
                   }
-                  className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
+                  className="cadence-field mt-1"
                 />
               </label>
               <label className="text-xs text-neutral-500">
@@ -323,7 +330,7 @@ export default function DailyCaptureCard({
                   onChange={(event) =>
                     setNumber("drift_minutes", event.target.value)
                   }
-                  className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-neutral-600"
+                  className="cadence-field mt-1"
                 />
               </label>
               <label className="col-span-2 text-xs text-neutral-500">
@@ -331,7 +338,7 @@ export default function DailyCaptureCard({
                 <textarea
                   value={checkin.notes ?? ""}
                   onChange={(event) => setText("notes", event.target.value)}
-                  className="mt-1 min-h-20 w-full resize-y rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600"
+                  className="cadence-field mt-1 min-h-20 resize-none"
                 />
               </label>
             </div>

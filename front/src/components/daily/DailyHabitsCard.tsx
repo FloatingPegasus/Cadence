@@ -7,6 +7,7 @@ import {
   type DailyHabit,
   type Habit,
 } from "../../api";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface DailyHabitsCardProps {
   date: string;
@@ -23,6 +24,7 @@ export default function DailyHabitsCard({
   onHabitsChanged,
   onSourceChanged,
 }: DailyHabitsCardProps) {
+  const { user } = useAuth();
   const [dailyHabits, setDailyHabits] = useState<DailyHabit[]>([]);
   const [newName, setNewName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +35,11 @@ export default function DailyHabitsCard({
   useEffect(() => {
     let cancelled = false;
     setError(null);
+    if (!user) {
+      setDailyHabits([]);
+      setIsLoading(false);
+      return;
+    }
     const initial = loadedDate.current === null;
     if (initial) setIsLoading(true);
     fetchDayHabits(date)
@@ -55,7 +62,7 @@ export default function DailyHabitsCard({
     return () => {
       cancelled = true;
     };
-  }, [date, refreshKey, habits.length]);
+  }, [date, refreshKey, habits.length, user?.id]);
 
   async function addHabit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -119,16 +126,18 @@ export default function DailyHabitsCard({
           {dailyHabits.map((habit) => (
             <label
               key={habit.id}
-              className="flex items-center justify-between gap-3 py-3 text-sm text-neutral-200"
+              className="flex items-center gap-3 py-3 text-sm text-neutral-200"
             >
-              <span>{habit.name}</span>
               <input
                 type="checkbox"
                 checked={habit.completed}
                 onChange={() => toggle(habit)}
                 aria-label={`Mark ${habit.name} complete for ${date}`}
-                className="h-6 w-6 accent-done"
+                className="cadence-check"
               />
+              <span className={habit.completed ? "text-neutral-500" : undefined}>
+                {habit.name}
+              </span>
             </label>
           ))}
         </div>
@@ -144,12 +153,12 @@ export default function DailyHabitsCard({
           onChange={(event) => setNewName(event.target.value)}
           placeholder="Add a habit"
           maxLength={100}
-          className="min-h-11 min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-600 sm:min-h-0 sm:text-sm"
+          className="cadence-field min-w-0 flex-1"
         />
         <button
           type="submit"
           disabled={isSaving || newName.trim().length === 0}
-          className="min-h-11 rounded-lg bg-neutral-800 px-3 py-2 text-sm text-neutral-200 transition-colors duration-150 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
+          className={`cadence-chip min-h-11 px-3.5 sm:text-xs ${newName.trim() ? "cadence-chip-solid" : "cadence-chip-ghost"}`}
         >
           {isSaving ? "Adding" : "Add"}
         </button>

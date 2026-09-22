@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -28,13 +28,14 @@ describe("FocusPage", () => {
     ).toBeTruthy();
   });
 
-  it("wakes the cat and shows the remaining time when a session starts", async () => {
+  it("wakes the cat when a session starts", async () => {
     const user = userEvent.setup();
     render(<FocusPage />);
     await user.click(screen.getByRole("button", { name: "Start" }));
     expect(
-      await screen.findByRole("button", { name: "Cat, 25:00" }),
+      await screen.findByRole("button", { name: "Cat, sitting" }),
     ).toBeTruthy();
+    expect(screen.getByText("25:00")).toBeTruthy();
   });
 
   it("lets you pick a background noise", async () => {
@@ -81,9 +82,9 @@ describe("FocusPage", () => {
       top: 0,
       left: 0,
       right: 800,
-      bottom: 600,
+      bottom: 800,
       width: 800,
-      height: 600,
+      height: 800,
       toJSON() {
         return {};
       },
@@ -93,16 +94,16 @@ describe("FocusPage", () => {
       y: 200,
       top: 200,
       left: 250,
-      right: 550,
-      bottom: 400,
-      width: 300,
-      height: 200,
+      right: 650,
+      bottom: 500,
+      width: 400,
+      height: 300,
       toJSON() {
         return {};
       },
     });
-    Object.defineProperty(panel, "offsetWidth", { value: 300 });
-    Object.defineProperty(panel, "offsetHeight", { value: 200 });
+    Object.defineProperty(panel, "offsetWidth", { value: 400 });
+    Object.defineProperty(panel, "offsetHeight", { value: 300 });
 
     const handle = screen.getByRole("button", { name: "Move timer" });
     fireEvent.pointerDown(handle, {
@@ -123,8 +124,135 @@ describe("FocusPage", () => {
     fireEvent.keyDown(handle, { key: "ArrowUp" });
     expect((panel as HTMLElement).style.top).toBe("284px");
 
+    const resize = screen.getByRole("button", {
+      name: "Resize from bottom right",
+    });
+    fireEvent.pointerDown(resize, {
+      pointerId: 2,
+      button: 0,
+      clientX: 640,
+      clientY: 490,
+    });
+    fireEvent.pointerMove(window, {
+      pointerId: 2,
+      clientX: 690,
+      clientY: 530,
+    });
+    expect((panel as HTMLElement).style.width).toBe("450px");
+    expect((panel as HTMLElement).style.height).toBe("340px");
+    fireEvent.pointerUp(window, { pointerId: 2 });
+
     await user.click(screen.getByRole("button", { name: "Exit full screen" }));
     expect(screen.queryByRole("dialog", { name: "Timer" })).toBeNull();
+  });
+
+  it("uses icons when the fullscreen timer is too narrow for labels", async () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        callback: ResizeObserverCallback;
+        constructor(callback: ResizeObserverCallback) {
+          this.callback = callback;
+        }
+        observe(target: Element) {
+          this.callback(
+            [
+              {
+                target,
+                contentRect: {
+                  x: 0,
+                  y: 0,
+                  top: 0,
+                  left: 0,
+                  right: 230,
+                  bottom: 320,
+                  width: 230,
+                  height: 320,
+                  toJSON() {
+                    return {};
+                  },
+                },
+                borderBoxSize: [],
+                contentBoxSize: [],
+                devicePixelContentBoxSize: [],
+              },
+            ],
+            this,
+          );
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const user = userEvent.setup();
+    render(<FocusPage />);
+    await user.click(screen.getByRole("button", { name: "Full screen" }));
+    const stage = screen.getByRole("dialog", { name: "Timer" });
+    await waitFor(() =>
+      expect(
+        stage.querySelector(".cadence-timer-float")?.getAttribute("data-density"),
+      ).toBe("icon"),
+    );
+    expect(
+      within(stage).getByRole("button", { name: "Start" }).querySelector("svg"),
+    ).toBeTruthy();
+    expect(
+      within(stage).getByRole("button", { name: "Reset" }).querySelector("svg"),
+    ).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps labels when the fullscreen timer is wide enough", async () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        callback: ResizeObserverCallback;
+        constructor(callback: ResizeObserverCallback) {
+          this.callback = callback;
+        }
+        observe(target: Element) {
+          this.callback(
+            [
+              {
+                target,
+                contentRect: {
+                  x: 0,
+                  y: 0,
+                  top: 0,
+                  left: 0,
+                  right: 480,
+                  bottom: 520,
+                  width: 480,
+                  height: 520,
+                  toJSON() {
+                    return {};
+                  },
+                },
+                borderBoxSize: [],
+                contentBoxSize: [],
+                devicePixelContentBoxSize: [],
+              },
+            ],
+            this,
+          );
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const user = userEvent.setup();
+    render(<FocusPage />);
+    await user.click(screen.getByRole("button", { name: "Full screen" }));
+    const stage = screen.getByRole("dialog", { name: "Timer" });
+    await waitFor(() =>
+      expect(
+        stage.querySelector(".cadence-timer-float")?.getAttribute("data-density"),
+      ).toBe("full"),
+    );
+    expect(
+      stage.querySelector(".cadence-timer-float")?.getAttribute("data-tall"),
+    ).toBe("true");
+    vi.unstubAllGlobals();
   });
 
   it("lets you replace minutes and restores them if left empty", async () => {
@@ -144,5 +272,38 @@ describe("FocusPage", () => {
     await user.tab();
     expect(input.value).toBe("50");
     expect(screen.getByRole("alert").textContent).toBe("Enter minutes");
+  });
+
+  it("opens a landscape picture-in-picture of the study scene", async () => {
+    const pipDocument = document.implementation.createHTMLDocument("pip");
+    const pipWindow = {
+      document: pipDocument,
+      close: vi.fn(),
+      addEventListener: vi.fn(),
+    };
+    const requestWindow = vi.fn().mockResolvedValue(pipWindow);
+    Object.defineProperty(window, "documentPictureInPicture", {
+      configurable: true,
+      value: { requestWindow },
+    });
+    const user = userEvent.setup();
+    render(<FocusPage />);
+    await user.click(screen.getByRole("button", { name: "Full screen" }));
+    await user.click(screen.getByRole("button", { name: "Picture in picture" }));
+    await waitFor(() =>
+      expect(pipDocument.body.querySelector(".cadence-timer-pip")).toBeTruthy(),
+    );
+    expect(requestWindow).toHaveBeenCalledWith({ width: 720, height: 405 });
+    expect(pipDocument.documentElement.classList.contains("cadence-pip")).toBe(
+      true,
+    );
+    expect(
+      pipDocument.body.querySelector(".cadence-timer-pip-clock")?.textContent,
+    ).toBe("25:00");
+    expect(
+      pipDocument.body.querySelector('[aria-label="Study scene"]'),
+    ).toBeTruthy();
+    expect(pipDocument.body.querySelector(".cadence-timer-controls")).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Timer" })).toBeNull();
   });
 });

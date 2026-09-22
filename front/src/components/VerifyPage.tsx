@@ -28,7 +28,7 @@ function VerifyPage() {
       .then((res) => {
         if (res.is_verified) {
           setStatus("success");
-          setMessage("Your email has been verified! You can now log in.");
+          setMessage("Your email has been verified.");
         } else {
           setStatus("success");
           setMessage("Account verified successfully.");
@@ -42,7 +42,7 @@ function VerifyPage() {
 
   return (
     <div className="mx-auto max-w-sm px-4 py-10 text-center sm:px-6 sm:py-16">
-      <h1 className="cadence-mark text-xl font-semibold text-neutral-100 tracking-tight mb-8">
+      <h1 className="cadence-mark cadence-wordmark text-xl text-neutral-100 tracking-tight mb-8">
         Cadence
       </h1>
 
@@ -52,21 +52,21 @@ function VerifyPage() {
 
       {status === "success" && (
         <div className="space-y-4">
-          <h2 className="cadence-mark text-lg font-semibold tracking-tight text-neutral-100">
-            Email verified
+          <h2 className="cadence-title text-lg font-semibold tracking-tight text-neutral-100">
+            Your email has been verified.
           </h2>
           <a
             href="/"
             className="inline-flex items-center justify-center w-full min-h-11 px-4 py-2.5 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 transition-colors"
           >
-            Log in
+            Open Cadence
           </a>
         </div>
       )}
 
       {status === "error" && (
         <div className="space-y-4">
-          <h2 className="cadence-mark text-lg font-semibold tracking-tight text-neutral-100">
+          <h2 className="cadence-title text-lg font-semibold tracking-tight text-neutral-100">
             Could not verify
           </h2>
           <p className="text-sm text-red-400">{message}</p>
@@ -74,7 +74,7 @@ function VerifyPage() {
             href="/"
             className="inline-flex items-center justify-center w-full min-h-11 px-4 py-2.5 rounded-lg bg-neutral-800 text-sm font-medium text-neutral-100 hover:bg-neutral-700 transition-colors"
           >
-            Back to login
+            Open Cadence
           </a>
         </div>
       )}

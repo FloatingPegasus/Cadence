@@ -2,20 +2,21 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  fetchClosurePreview,
-  updateDayStatus,
-} from "../../api";
+import { fetchClosurePreview, updateDayStatus } from "../../api";
+import { authStub } from "../../authTest";
+import { useAuth } from "../../contexts/AuthContext";
 import DayClosureCard from "./DayClosureCard";
 
 vi.mock("../../api", () => ({
   fetchClosurePreview: vi.fn(),
   updateDayStatus: vi.fn(),
 }));
+vi.mock("../../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
 
 describe("DayClosureCard", () => {
   it("allows an empty day to close after a non-blocking review", async () => {
     const user = userEvent.setup();
+    vi.mocked(useAuth).mockReturnValue(authStub());
     const onChanged = vi.fn();
     vi.mocked(fetchClosurePreview).mockResolvedValue({
       date: "2026-07-23",

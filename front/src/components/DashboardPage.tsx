@@ -59,7 +59,6 @@ export default function DashboardPage() {
     if (!user) {
       setHabits([]);
       setData(null);
-      setSelectedDate(null);
       setSelectedHabitId(null);
       return;
     }
@@ -70,7 +69,7 @@ export default function DashboardPage() {
           caught instanceof Error ? caught.message : "Could not load habits",
         );
       });
-  }, [user, habitVersion]);
+  }, [user?.id, habitVersion]);
 
   useEffect(() => {
     if (!user) {
@@ -84,7 +83,7 @@ export default function DashboardPage() {
           caught instanceof Error ? caught.message : "Could not load areas",
         );
       });
-  }, [user, contextVersion]);
+  }, [user?.id, contextVersion]);
 
   useEffect(() => {
     if (!user || !opened.has("calendar")) return;
@@ -95,7 +94,7 @@ export default function DashboardPage() {
           caught instanceof Error ? caught.message : "Could not load the month",
         );
       });
-  }, [user, month, habitVersion, opened]);
+  }, [user?.id, month, habitVersion, opened]);
 
   useEffect(() => {
     if (!user || !(opened.has("tasks") || opened.has("calendar"))) return;
@@ -106,7 +105,7 @@ export default function DashboardPage() {
           caught instanceof Error ? caught.message : "Could not load tasks",
         );
       });
-  }, [user, taskVersion, opened]);
+  }, [user?.id, taskVersion, opened]);
 
   function handleToggle(habitId: number, dateStr: string, newVal: string) {
     const key = `${habitId}-${dateStr}`;
@@ -221,12 +220,12 @@ export default function DashboardPage() {
               Today
             </h1>
             <label className="text-xs text-neutral-500">
-              Day
+              <span className="sr-only">Day</span>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(event) => setSelectedDate(event.target.value)}
-                className="ml-2 min-h-11 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-2 text-base text-neutral-300 outline-none transition-colors duration-150 focus:border-neutral-600 sm:min-h-0 sm:py-1.5 sm:text-xs"
+                className="cadence-chip min-h-11 px-2 py-2 text-base text-neutral-300 outline-none sm:min-h-0 sm:py-1.5 sm:text-xs"
               />
             </label>
           </div>
@@ -289,13 +288,18 @@ export default function DashboardPage() {
                 onSelectHabit={setSelectedHabitId}
               />
             </div>
-          ) : null}
+          ) : user ? null : (
+            <p className="mt-4 text-center text-sm text-neutral-500">Nothing here yet.</p>
+          )}
           {dayDialogOpen && selectedDate && data && (
             <DayHabitsDialog
               date={selectedDate}
               habits={data.habits}
               lookup={data.lookup}
-              tasks={tasks.filter((task) => task.due_date === selectedDate)}
+              tasks={tasks.filter(
+                (task) =>
+                  task.due_date === selectedDate && !task.is_abandoned,
+              )}
               onToggle={handleToggle}
               onToggleTask={handleToggleTask}
               onAddTask={handleAddTask}
@@ -317,13 +321,22 @@ export default function DashboardPage() {
       )}
       {opened.has("continuity") && (
         <ViewPane active={view === "continuity"}>
-          <ContinuityExplorer
-            contexts={contexts}
-            anchorDate={selectedDate ?? todayAsLocalDate()}
-            selectedDate={selectedDate}
-            onSelectDate={openDay}
-            refreshKey={continuityVersion}
-          />
+          {user ? (
+            <ContinuityExplorer
+              contexts={contexts}
+              anchorDate={selectedDate ?? todayAsLocalDate()}
+              selectedDate={selectedDate}
+              onSelectDate={openDay}
+              refreshKey={continuityVersion}
+            />
+          ) : (
+            <div>
+              <h1 className="cadence-title text-2xl font-medium text-neutral-100">
+                History
+              </h1>
+              <p className="mt-8 text-sm text-neutral-500">Nothing here yet.</p>
+            </div>
+          )}
         </ViewPane>
       )}
       {opened.has("settings") && (

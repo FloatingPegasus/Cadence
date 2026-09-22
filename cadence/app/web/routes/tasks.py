@@ -30,6 +30,7 @@ class TaskUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     due_date: date | None = None
     is_completed: bool | None = None
+    is_abandoned: bool | None = None
 
     @field_validator("title")
     @classmethod
@@ -89,6 +90,7 @@ async def update_task(
             title=fields.get("title"),
             due_date=fields.get("due_date"),
             is_completed=fields.get("is_completed"),
+            is_abandoned=fields.get("is_abandoned"),
             due_date_set="due_date" in fields,
         )
     except tasks_service.TaskNotFoundError as error:
