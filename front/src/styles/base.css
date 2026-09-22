@@ -809,6 +809,16 @@ html.cadence-pip body::after {
   display: none;
 }
 
+.cadence-timer-pip-source {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 720px;
+  height: 405px;
+  transform: translate(-120%, -120%);
+  pointer-events: none;
+}
+
 .cadence-timer-resize {
   position: absolute;
   z-index: 3;

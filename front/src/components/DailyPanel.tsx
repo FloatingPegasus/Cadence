@@ -17,6 +17,8 @@ interface DailyPanelProps {
   contexts: ContinuityContext[];
   refreshKey: number;
   onSelectDate: (date: string) => void;
+  onOpenHour?: (date: string) => void;
+  onOpenTask?: () => void;
   onChanged: () => void;
   onHabitsChanged: () => void;
 }
@@ -27,6 +29,8 @@ export default function DailyPanel({
   contexts,
   refreshKey,
   onSelectDate,
+  onOpenHour,
+  onOpenTask,
   onChanged,
   onHabitsChanged,
 }: DailyPanelProps) {
@@ -45,6 +49,8 @@ export default function DailyPanel({
           date={date}
           refreshKey={refreshKey}
           onSelectDate={onSelectDate}
+          onOpenHour={onOpenHour}
+          onOpenTask={onOpenTask}
         />
         <div className="cadence-surface cadence-note">
           <DailyHabitsCard

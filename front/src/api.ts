@@ -518,6 +518,16 @@ export interface DailyReentry {
     source: "summary" | "note";
     excerpt: string;
   } | null;
+  last_hour?: {
+    date: string;
+    hour: number;
+    content: string;
+  } | null;
+  carried_task?: {
+    id: number;
+    title: string;
+    due_date: string;
+  } | null;
   open_threads: Array<{
     id: number;
     origin_date: string;

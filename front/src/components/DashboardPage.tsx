@@ -235,6 +235,11 @@ export default function DashboardPage() {
             contexts={contexts}
             refreshKey={continuityVersion}
             onSelectDate={setSelectedDate}
+            onOpenHour={(date) => {
+              setSelectedDate(date);
+              openView("hours");
+            }}
+            onOpenTask={() => openView("tasks")}
             onChanged={() =>
               setContinuityVersion((version) => version + 1)
             }

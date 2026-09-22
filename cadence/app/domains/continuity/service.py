@@ -13,7 +13,9 @@ from ...persistence.models.daily_checkin import DailyCheckin
 from ...persistence.models.day import Day
 from ...persistence.models.day_context import DayContext
 from ...persistence.models.habit_log import HabitLog
+from ...persistence.models.hour_log import HourLog
 from ...persistence.models.summary_artifact import SummaryArtifact
+from ...persistence.models.task import Task
 from ...persistence.models.weekly_reflection import WeeklyReflection
 from ...persistence.models.continuity_embedding import ContinuityEmbedding
 from ...persistence.models.user import User
@@ -233,9 +235,63 @@ async def get_day_reentry(
                 "excerpt": summary_preview or note_preview,
             }
 
+    filled_today = await db.scalar(
+        select(HourLog.id)
+        .join(Day, Day.id == HourLog.day_id)
+        .where(
+            Day.user_id == user_id,
+            Day.date == target_date,
+            func.length(func.trim(HourLog.content)) > 0,
+        )
+        .limit(1)
+    )
+    last_hour = None
+    carried_task = None
+    if filled_today is None:
+        hour_row = (
+            await db.execute(
+                select(Day.date, HourLog.hour, HourLog.content)
+                .join(HourLog, HourLog.day_id == Day.id)
+                .where(
+                    Day.user_id == user_id,
+                    Day.date < target_date,
+                    func.length(func.trim(HourLog.content)) > 0,
+                )
+                .order_by(Day.date.desc(), HourLog.hour.desc())
+                .limit(1)
+            )
+        ).one_or_none()
+        if hour_row is not None:
+            hour_date, hour, content = hour_row
+            last_hour = {
+                "date": hour_date.isoformat(),
+                "hour": hour,
+                "content": content.strip(),
+            }
+        task = await db.scalar(
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                Task.is_completed.is_(False),
+                Task.is_abandoned.is_(False),
+                Task.due_date.is_not(None),
+                Task.due_date <= target_date,
+            )
+            .order_by(Task.due_date.asc(), Task.id.asc())
+            .limit(1)
+        )
+        if task is not None and task.due_date is not None:
+            carried_task = {
+                "id": task.id,
+                "title": task.title,
+                "due_date": task.due_date.isoformat(),
+            }
+
     return {
         "date": target_date.isoformat(),
         "previous_trace": previous_trace,
+        "last_hour": last_hour,
+        "carried_task": carried_task,
         "open_threads": [
             {
                 "id": item.id,

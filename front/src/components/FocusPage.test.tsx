@@ -305,5 +305,42 @@ describe("FocusPage", () => {
     ).toBeTruthy();
     expect(pipDocument.body.querySelector(".cadence-timer-controls")).toBeNull();
     expect(screen.queryByRole("dialog", { name: "Timer" })).toBeNull();
+    Reflect.deleteProperty(window, "documentPictureInPicture");
+  });
+
+  it("uses video picture-in-picture when the document API is missing", async () => {
+    Reflect.deleteProperty(window, "documentPictureInPicture");
+    const requestPictureInPicture = vi.fn().mockResolvedValue({});
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage() {},
+      fillRect() {},
+      fillText() {},
+      font: "",
+      fillStyle: "",
+      shadowColor: "",
+      shadowBlur: 0,
+    } as unknown as CanvasRenderingContext2D);
+    Object.defineProperty(HTMLCanvasElement.prototype, "captureStream", {
+      configurable: true,
+      value: () => ({ getTracks: () => [{ stop() {} }] }),
+    });
+    vi.spyOn(HTMLVideoElement.prototype, "play").mockResolvedValue(undefined);
+    Object.defineProperty(HTMLVideoElement.prototype, "requestPictureInPicture", {
+      configurable: true,
+      value: requestPictureInPicture,
+    });
+    Object.defineProperty(document, "pictureInPictureEnabled", {
+      configurable: true,
+      value: true,
+    });
+
+    const user = userEvent.setup();
+    render(<FocusPage />);
+    await user.click(screen.getByRole("button", { name: "Full screen" }));
+    await user.click(screen.getByRole("button", { name: "Picture in picture" }));
+    await waitFor(() => expect(requestPictureInPicture).toHaveBeenCalled());
+    expect(document.querySelector(".cadence-timer-pip-source")).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "Timer" })).toBeNull();
+    vi.restoreAllMocks();
   });
 });

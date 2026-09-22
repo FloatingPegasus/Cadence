@@ -5,11 +5,14 @@ import {
   type DailyReentry,
 } from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
+import { formatHourLabel } from "../../time";
 
 interface ReentryCardProps {
   date: string;
   refreshKey: number;
   onSelectDate: (date: string) => void;
+  onOpenHour?: (date: string) => void;
+  onOpenTask?: () => void;
 }
 
 function shortDate(date: string) {
@@ -23,6 +26,8 @@ export default function ReentryCard({
   date,
   refreshKey,
   onSelectDate,
+  onOpenHour,
+  onOpenTask,
 }: ReentryCardProps) {
   const { user } = useAuth();
   const [reentry, setReentry] = useState<DailyReentry | null>(null);
@@ -62,7 +67,9 @@ export default function ReentryCard({
     };
   }, [date, refreshKey, user?.id]);
 
+  const hasResume = Boolean(reentry?.last_hour || reentry?.carried_task);
   const hasContext =
+    hasResume ||
     reentry?.previous_trace ||
     reentry?.open_threads.length ||
     reentry?.contexts.some((context) => context.last_activity);
@@ -92,6 +99,40 @@ export default function ReentryCard({
         <p role="alert" className="mt-4 text-xs text-red-400">
           {error}
         </p>
+      ) : hasResume ? (
+        <div className="mt-4 grid gap-3">
+          {reentry?.last_hour && (
+            <button
+              type="button"
+              onClick={() =>
+                (onOpenHour ?? onSelectDate)(reentry.last_hour!.date)
+              }
+              className="w-full rounded-lg px-1 py-1 text-left hover:bg-neutral-950/40"
+            >
+              <span className="text-xs text-violet-300">
+                {shortDate(reentry.last_hour.date)} ·{" "}
+                {formatHourLabel(reentry.last_hour.hour)}
+              </span>
+              <span className="mt-1 line-clamp-2 block text-sm leading-5 text-neutral-200">
+                {reentry.last_hour.content}
+              </span>
+            </button>
+          )}
+          {reentry?.carried_task && (
+            <button
+              type="button"
+              onClick={() => onOpenTask?.()}
+              className="w-full rounded-lg px-1 py-1 text-left hover:bg-neutral-950/40"
+            >
+              <span className="text-xs text-violet-300">
+                {shortDate(reentry.carried_task.due_date)}
+              </span>
+              <span className="mt-1 block text-sm text-neutral-100">
+                {reentry.carried_task.title}
+              </span>
+            </button>
+          )}
+        </div>
       ) : (
         <div
           className={

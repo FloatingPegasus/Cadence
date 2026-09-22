@@ -931,3 +931,57 @@ class CadenceContinuityApiTests(ApiTestCase):
             "bounded re-entry",
             reentry["contexts"][0]["last_activity"]["excerpt"],
         )
+        self.assertIsNone(reentry["last_hour"])
+        self.assertIsNone(reentry["carried_task"])
+
+    def test_reentry_after_a_gap_is_one_hour_and_one_task(self) -> None:
+        self.client.put(
+            "/api/days/2026-07-21/hours",
+            headers=self.alpha_headers,
+            json={"hour": 9, "content": "Morning notes"},
+        )
+        self.client.put(
+            "/api/days/2026-07-21/hours",
+            headers=self.alpha_headers,
+            json={"hour": 16, "content": "Wrote the migration"},
+        )
+        self.client.post(
+            "/api/tasks",
+            headers=self.alpha_headers,
+            json={"title": "Later task", "due_date": "2026-07-24"},
+        )
+        carried = self.client.post(
+            "/api/tasks",
+            headers=self.alpha_headers,
+            json={"title": "Ship the note", "due_date": "2026-07-22"},
+        )
+        self.assertEqual(carried.status_code, 201)
+        self.client.post(
+            "/api/tasks",
+            headers=self.beta_headers,
+            json={"title": "Private task", "due_date": "2026-07-22"},
+        )
+
+        response = self.client.get(
+            "/api/days/2026-07-23/reentry",
+            headers=self.alpha_headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        reentry = response.json()
+        self.assertEqual(reentry["last_hour"]["date"], "2026-07-21")
+        self.assertEqual(reentry["last_hour"]["hour"], 16)
+        self.assertEqual(reentry["last_hour"]["content"], "Wrote the migration")
+        self.assertEqual(reentry["carried_task"]["title"], "Ship the note")
+        self.assertNotIn("Private task", str(reentry))
+
+        self.client.put(
+            "/api/days/2026-07-23/hours",
+            headers=self.alpha_headers,
+            json={"hour": 10, "content": "Back at it"},
+        )
+        resumed = self.client.get(
+            "/api/days/2026-07-23/reentry",
+            headers=self.alpha_headers,
+        )
+        self.assertIsNone(resumed.json()["last_hour"])
+        self.assertIsNone(resumed.json()["carried_task"])

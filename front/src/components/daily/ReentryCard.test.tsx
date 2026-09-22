@@ -96,6 +96,48 @@ describe("ReentryCard", () => {
     expect(screen.queryByText("Related areas")).toBeNull();
   });
 
+  it("opens the last hour and the carried task after a gap", async () => {
+    const user = userEvent.setup();
+    const onOpenHour = vi.fn();
+    const onOpenTask = vi.fn();
+    vi.mocked(fetchDayReentry).mockResolvedValue({
+      date: "2026-07-23",
+      previous_trace: {
+        date: "2026-07-21",
+        source: "note",
+        excerpt: "Older note that should stay behind the hour",
+      },
+      last_hour: {
+        date: "2026-07-21",
+        hour: 16,
+        content: "Wrote the migration",
+      },
+      carried_task: {
+        id: 4,
+        title: "Ship the note",
+        due_date: "2026-07-22",
+      },
+      open_threads: [],
+      contexts: [],
+    });
+
+    render(
+      <ReentryCard
+        date="2026-07-23"
+        refreshKey={0}
+        onSelectDate={vi.fn()}
+        onOpenHour={onOpenHour}
+        onOpenTask={onOpenTask}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /Wrote the migration/ }));
+    expect(onOpenHour).toHaveBeenCalledWith("2026-07-21");
+    await user.click(screen.getByRole("button", { name: /Ship the note/ }));
+    expect(onOpenTask).toHaveBeenCalled();
+    expect(screen.queryByText("Earlier note")).toBeNull();
+  });
+
   it("does not flash a loading card while the day refreshes", async () => {
     vi.mocked(fetchDayReentry).mockResolvedValue({
       date: "2026-07-23",

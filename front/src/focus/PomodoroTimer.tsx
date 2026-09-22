@@ -9,7 +9,15 @@ import { createPortal } from "react-dom";
 
 import FocusCat from "./FocusCat";
 import { AMBIENCE_OPTIONS, type AmbienceKind } from "./lofi";
-import { copyPipStyles, PIP_FRAME, pipApi } from "./pictureInPicture";
+import {
+  copyPipStyles,
+  openVideoPip,
+  PIP_FRAME,
+  pipApi,
+  pipAvailable,
+  type VideoPipSession,
+} from "./pictureInPicture";
+import { STUDY_SCENES } from "./scenes";
 import StudyScene from "./StudyScene";
 
 const MAX_MINUTES = 180;
@@ -527,6 +535,7 @@ export default function PomodoroTimer({
   const [expanded, setExpanded] = useState(false);
   const [pipWindow, setPipWindow] = useState<Window | null>(null);
   const pipWindowRef = useRef<Window | null>(null);
+  const videoPipRef = useRef<VideoPipSession | null>(null);
   const [pos, setPos] = useState<Point | null>(null);
   const [size, setSize] = useState<Size | null>(null);
   const sizeRef = useRef<Size | null>(null);
@@ -609,8 +618,15 @@ export default function PomodoroTimer({
   useEffect(() => {
     return () => {
       pipWindowRef.current?.close();
+      videoPipRef.current?.close();
     };
   }, []);
+
+  useEffect(() => {
+    const src = STUDY_SCENES[sceneIndex]?.src;
+    if (!src) return;
+    videoPipRef.current?.update({ src, clock: formatClock(remaining) });
+  }, [sceneIndex, remaining]);
 
   useEffect(() => {
     onStatusChange?.({ clock: formatClock(remaining), running });
@@ -718,18 +734,30 @@ export default function PomodoroTimer({
   }, [expanded]);
 
   async function openPip() {
+    const src = STUDY_SCENES[sceneIndex]?.src;
+    if (!src) return;
     const api = pipApi();
-    if (!api) return;
     try {
-      const next = await api.requestWindow(PIP_FRAME);
-      copyPipStyles(next.document);
-      next.addEventListener("pagehide", () => {
-        pipWindowRef.current = null;
-        setPipWindow(null);
+      if (api) {
+        const next = await api.requestWindow(PIP_FRAME);
+        copyPipStyles(next.document);
+        next.addEventListener("pagehide", () => {
+          pipWindowRef.current = null;
+          setPipWindow(null);
+        });
+        pipWindowRef.current?.close();
+        videoPipRef.current?.close();
+        videoPipRef.current = null;
+        pipWindowRef.current = next;
+        setPipWindow(next);
+        setExpanded(false);
+        return;
+      }
+      videoPipRef.current?.close();
+      videoPipRef.current = await openVideoPip({
+        src,
+        clock: formatClock(remaining),
       });
-      pipWindowRef.current?.close();
-      pipWindowRef.current = next;
-      setPipWindow(next);
       setExpanded(false);
     } catch {
       // The browser may reject Picture-in-Picture without a user gesture.
@@ -1248,7 +1276,7 @@ export default function PomodoroTimer({
                 >
                   <MoveMark />
                 </button>
-                {pipApi() ? (
+                {pipAvailable() ? (
                   <button
                     type="button"
                     aria-label="Picture in picture"
