@@ -812,11 +812,26 @@ html.cadence-pip body::after {
 .cadence-timer-pip-source {
   position: fixed;
   left: 0;
-  top: 0;
-  width: 720px;
-  height: 405px;
-  transform: translate(-120%, -120%);
+  bottom: 0;
+  z-index: 1;
+  width: 160px;
+  height: 90px;
+  opacity: 0.02;
   pointer-events: none;
+}
+
+.cadence-timer-pip-source-fallback {
+  left: auto;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 90;
+  width: min(18rem, calc(100vw - 2rem));
+  height: auto;
+  aspect-ratio: 16 / 9;
+  opacity: 1;
+  pointer-events: auto;
+  border-radius: 0.7rem;
+  background: #111;
 }
 
 .cadence-timer-resize {

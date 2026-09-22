@@ -81,14 +81,20 @@ export async function openVideoPip(frame: PipFrame): Promise<VideoPipSession> {
   };
 
   paint();
+  const stream = captureCanvas(canvas);
+  paint();
+  requestStreamFrame(stream);
   const video = document.createElement("video");
   const webkit = video as WebkitVideo;
   video.className = "cadence-timer-pip-source";
   video.muted = true;
+  video.defaultMuted = true;
   video.autoplay = true;
   video.playsInline = true;
+  video.setAttribute("muted", "");
   video.setAttribute("playsinline", "");
-  video.srcObject = canvas.captureStream(15);
+  video.setAttribute("webkit-playsinline", "");
+  video.srcObject = stream;
   document.body.appendChild(video);
 
   const close = () => {
@@ -96,30 +102,45 @@ export async function openVideoPip(frame: PipFrame): Promise<VideoPipSession> {
     closed = true;
     video.removeEventListener("leavepictureinpicture", close);
     video.removeEventListener("webkitpresentationmodechanged", onWebkitMode);
-    const stream = video.srcObject as { getTracks?: () => Array<{ stop: () => void }> } | null;
-    if (stream && typeof stream.getTracks === "function") {
-      for (const track of stream.getTracks()) track.stop();
+    const currentStream = video.srcObject as { getTracks?: () => Array<{ stop: () => void }> } | null;
+    if (currentStream && typeof currentStream.getTracks === "function") {
+      for (const track of currentStream.getTracks()) track.stop();
     }
     video.srcObject = null;
     video.remove();
   };
 
+  let sawPip = false;
   const onWebkitMode = () => {
-    if (webkit.webkitPresentationMode !== "picture-in-picture") close();
+    if (webkit.webkitPresentationMode === "picture-in-picture") {
+      sawPip = true;
+      video.classList.remove("cadence-timer-pip-source-fallback");
+      video.controls = false;
+      return;
+    }
+    if (sawPip) close();
   };
 
+  video.addEventListener(
+    "playing",
+    () => {
+      if (closed || document.pictureInPictureElement === video) return;
+      if (webkit.webkitPresentationMode === "picture-in-picture") return;
+      try {
+        webkit.webkitSetPresentationMode?.("picture-in-picture");
+      } catch {
+        video.controls = true;
+        video.classList.add("cadence-timer-pip-source-fallback");
+      }
+    },
+    { once: true },
+  );
+
   try {
-    await video.play();
-    if (typeof video.requestPictureInPicture === "function") {
-      await video.requestPictureInPicture();
-    } else if (typeof webkit.webkitSetPresentationMode === "function") {
-      webkit.webkitSetPresentationMode("picture-in-picture");
-    } else {
-      throw new Error("Picture in picture is unavailable");
-    }
-  } catch (error) {
-    close();
-    throw error;
+    await enterPictureInPicture(video);
+  } catch {
+    video.controls = true;
+    video.classList.add("cadence-timer-pip-source-fallback");
   }
   video.addEventListener("leavepictureinpicture", close);
   video.addEventListener("webkitpresentationmodechanged", onWebkitMode);
@@ -138,6 +159,51 @@ export async function openVideoPip(frame: PipFrame): Promise<VideoPipSession> {
     },
     close,
   };
+}
+
+function captureCanvas(canvas: HTMLCanvasElement) {
+  try {
+    return canvas.captureStream(15);
+  } catch {
+    return canvas.captureStream();
+  }
+}
+
+function requestStreamFrame(stream: MediaStream) {
+  const tracks = stream.getVideoTracks?.() ?? [];
+  const track = tracks[0] as MediaStreamTrack & { requestFrame?: () => void };
+  track?.requestFrame?.();
+}
+
+async function enterPictureInPicture(video: WebkitVideo) {
+  const playing = video.play();
+  if (
+    video.webkitSupportsPresentationMode?.("picture-in-picture") &&
+    video.webkitSetPresentationMode
+  ) {
+    video.webkitSetPresentationMode("picture-in-picture");
+  }
+  let opened = video.webkitPresentationMode === "picture-in-picture";
+  if (!opened && typeof video.requestPictureInPicture === "function") {
+    try {
+      await video.requestPictureInPicture();
+      opened = true;
+    } catch {
+      opened = video.webkitPresentationMode === "picture-in-picture";
+    }
+  }
+  await playing;
+  if (opened || document.pictureInPictureElement === video) return;
+  if (video.webkitSetPresentationMode) {
+    video.webkitSetPresentationMode("picture-in-picture");
+    if (
+      video.webkitPresentationMode === "picture-in-picture" ||
+      document.pictureInPictureElement === video
+    ) {
+      return;
+    }
+  }
+  throw new Error("Picture in picture is unavailable");
 }
 
 function videoPipAvailable(): boolean {
