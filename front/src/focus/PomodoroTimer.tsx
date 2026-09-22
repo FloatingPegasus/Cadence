@@ -10,15 +10,14 @@ import { createPortal } from "react-dom";
 import FocusCat from "./FocusCat";
 import { AMBIENCE_OPTIONS, type AmbienceKind } from "./lofi";
 import {
-  closePreparedPip,
+  beginLivePip,
+  closeLivePip,
   copyPipStyles,
-  openVideoPip,
   PIP_FRAME,
   pipApi,
   pipAvailable,
-  presentPreparedPip,
-  primeVideoPip,
-  type VideoPipSession,
+  presentLivePip,
+  updateLivePip,
 } from "./pictureInPicture";
 import { STUDY_SCENES } from "./scenes";
 import StudyScene from "./StudyScene";
@@ -538,7 +537,6 @@ export default function PomodoroTimer({
   const [expanded, setExpanded] = useState(false);
   const [pipWindow, setPipWindow] = useState<Window | null>(null);
   const pipWindowRef = useRef<Window | null>(null);
-  const videoPipRef = useRef<VideoPipSession | null>(null);
   const [pos, setPos] = useState<Point | null>(null);
   const [size, setSize] = useState<Size | null>(null);
   const sizeRef = useRef<Size | null>(null);
@@ -621,17 +619,15 @@ export default function PomodoroTimer({
   useEffect(() => {
     return () => {
       pipWindowRef.current?.close();
-      videoPipRef.current?.close();
-      closePreparedPip();
+      closeLivePip();
     };
   }, []);
 
   useEffect(() => {
+    if (!expanded || pipApi()) return;
     const src = STUDY_SCENES[sceneIndex]?.src;
     if (!src) return;
-    const frame = { src, clock: formatClock(remaining) };
-    videoPipRef.current?.update(frame);
-    if (expanded) primeVideoPip(frame);
+    updateLivePip({ src, clock: formatClock(remaining) });
   }, [sceneIndex, remaining, expanded]);
 
   useEffect(() => {
@@ -752,23 +748,15 @@ export default function PomodoroTimer({
           setPipWindow(null);
         });
         pipWindowRef.current?.close();
-        videoPipRef.current?.close();
-        videoPipRef.current = null;
+        closeLivePip();
         pipWindowRef.current = next;
         setPipWindow(next);
         setExpanded(false);
         return;
       }
-      if (presentPreparedPip()) {
+      if (presentLivePip({ src, clock: formatClock(remaining) })) {
         setExpanded(false);
-        return;
       }
-      videoPipRef.current?.close();
-      videoPipRef.current = await openVideoPip({
-        src,
-        clock: formatClock(remaining),
-      });
-      setExpanded(false);
     } catch {
       // The browser may reject Picture-in-Picture without a user gesture.
     }
@@ -1153,7 +1141,13 @@ export default function PomodoroTimer({
           <button
             type="button"
             aria-label="Full screen"
-            onClick={() => setExpanded(true)}
+            onClick={() => {
+              const src = STUDY_SCENES[sceneIndex]?.src;
+              if (src && !pipApi()) {
+                beginLivePip({ src, clock: formatClock(remaining) });
+              }
+              setExpanded(true);
+            }}
             className="cadence-chip cadence-chip-icon"
           >
             <ExpandMark />
