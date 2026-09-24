@@ -453,13 +453,17 @@ html.dark .cadence-surface-quiet {
 }
 
 .cadence-fold {
-  margin-top: 0.35rem;
-  padding-top: 0.7rem;
+  padding-block: 0.2rem;
   border-top: 1px solid color-mix(in srgb, var(--n-700) 78%, transparent);
 }
 
 .cadence-fold:first-of-type {
   margin-top: 0.85rem;
+}
+
+.cadence-surface > .cadence-fold:first-child {
+  margin-top: 0;
+  border-top: 0;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
@@ -1015,9 +1019,20 @@ summary {
 }
 
 summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
   padding-block: 0.25rem;
   list-style: none;
   cursor: pointer;
+}
+
+@media (min-width: 640px) and (hover: hover) and (pointer: fine) {
+  summary {
+    min-height: 2.25rem;
+  }
 }
 
 summary::-webkit-details-marker {
@@ -1027,9 +1042,10 @@ summary::-webkit-details-marker {
 summary::after {
   content: "";
   display: inline-block;
+  flex: none;
   width: 0.38rem;
   height: 0.38rem;
-  margin-left: 0.45rem;
+  margin-right: 0.2rem;
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   transform: rotate(45deg) translateY(-0.08rem);

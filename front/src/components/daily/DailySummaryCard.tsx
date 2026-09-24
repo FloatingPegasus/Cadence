@@ -107,10 +107,10 @@ export default function DailySummaryCard({
     content !== (summary?.content ?? "") || summary?.is_stale === true;
 
   return (
-    <details className="py-2">
+    <details className="cadence-fold">
       <summary
         id="daily-summary-title"
-        className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+        className="text-sm text-neutral-400 transition-colors duration-150 hover:text-neutral-200"
       >
         Daily review
       </summary>

@@ -87,10 +87,10 @@ export default function DayClosureCard({
   }
 
   return (
-    <details className="py-2">
+    <details className="cadence-fold">
       <summary
         id="day-closure-title"
-        className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+        className="text-sm text-neutral-400 transition-colors duration-150 hover:text-neutral-200"
       >
         Finish the day
       </summary>
