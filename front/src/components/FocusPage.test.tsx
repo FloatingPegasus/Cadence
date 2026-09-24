@@ -38,6 +38,13 @@ describe("FocusPage", () => {
     expect(screen.getByText("25:00")).toBeTruthy();
   });
 
+  it("starts the timer when asked from Home", async () => {
+    const { rerender } = render(<FocusPage />);
+    screen.getByRole("button", { name: "Start" });
+    rerender(<FocusPage startSignal={1} />);
+    expect(await screen.findByRole("button", { name: "Pause" })).toBeTruthy();
+  });
+
   it("lets you pick a background noise", async () => {
     const user = userEvent.setup();
     render(<FocusPage />);

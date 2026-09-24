@@ -59,11 +59,28 @@ export default function DashboardNav({
             <span
               className={
                 view === item.id
-                  ? "border-b border-violet-400 pb-px font-medium text-neutral-100"
-                  : "border-b border-transparent pb-px text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
+                  ? "relative pb-px font-medium text-neutral-100"
+                  : "pb-px text-neutral-500 transition-colors duration-150 hover:text-neutral-200"
               }
             >
               {item.label}
+              {view === item.id ? (
+                <svg
+                  className="cadence-tab-underline"
+                  viewBox="0 0 60 6"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M2 4.2C14 2.4 30 3.6 44 2.8S56 3.6 58 3.2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+              ) : null}
             </span>
           </button>
         ))}

@@ -24,11 +24,18 @@ import HabitGrid from "./HabitGrid";
 import Header from "./Header";
 import HoursPage from "./HoursPage";
 import MonthNav from "./MonthNav";
-import RecentDays from "./RecentDays";
 import SettingsPanel from "./SettingsPanel";
 import TasksPage from "./TasksPage";
 import ViewPane from "./ViewPane";
 import { todayAsLocalDate } from "../time";
+
+function longDate(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -54,6 +61,7 @@ export default function DashboardPage() {
   const [contextVersion, setContextVersion] = useState(0);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
+  const [focusStart, setFocusStart] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -182,6 +190,11 @@ export default function DashboardPage() {
     }
   }
 
+  function refreshTasks() {
+    setTaskVersion((version) => version + 1);
+    setContinuityVersion((version) => version + 1);
+  }
+
   function openDateDialog(date: string) {
     setSelectedDate(date);
     setDayDialogOpen(true);
@@ -220,21 +233,20 @@ export default function DashboardPage() {
         <ViewPane active={view === "today"}>
           <div className="flex flex-wrap items-baseline justify-between gap-4">
             <h1 className="cadence-title text-2xl font-medium text-neutral-100">
-              Today
+              {longDate(selectedDate)}
             </h1>
-            <label className="text-xs text-neutral-500">
-              <span className="sr-only">Day</span>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(event) => setSelectedDate(event.target.value)}
-                className="cadence-chip min-h-11 px-2 py-2 text-base text-neutral-300 outline-none sm:min-h-0 sm:py-1.5 sm:text-xs"
-              />
-            </label>
+            {selectedDate !== todayAsLocalDate() ? (
+              <button
+                type="button"
+                onClick={() => setSelectedDate(todayAsLocalDate())}
+                className="cadence-chip sm:text-xs"
+              >
+                Back to today
+              </button>
+            ) : null}
           </div>
           <DailyPanel
             date={selectedDate}
-            habits={habits}
             contexts={contexts}
             refreshKey={continuityVersion}
             onSelectDate={setSelectedDate}
@@ -243,26 +255,23 @@ export default function DashboardPage() {
               openView("hours");
             }}
             onOpenTask={() => openView("tasks")}
+            onStartFocus={() => {
+              setFocusStart((count) => count + 1);
+              openView("focus");
+            }}
             onChanged={() =>
               setContinuityVersion((version) => version + 1)
             }
             onHabitsChanged={() =>
               setHabitVersion((version) => version + 1)
             }
-          />
-          <RecentDays
-            selectedDate={selectedDate}
-            onSelect={setSelectedDate}
-            refreshKey={continuityVersion}
+            onTasksChanged={refreshTasks}
           />
         </ViewPane>
       )}
       {opened.has("tasks") && (
         <ViewPane active={view === "tasks"}>
-          <TasksPage
-            refreshKey={taskVersion}
-            onChanged={() => setTaskVersion((version) => version + 1)}
-          />
+          <TasksPage refreshKey={taskVersion} onChanged={refreshTasks} />
         </ViewPane>
       )}
       {opened.has("hours") && selectedDate && (
@@ -278,7 +287,7 @@ export default function DashboardPage() {
       )}
       {opened.has("focus") && (
         <ViewPane active={view === "focus"}>
-          <FocusPage />
+          <FocusPage startSignal={focusStart} />
         </ViewPane>
       )}
       {opened.has("continuity") && (

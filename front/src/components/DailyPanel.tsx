@@ -1,40 +1,66 @@
-import {
-  generateSummary,
-  type ContinuityContext,
-  type Habit,
-} from "../api";
+import { useEffect, useState } from "react";
+
+import { generateSummary, type ContinuityContext } from "../api";
 import { useAuth } from "../contexts/AuthContext";
+import { todayAsLocalDate } from "../time";
 import CarryForwardCard from "./daily/CarryForwardCard";
-import DailyCaptureCard from "./daily/DailyCaptureCard";
-import DailyHabitsCard from "./daily/DailyHabitsCard";
-import DayClosureCard from "./daily/DayClosureCard";
+import CloseDayCard from "./daily/CloseDayCard";
 import DailySummaryCard from "./daily/DailySummaryCard";
+import LogNote from "./daily/LogNote";
 import ReentryCard from "./daily/ReentryCard";
+import TodayList from "./daily/TodayList";
+
+const EVENING_HOUR = 18;
 
 interface DailyPanelProps {
   date: string;
-  habits: Habit[];
   contexts: ContinuityContext[];
   refreshKey: number;
   onSelectDate: (date: string) => void;
   onOpenHour?: (date: string) => void;
   onOpenTask?: () => void;
+  onStartFocus: () => void;
   onChanged: () => void;
   onHabitsChanged: () => void;
+  onTasksChanged: () => void;
+}
+
+function useCurrentHour() {
+  const [hour, setHour] = useState(() => new Date().getHours());
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => setHour(new Date().getHours()),
+      60_000,
+    );
+    return () => window.clearInterval(timer);
+  }, []);
+  return hour;
 }
 
 export default function DailyPanel({
   date,
-  habits,
   contexts,
   refreshKey,
   onSelectDate,
   onOpenHour,
   onOpenTask,
+  onStartFocus,
   onChanged,
   onHabitsChanged,
+  onTasksChanged,
 }: DailyPanelProps) {
   const { user, aiEnabled } = useAuth();
+  const hour = useCurrentHour();
+  const isToday = date === todayAsLocalDate();
+  const [chosen, setChosen] = useState<"log" | "close" | null>(null);
+
+  useEffect(() => {
+    setChosen(null);
+  }, [date]);
+
+  const mode = !isToday
+    ? "close"
+    : (chosen ?? (hour < EVENING_HOUR ? "log" : "close"));
 
   function sourceChanged(hasSource = true) {
     onChanged();
@@ -43,44 +69,58 @@ export default function DailyPanel({
   }
 
   return (
-    <div className="mt-5 sm:mt-8">
-      <div className="grid gap-4">
-        <ReentryCard
+    <div className="mt-5 grid gap-4 sm:mt-8">
+      <ReentryCard
+        date={date}
+        refreshKey={refreshKey}
+        onSelectDate={onSelectDate}
+        onOpenHour={onOpenHour}
+        onOpenTask={onOpenTask}
+      />
+      <div>
+        <div className="cadence-surface cadence-note">
+          {mode === "log" ? (
+            <LogNote
+              date={date}
+              hour={hour}
+              refreshKey={refreshKey}
+              onStartFocus={onStartFocus}
+              onChanged={onChanged}
+            />
+          ) : (
+            <CloseDayCard
+              date={date}
+              contexts={contexts}
+              onChanged={sourceChanged}
+            >
+              {aiEnabled ? (
+                <DailySummaryCard
+                  date={date}
+                  refreshKey={refreshKey}
+                  onChanged={onChanged}
+                />
+              ) : null}
+              <CarryForwardCard date={date} onChanged={onChanged} />
+            </CloseDayCard>
+          )}
+        </div>
+        {isToday ? (
+          <button
+            type="button"
+            onClick={() => setChosen(mode === "log" ? "close" : "log")}
+            className="mt-1 min-h-11 px-0.5 text-sm text-violet-300 hover:text-violet-200"
+          >
+            {mode === "log" ? "Close the day" : "Log something"}
+          </button>
+        ) : null}
+      </div>
+      <div className="mt-2">
+        <TodayList
           date={date}
           refreshKey={refreshKey}
-          onSelectDate={onSelectDate}
-          onOpenHour={onOpenHour}
-          onOpenTask={onOpenTask}
+          onHabitsChanged={onHabitsChanged}
+          onChanged={onTasksChanged}
         />
-        <div className="cadence-surface cadence-note">
-          <DailyHabitsCard
-            date={date}
-            habits={habits}
-            refreshKey={refreshKey}
-            onHabitsChanged={onHabitsChanged}
-            onSourceChanged={() => sourceChanged(true)}
-          />
-        </div>
-        <div className="cadence-surface cadence-surface-quiet">
-          <DailyCaptureCard
-            date={date}
-            contexts={contexts}
-            onChanged={sourceChanged}
-          />
-        </div>
-        <div className="cadence-surface cadence-surface-quiet">
-          <CarryForwardCard date={date} onChanged={onChanged} />
-          <DailySummaryCard
-            date={date}
-            refreshKey={refreshKey}
-            onChanged={onChanged}
-          />
-          <DayClosureCard
-            date={date}
-            refreshKey={refreshKey}
-            onChanged={onChanged}
-          />
-        </div>
       </div>
     </div>
   );
