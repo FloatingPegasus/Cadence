@@ -874,6 +874,24 @@ export function fetchDataExport(): Promise<CadenceDataExport> {
   return request<CadenceDataExport>("/api/account/export");
 }
 
+export interface DaySettings {
+  day_ends_at: number;
+  auto_close: boolean;
+}
+
+export function updateDaySettings(settings: DaySettings): Promise<DaySettings> {
+  return request<DaySettings>("/api/account/day-settings", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });
+}
+
+export function beginDay(date: string): Promise<{ closed: string[] }> {
+  return request<{ closed: string[] }>(`/api/days/${date}/begin`, {
+    method: "POST",
+  });
+}
+
 export function fetchAIPreferences(): Promise<AIPreferences> {
   return request<AIPreferences>("/api/account/ai-preferences");
 }

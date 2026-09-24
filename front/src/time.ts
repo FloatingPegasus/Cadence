@@ -7,8 +7,15 @@ export const GOAL_KIND_LABELS: Record<GoalKind, string> = {
   short_term: "Short term",
 };
 
+let dayEndsAt = 0;
+
+export function setDayEndsAt(hour: number) {
+  dayEndsAt = hour;
+}
+
 export function todayAsLocalDate() {
   const today = new Date();
+  today.setHours(today.getHours() - dayEndsAt);
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 

@@ -17,7 +17,7 @@ describe("AIPrivacySettings", () => {
     render(<AIPrivacySettings />);
     await user.click(
       screen.getByRole("checkbox", {
-        name: /Allow automatic summaries/,
+        name: /Let Cadence reply to logs/,
       }),
     );
     expect(updateAIPrivacy).not.toHaveBeenCalled();

@@ -11,6 +11,8 @@ export const testUser: AuthUser = {
   is_developer: false,
   ai_processing_consent: false,
   ai_redaction_enabled: true,
+  day_ends_at: 0,
+  auto_close: true,
 };
 
 export function authStub(
@@ -31,6 +33,7 @@ export function authStub(
     closeAuth: vi.fn(),
     resendVerification: vi.fn(),
     updateAIPrivacy: vi.fn(),
+    updateDaySettings: vi.fn(),
     verifyEmail: vi.fn(),
     logout: vi.fn(),
     ...overrides,

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { addLog, deleteLog, fetchLogs, updateLog, type LogEntry } from "../api";
-import { authStub } from "../authTest";
+import { authStub, testUser } from "../authTest";
 import { useAuth } from "../contexts/AuthContext";
 import HoursPage from "./HoursPage";
 
@@ -80,6 +80,21 @@ describe("HoursPage", () => {
     await user.tab();
     expect(deleteLog).toHaveBeenCalledWith("2026-07-24", 2);
     await waitFor(() => expect(screen.getAllByLabelText("2 PM")).toHaveLength(1));
+  });
+
+  it("starts the hours where the person's day starts", async () => {
+    vi.mocked(useAuth).mockReturnValue(
+      authStub({ user: { ...testUser, day_ends_at: 4 } }),
+    );
+    vi.mocked(fetchLogs).mockResolvedValue([]);
+    renderPage();
+
+    await screen.findByLabelText("4 AM");
+    const rows = [...document.querySelectorAll("li[data-hour]")].map((row) =>
+      row.getAttribute("data-hour"),
+    );
+    expect(rows.slice(0, 2)).toEqual(["4", "5"]);
+    expect(rows.at(-1)).toBe("3");
   });
 
   it("adds another log to an hour that already has one", async () => {

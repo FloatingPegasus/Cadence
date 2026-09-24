@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import {
+  beginDay,
   fetchHabits,
   fetchContexts,
   fetchMonthData,
@@ -62,6 +63,16 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [focusStart, setFocusStart] = useState(0);
+  const today = todayAsLocalDate();
+
+  useEffect(() => {
+    if (!user) return;
+    beginDay(today)
+      .then(({ closed }) => {
+        if (closed.length) setContinuityVersion((version) => version + 1);
+      })
+      .catch(() => {});
+  }, [user?.id, today]);
 
   useEffect(() => {
     if (!user) {
@@ -235,10 +246,10 @@ export default function DashboardPage() {
             <h1 className="cadence-title text-2xl font-medium text-neutral-100">
               {longDate(selectedDate)}
             </h1>
-            {selectedDate !== todayAsLocalDate() ? (
+            {selectedDate !== today ? (
               <button
                 type="button"
-                onClick={() => setSelectedDate(todayAsLocalDate())}
+                onClick={() => setSelectedDate(today)}
                 className="cadence-chip sm:text-xs"
               >
                 Back to today
@@ -295,7 +306,7 @@ export default function DashboardPage() {
           {user ? (
             <ContinuityExplorer
               contexts={contexts}
-              anchorDate={selectedDate ?? todayAsLocalDate()}
+              anchorDate={selectedDate ?? today}
               selectedDate={selectedDate}
               onSelectDate={openDay}
               refreshKey={continuityVersion}

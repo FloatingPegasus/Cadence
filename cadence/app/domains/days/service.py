@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import and_, exists, func, or_, select
+from sqlalchemy import and_, exists, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,9 +67,7 @@ async def get_day(db: AsyncSession, user_id: int, target_date: date | str) -> di
     }
 
 
-async def list_recent_days(
-    db: AsyncSession, user_id: int, limit: int = 7
-) -> list[dict]:
+def _day_has_content():
     checkin_has_values = or_(
         DailyCheckin.sleep_hours.is_not(None),
         DailyCheckin.sleep_quality.is_not(None),
@@ -81,10 +79,13 @@ async def list_recent_days(
         DailyCheckin.drift_minutes.is_not(None),
         DailyCheckin.notes.is_not(None),
     )
-    has_activity = or_(
-        Day.status == "closed",
+    return or_(
         func.length(func.trim(func.coalesce(Day.daily_note, ""))) > 0,
-        checkin_has_values,
+        exists(
+            select(DailyCheckin.id)
+            .where(DailyCheckin.day_id == Day.id, checkin_has_values)
+            .correlate(Day)
+        ),
         exists(
             select(ConversationEntry.id).where(
                 ConversationEntry.day_id == Day.id,
@@ -108,6 +109,12 @@ async def list_recent_days(
         ),
         exists(select(DayContext.day_id).where(DayContext.day_id == Day.id)),
     )
+
+
+async def list_recent_days(
+    db: AsyncSession, user_id: int, limit: int = 7
+) -> list[dict]:
+    has_activity = or_(Day.status == "closed", _day_has_content())
     result = await db.execute(
         select(Day, DailyCheckin)
         .outerjoin(DailyCheckin, DailyCheckin.day_id == Day.id)
@@ -151,6 +158,26 @@ async def update_day(
         "status": day.status,
         "daily_note": day.daily_note or "",
     }
+
+
+async def close_past_days(
+    db: AsyncSession, user_id: int, before: date | str
+) -> list[date]:
+    await acquire_continuity_lock(db, user_id)
+    result = await db.execute(
+        update(Day)
+        .where(
+            Day.user_id == user_id,
+            Day.date < _coerce_date(before),
+            func.coalesce(Day.status, "open") == "open",
+            _day_has_content(),
+        )
+        .values(status="closed")
+        .returning(Day.date)
+    )
+    closed = sorted(result.scalars().all())
+    await db.commit()
+    return closed
 
 
 async def update_day_status(

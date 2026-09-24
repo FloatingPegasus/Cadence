@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  beginDay,
   fetchContexts,
   fetchHabits,
   fetchMonthData,
@@ -11,9 +12,11 @@ import {
 } from "../api";
 import { authStub } from "../authTest";
 import { useAuth } from "../contexts/AuthContext";
+import { todayAsLocalDate } from "../time";
 import DashboardPage from "./DashboardPage";
 
 vi.mock("../api", () => ({
+  beginDay: vi.fn(),
   fetchContexts: vi.fn(),
   fetchHabits: vi.fn(),
   fetchMonthData: vi.fn(),
@@ -61,6 +64,10 @@ vi.mock("./FocusPage", () => ({
 }));
 
 describe("DashboardPage progressive disclosure", () => {
+  beforeEach(() => {
+    vi.mocked(beginDay).mockResolvedValue({ closed: [] });
+  });
+
   it("loads one workspace at a time and defers calendar data", async () => {
     const user = userEvent.setup();
     vi.mocked(useAuth).mockReturnValue(authStub());
@@ -78,6 +85,7 @@ describe("DashboardPage progressive disclosure", () => {
 
     render(<DashboardPage />);
     screen.getByText("Daily workspace");
+    expect(beginDay).toHaveBeenCalledWith(todayAsLocalDate());
     expect(
       screen.getByText("Tasks workspace").closest("[hidden]"),
     ).not.toBeNull();
@@ -121,6 +129,7 @@ describe("DashboardPage progressive disclosure", () => {
     render(<DashboardPage />);
     screen.getByText("Daily workspace");
     expect(fetchHabits).not.toHaveBeenCalled();
+    expect(beginDay).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Focus" }));
     expect(

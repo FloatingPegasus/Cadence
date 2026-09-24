@@ -3,6 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import AIPrivacySettings from "./AIPrivacySettings";
 import ContextManager from "./ContextManager";
 import DataExportButton from "./DataExportButton";
+import DaySettings from "./DaySettings";
 import DevAIModels from "./DevAIModels";
 import GoalsSettings from "./GoalsSettings";
 import HabitManager from "./HabitManager";
@@ -43,6 +44,11 @@ export default function SettingsPanel({
         <div className="cadence-surface">
           <ContextManager contexts={contexts} onChanged={onContextsChanged} />
         </div>
+        {user ? (
+          <div className="cadence-surface">
+            <DaySettings />
+          </div>
+        ) : null}
         {claimed && aiEnabled ? (
           <div className="cadence-surface">
             <AIPrivacySettings />

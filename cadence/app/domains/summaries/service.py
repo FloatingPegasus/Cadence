@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from datetime import date
 
 from sqlalchemy import and_, select, update
@@ -18,6 +19,8 @@ from ...services import ai as ai_service
 from ...services import embeddings as embedding_service
 from ...services.continuity_lock import acquire_continuity_lock
 
+
+logger = logging.getLogger("cadence.summaries")
 
 PROMPT_VERSION = "daily-summary-v2"
 SOURCE_CHANGED_MESSAGE = "Source changed while generating; please retry."
@@ -374,3 +377,18 @@ async def generate_daily_summary(
                 content=artifact.content,
             )
         return serialize(artifact, source_fingerprint)
+
+
+async def summarize_closed_days(
+    db: AsyncSession, user_id: int, dates: list[date]
+) -> None:
+    factory = _session_factory(db)
+    for target_date in dates:
+        async with factory() as summary_db:
+            try:
+                current = await get_daily_summary(summary_db, user_id, target_date)
+                if current and (current["is_user_edited"] or not current["is_stale"]):
+                    continue
+                await generate_daily_summary(summary_db, user_id, target_date)
+            except Exception:
+                logger.warning("closing summary skipped date=%s", target_date)

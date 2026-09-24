@@ -158,7 +158,8 @@ export default function HoursPage({
         </p>
       )}
       <ol className="cadence-surface mt-6">
-        {HOURS.map((hour) => {
+        {HOURS.map((offset) => {
+          const hour = (offset + (user?.day_ends_at ?? 0)) % 24;
           const active = isToday && hour === currentHour;
           const label = formatHourLabel(hour);
           const entries = byHour.get(hour) ?? [];

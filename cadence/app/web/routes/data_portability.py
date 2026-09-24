@@ -2,7 +2,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...domains.data_portability import service
@@ -17,6 +17,11 @@ router = APIRouter(tags=["data portability"])
 class AIPreferencesUpdate(BaseModel):
     processing_consent: bool
     redaction_enabled: bool
+
+
+class DaySettingsUpdate(BaseModel):
+    day_ends_at: int = Field(ge=0, le=12)
+    auto_close: bool
 
 
 def _ai_preferences(user: User) -> dict:
@@ -55,6 +60,18 @@ async def update_ai_preferences(
     await db.commit()
     await db.refresh(user)
     return _ai_preferences(user)
+
+
+@router.put("/account/day-settings")
+async def update_day_settings(
+    body: DaySettingsUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    user.day_ends_at = body.day_ends_at
+    user.auto_close = body.auto_close
+    await db.commit()
+    return {"day_ends_at": user.day_ends_at, "auto_close": user.auto_close}
 
 
 @router.get("/account/export")
