@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -88,6 +88,40 @@ describe("TasksPage", () => {
       await screen.findByRole("button", { name: "Carry forward" }),
     );
     expect(updateTask).toHaveBeenCalledWith(9, { due_date: next });
+  });
+
+  it("groups open tasks by when they are due", async () => {
+    const user = userEvent.setup();
+    const today = todayAsLocalDate();
+    const yesterday = shiftLocalDate(today, -1);
+    const later = shiftLocalDate(today, 5);
+    vi.mocked(fetchTasks).mockResolvedValue([
+      task({ id: 1, title: "Reply to the landlord", due_date: yesterday }),
+      task({ id: 2, title: "Send the invoice", due_date: today }),
+      task({ id: 3, title: "Book the dentist", due_date: later }),
+      task({ id: 4, title: "Water the plants", due_date: null }),
+    ]);
+    vi.mocked(updateTask).mockResolvedValue(
+      task({ id: 1, title: "Reply to the landlord", due_date: today }),
+    );
+
+    render(<TasksPage refreshKey={0} onChanged={vi.fn()} />);
+
+    const headings = (await screen.findAllByRole("heading", { level: 2 })).map(
+      (heading) => heading.textContent,
+    );
+    expect(headings).toEqual(["Earlier", "Today", "Upcoming", "No date"]);
+    const earlier = screen.getByRole("heading", { name: "Earlier" })
+      .parentElement as HTMLElement;
+    within(earlier).getByText("Reply to the landlord");
+    within(earlier).getByText("Yesterday");
+
+    await user.click(
+      screen.getByRole("button", { name: "Due Reply to the landlord" }),
+    );
+    const input = screen.getByLabelText("Due Reply to the landlord");
+    fireEvent.change(input, { target: { value: today } });
+    expect(updateTask).toHaveBeenCalledWith(1, { due_date: today });
   });
 
   it("abandons a task and can restore it", async () => {
