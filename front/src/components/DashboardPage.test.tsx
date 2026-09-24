@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -22,13 +23,26 @@ vi.mock("../api", () => ({
   updateTask: vi.fn(),
 }));
 vi.mock("../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
-vi.mock("./Header", () => ({ default: () => <div>Header</div> }));
+vi.mock("./Header", () => ({
+  default: ({ onOpenSettings }: { onOpenSettings: () => void }) => (
+    <button type="button" onClick={onOpenSettings}>
+      Settings
+    </button>
+  ),
+}));
 vi.mock("./DailyPanel", () => ({ default: () => <div>Daily workspace</div> }));
 vi.mock("./RecentDays", () => ({ default: () => <div>Recent days</div> }));
 vi.mock("./HabitGrid", () => ({ default: () => <div>Habit calendar</div> }));
 vi.mock("./MonthNav", () => ({ default: () => <div>Month navigation</div> }));
 vi.mock("./DisciplineContinuity", () => ({ default: () => <div>Discipline detail</div> }));
-vi.mock("./ContinuityExplorer", () => ({ default: () => <div>Continuity workspace</div> }));
+vi.mock("./ContinuityExplorer", () => ({
+  default: ({ calendar }: { calendar?: ReactNode }) => (
+    <div>
+      Continuity workspace
+      {calendar}
+    </div>
+  ),
+}));
 vi.mock("./SettingsPanel", () => ({ default: () => <div>Settings workspace</div> }));
 vi.mock("./HoursPage", () => ({ default: () => <div>Hours workspace</div> }));
 vi.mock("./TasksPage", () => ({ default: () => <div>Tasks workspace</div> }));
@@ -67,7 +81,7 @@ describe("DashboardPage progressive disclosure", () => {
       screen.getByText("Daily workspace").closest("[hidden]"),
     ).not.toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Calendar" }));
+    await user.click(screen.getByRole("button", { name: "History" }));
     await waitFor(() => expect(fetchMonthData).toHaveBeenCalledOnce());
     await screen.findByText("Habit calendar");
     expect(
@@ -101,12 +115,9 @@ describe("DashboardPage progressive disclosure", () => {
       screen.getByText("Focus workspace").closest("[hidden]"),
     ).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Calendar" }));
-    screen.getByText("Nothing here yet.");
-
     await user.click(screen.getByRole("button", { name: "History" }));
     expect(fetchMonthData).not.toHaveBeenCalled();
     screen.getByRole("heading", { name: "History" });
-    expect(screen.getAllByText("Nothing here yet.")).toHaveLength(2);
+    screen.getByText("Nothing here yet.");
   });
 });
