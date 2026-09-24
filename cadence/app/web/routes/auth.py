@@ -703,7 +703,7 @@ async def create_guest(
     await enforce_auth_rate_limit(
         request,
         scope="guest",
-        identity="guest",
+        identity=None,
         limit=settings.auth_guest_rate_limit,
     )
     existing = await _existing_session_user(request, credentials, db)
