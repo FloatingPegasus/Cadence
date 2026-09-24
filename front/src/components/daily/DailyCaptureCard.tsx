@@ -68,6 +68,7 @@ export default function DailyCaptureCard({
   const [error, setError] = useState<string | null>(null);
   const saveChain = useRef(Promise.resolve());
   const lastNote = useRef("");
+  const lastCheckin = useRef<Checkin>({});
   const loadedDate = useRef<string | null>(null);
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function DailyCaptureCard({
         setNote(day.daily_note);
         setCheckin(values);
         lastNote.current = day.daily_note;
+        lastCheckin.current = values;
       })
       .catch((caught) => {
         if (cancelled) return;
@@ -136,6 +138,7 @@ export default function DailyCaptureCard({
         setAttachedContexts(updatedContexts);
         setSaved(true);
         lastNote.current = nextNote;
+        lastCheckin.current = nextCheckin;
         const hasSource =
           nextNote.trim().length > 0 ||
           Object.values(nextCheckin).some(
@@ -155,22 +158,22 @@ export default function DailyCaptureCard({
     return task;
   }
 
-  function setNumber(key: keyof Checkin, value: string) {
-    const next = {
-      ...checkin,
-      [key]: value === "" ? null : Number(value),
-    };
+  function setScale(key: keyof Checkin, value: number | null) {
+    const next = { ...checkin, [key]: value };
     setCheckin(next);
     void save(note, next);
   }
 
-  function setText(key: keyof Checkin, value: string) {
-    const next = {
-      ...checkin,
-      [key]: value === "" ? null : value,
-    };
-    setCheckin(next);
-    void save(note, next);
+  function editCheckin(key: keyof Checkin, value: string, numeric: boolean) {
+    setCheckin((current) => ({
+      ...current,
+      [key]: value === "" ? null : numeric ? Number(value) : value,
+    }));
+  }
+
+  function commitCheckin(key: keyof Checkin) {
+    if ((checkin[key] ?? null) === (lastCheckin.current[key] ?? null)) return;
+    void save();
   }
 
   function toggleContext(contextId: number) {
@@ -251,23 +254,16 @@ export default function DailyCaptureCard({
             <summary className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
               Check-in
             </summary>
-            <div className="mt-2 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
               {checkinFields.map(({ key, label, low, high }) => (
-                <label key={key} className="text-xs text-neutral-500">
-                  {label}
-                  <select
-                    value={checkin[key] ?? ""}
-                    onChange={(event) => setNumber(key, event.target.value)}
-                    className="cadence-field mt-1"
-                  >
-                    <option value="">Not set</option>
-                    <option value="1">1 · {low}</option>
-                    <option value="2">2</option>
-                    <option value="3">3 · Neutral</option>
-                    <option value="4">4</option>
-                    <option value="5">5 · {high}</option>
-                  </select>
-                </label>
+                <ScaleInput
+                  key={key}
+                  label={label}
+                  low={low}
+                  high={high}
+                  value={checkin[key] as number | null | undefined}
+                  onChange={(value) => setScale(key, value)}
+                />
               ))}
             </div>
           </details>
@@ -277,6 +273,15 @@ export default function DailyCaptureCard({
               Add more detail
             </summary>
             <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <ScaleInput
+                  label="Sleep quality"
+                  low="Poor"
+                  high="Restful"
+                  value={checkin.sleep_quality}
+                  onChange={(value) => setScale("sleep_quality", value)}
+                />
+              </div>
               <label className="text-xs text-neutral-500">
                 Sleep hours
                 <input
@@ -286,37 +291,9 @@ export default function DailyCaptureCard({
                   step="0.25"
                   value={checkin.sleep_hours ?? ""}
                   onChange={(event) =>
-                    setNumber("sleep_hours", event.target.value)
+                    editCheckin("sleep_hours", event.target.value, true)
                   }
-                  className="cadence-field mt-1"
-                />
-              </label>
-              <label className="text-xs text-neutral-500">
-                Sleep quality
-                <select
-                  value={checkin.sleep_quality ?? ""}
-                  onChange={(event) =>
-                    setNumber("sleep_quality", event.target.value)
-                  }
-                  className="cadence-field mt-1"
-                >
-                  <option value="">Not set</option>
-                  <option value="1">1 · Poor</option>
-                  <option value="2">2</option>
-                  <option value="3">3 · Neutral</option>
-                  <option value="4">4</option>
-                  <option value="5">5 · Restful</option>
-                </select>
-              </label>
-              <label className="text-xs text-neutral-500">
-                Emotional state
-                <input
-                  type="text"
-                  maxLength={100}
-                  value={checkin.emotional_state ?? ""}
-                  onChange={(event) =>
-                    setText("emotional_state", event.target.value)
-                  }
+                  onBlur={() => commitCheckin("sleep_hours")}
                   className="cadence-field mt-1"
                 />
               </label>
@@ -328,8 +305,22 @@ export default function DailyCaptureCard({
                   max="1440"
                   value={checkin.drift_minutes ?? ""}
                   onChange={(event) =>
-                    setNumber("drift_minutes", event.target.value)
+                    editCheckin("drift_minutes", event.target.value, true)
                   }
+                  onBlur={() => commitCheckin("drift_minutes")}
+                  className="cadence-field mt-1"
+                />
+              </label>
+              <label className="col-span-2 text-xs text-neutral-500">
+                Emotional state
+                <input
+                  type="text"
+                  maxLength={100}
+                  value={checkin.emotional_state ?? ""}
+                  onChange={(event) =>
+                    editCheckin("emotional_state", event.target.value, false)
+                  }
+                  onBlur={() => commitCheckin("emotional_state")}
                   className="cadence-field mt-1"
                 />
               </label>
@@ -337,7 +328,10 @@ export default function DailyCaptureCard({
                 Check-in note
                 <textarea
                   value={checkin.notes ?? ""}
-                  onChange={(event) => setText("notes", event.target.value)}
+                  onChange={(event) =>
+                    editCheckin("notes", event.target.value, false)
+                  }
+                  onBlur={() => commitCheckin("notes")}
                   className="cadence-field mt-1 min-h-20 resize-none"
                 />
               </label>
@@ -352,5 +346,52 @@ export default function DailyCaptureCard({
         </p>
       )}
     </section>
+  );
+}
+
+function ScaleInput({
+  label,
+  low,
+  high,
+  value,
+  onChange,
+}: {
+  label: string;
+  low: string;
+  high: string;
+  value: number | null | undefined;
+  onChange: (value: number | null) => void;
+}) {
+  return (
+    <fieldset className="w-fit">
+      <legend className="text-xs text-neutral-500">{label}</legend>
+      <div className="mt-1.5 flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((step) => (
+          <button
+            key={step}
+            type="button"
+            aria-pressed={value === step}
+            aria-label={
+              step === 1 ? `1, ${low}` : step === 5 ? `5, ${high}` : String(step)
+            }
+            onClick={() => onChange(value === step ? null : step)}
+            className={
+              value === step
+                ? "cadence-chip cadence-chip-icon cadence-chip-solid"
+                : "cadence-chip cadence-chip-icon"
+            }
+          >
+            {step}
+          </button>
+        ))}
+      </div>
+      <div
+        aria-hidden="true"
+        className="mt-1 flex justify-between text-[11px] text-neutral-600"
+      >
+        <span>{low}</span>
+        <span>{high}</span>
+      </div>
+    </fieldset>
   );
 }
