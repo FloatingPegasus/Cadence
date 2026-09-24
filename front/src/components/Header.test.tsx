@@ -44,6 +44,17 @@ describe("Header", () => {
     expect(screen.getByRole("button", { name: "Log in" })).toBeTruthy();
   });
 
+  it("closes the log in dialog from its close button", async () => {
+    const user = userEvent.setup();
+    const closeAuth = vi.fn();
+    vi.mocked(useAuth).mockReturnValue(
+      authStub({ user: null, authDialog: "login", closeAuth }),
+    );
+    renderHeader();
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(closeAuth).toHaveBeenCalledOnce();
+  });
+
   it("offers keep this for a guest", async () => {
     const user = userEvent.setup();
     const openClaim = vi.fn();

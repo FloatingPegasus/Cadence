@@ -221,6 +221,7 @@ export default function DailyCaptureCard({
               if (note === lastNote.current) return;
               void save();
             }}
+            placeholder="Write about today"
             className="cadence-lines min-h-24 w-full resize-none border-0 bg-transparent p-0 text-base text-neutral-100 outline-none placeholder:text-neutral-600"
           />
 
@@ -251,7 +252,7 @@ export default function DailyCaptureCard({
           )}
 
           <details className="cadence-fold">
-            <summary className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
+            <summary className="text-sm text-neutral-400 transition-colors duration-150 hover:text-neutral-200">
               Check-in
             </summary>
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
@@ -269,7 +270,7 @@ export default function DailyCaptureCard({
           </details>
 
           <details className="cadence-fold">
-            <summary className="text-sm text-neutral-500 transition-colors duration-150 hover:text-neutral-300">
+            <summary className="text-sm text-neutral-400 transition-colors duration-150 hover:text-neutral-200">
               Add more detail
             </summary>
             <div className="mt-3 grid grid-cols-2 gap-3">

@@ -103,8 +103,28 @@ function Header({ settingsOpen, onOpenSettings }: HeaderProps) {
             aria-modal="true"
             aria-labelledby={headingId}
             tabIndex={-1}
-            className="cadence-dialog w-full max-w-sm outline-none"
+            className="cadence-dialog relative w-full max-w-sm outline-none"
           >
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={closeAuth}
+              className="cadence-chip cadence-chip-icon cadence-chip-ghost absolute right-2 top-2 z-10"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                className="h-[0.9rem] w-[0.9rem]"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M4 4l8 8M12 4l-8 8"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
             <LoginPage
               headingId={headingId}
               intent={authDialog}

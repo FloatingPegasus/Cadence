@@ -68,7 +68,7 @@ export default function DailyPanel({
             onChanged={sourceChanged}
           />
         </div>
-        <div className="cadence-surface cadence-surface-quiet space-y-1">
+        <div className="cadence-surface cadence-surface-quiet">
           <CarryForwardCard date={date} onChanged={onChanged} />
           <DailySummaryCard
             date={date}
