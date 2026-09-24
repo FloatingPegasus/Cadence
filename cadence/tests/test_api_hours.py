@@ -149,7 +149,7 @@ class CadenceLogsAndGoalsApiTests(ApiTestCase):
             "/api/goals",
             headers=self.alpha_headers,
             json={
-                "kind": "ultimate",
+                "kind": "long_term",
                 "title": "Write every day",
                 "notes": "A page is enough",
             },
@@ -163,7 +163,7 @@ class CadenceLogsAndGoalsApiTests(ApiTestCase):
         )
 
         self.assertEqual(created.status_code, 201)
-        self.assertEqual(created.json()["kind"], "ultimate")
+        self.assertEqual(created.json()["kind"], "long_term")
         self.assertEqual(listed.json()[0]["title"], "Write every day")
         self.assertEqual(other.json(), [])
         self.assertEqual(invalid.status_code, 422)

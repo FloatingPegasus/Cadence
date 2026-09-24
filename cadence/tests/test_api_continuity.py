@@ -522,7 +522,7 @@ class CadenceContinuityApiTests(ApiTestCase):
         self.client.post(
             "/api/goals",
             headers=self.alpha_headers,
-            json={"kind": "ultimate", "title": "Stay consistent"},
+            json={"kind": "long_term", "title": "Stay consistent"},
         )
         self.client.post(
             "/api/tasks",

@@ -1,4 +1,13 @@
-from sqlalchemy import Boolean, CheckConstraint, Column, Integer, SmallInteger, String, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    Integer,
+    SmallInteger,
+    String,
+    Text,
+    text,
+)
 
 from ...extensions import Base
 
@@ -26,3 +35,4 @@ class User(Base):
     auto_close = Column(
         Boolean, nullable=False, default=True, server_default=text("true")
     )
+    about = Column(Text, nullable=False, default="", server_default=text("''"))

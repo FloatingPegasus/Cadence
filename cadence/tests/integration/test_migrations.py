@@ -173,6 +173,36 @@ class MigrationIntegrationTests(unittest.TestCase):
                 self.assertEqual(hours, [(9, "Deep work\nThen a walk")])
                 self.assertEqual(entries, [("Felt calm",)])
 
+    def test_goals_move_to_long_term_and_short_term(self) -> None:
+        with disposable_database() as database:
+            database.run_alembic("upgrade", "0007_day_settings")
+            url = database.url.set(drivername="postgresql").render_as_string(
+                hide_password=False
+            )
+            with psycopg.connect(url, autocommit=True) as db:
+                user_id = db.execute(
+                    "INSERT INTO users (username, email, hashed_password) "
+                    "VALUES ('goals', 'goals@example.com', 'x') RETURNING id"
+                ).fetchone()[0]
+                db.execute(
+                    "INSERT INTO user_goals (user_id, kind, title) VALUES "
+                    "(%s, 'ultimate', 'Big'), (%s, 'secondary', 'Small'), "
+                    "(%s, 'long_term', 'Kept')",
+                    (user_id, user_id, user_id),
+                )
+
+            database.run_alembic("upgrade", "head")
+            with psycopg.connect(url, autocommit=True) as db:
+                goals = db.execute(
+                    "SELECT title, kind FROM user_goals ORDER BY title"
+                ).fetchall()
+                about = db.execute("SELECT about FROM users").fetchone()[0]
+            self.assertEqual(
+                goals,
+                [("Big", "long_term"), ("Kept", "long_term"), ("Small", "short_term")],
+            )
+            self.assertEqual(about, "")
+
     def _assert_api_round_trip(self, engine, user_id: int) -> None:
         import cadence.app as app_module
 

@@ -11,10 +11,12 @@ from ...persistence.models.habit import Habit
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...persistence.models.task import Task
+from ...persistence.models.user import User
 from ...persistence.models.user_goal import UserGoal
 from ...persistence.models.weekly_reflection import WeeklyReflection
 
 LAYER_CAPS = {
+    "About them": 1_500,
     "Goals": 800,
     "Habits": 800,
     "Tasks": 1_200,
@@ -22,12 +24,7 @@ LAYER_CAPS = {
     "Today": 4_000,
 }
 
-GOAL_LABELS = {
-    "long_term": "Long term",
-    "short_term": "Short term",
-    "ultimate": "Long term",
-    "secondary": "Short term",
-}
+GOAL_LABELS = {"long_term": "Long term", "short_term": "Short term"}
 
 CHECKIN_LABELS = (
     ("energy_level", "Energy"),
@@ -205,7 +202,9 @@ async def build_context(
     log_text: str,
     exclude_id: int | None = None,
 ) -> str:
+    about = await db.scalar(select(User.about).where(User.id == user_id))
     layers = [
+        ("About them", (about or "").strip()),
         ("Goals", await _goals(db, user_id)),
         ("Habits", await _habits(db, user_id, target_date)),
         ("Tasks", await _tasks(db, user_id, target_date)),

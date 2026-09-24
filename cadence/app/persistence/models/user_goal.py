@@ -3,7 +3,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, func
 from ...extensions import Base
 
 
-GOAL_KINDS = ("ultimate", "secondary", "short_term", "long_term")
+GOAL_KINDS = ("long_term", "short_term")
 
 
 class UserGoal(Base):

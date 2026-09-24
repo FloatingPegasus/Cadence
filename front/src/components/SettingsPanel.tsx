@@ -1,12 +1,11 @@
 import type { ContinuityContext, Habit } from "../api";
 import { useAuth } from "../contexts/AuthContext";
+import AboutYou from "./AboutYou";
 import AIPrivacySettings from "./AIPrivacySettings";
 import ContextManager from "./ContextManager";
 import DataExportButton from "./DataExportButton";
 import DaySettings from "./DaySettings";
 import DevAIModels from "./DevAIModels";
-import GoalsSettings from "./GoalsSettings";
-import HabitManager from "./HabitManager";
 import LogoutButton from "./LogoutButton";
 
 interface SettingsPanelProps {
@@ -34,13 +33,8 @@ export default function SettingsPanel({
       </h1>
       <div className="space-y-5">
         <div className="cadence-surface">
-          <GoalsSettings />
+          <AboutYou habits={habits} onHabitsChanged={onHabitsChanged} />
         </div>
-        {habits.length > 0 ? (
-          <div className="cadence-surface">
-            <HabitManager habits={habits} onChanged={onHabitsChanged} />
-          </div>
-        ) : null}
         <div className="cadence-surface">
           <ContextManager contexts={contexts} onChanged={onContextsChanged} />
         </div>

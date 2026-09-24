@@ -1,10 +1,11 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...domains.companion.context import build_context
 from ...domains.data_portability import service
 from ...extensions import get_db
 from ...persistence.models.user import User
@@ -22,6 +23,10 @@ class AIPreferencesUpdate(BaseModel):
 class DaySettingsUpdate(BaseModel):
     day_ends_at: int = Field(ge=0, le=12)
     auto_close: bool
+
+
+class AboutUpdate(BaseModel):
+    about: str = Field(max_length=1_500)
 
 
 def _ai_preferences(user: User) -> dict:
@@ -72,6 +77,26 @@ async def update_day_settings(
     user.auto_close = body.auto_close
     await db.commit()
     return {"day_ends_at": user.day_ends_at, "auto_close": user.auto_close}
+
+
+@router.put("/account/about")
+async def update_about(
+    body: AboutUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    user.about = body.about.strip()
+    await db.commit()
+    return {"about": user.about}
+
+
+@router.get("/account/context")
+async def preview_context(
+    target_date: date = Query(alias="date"),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return {"text": await build_context(db, user.id, target_date, "")}
 
 
 @router.get("/account/export")

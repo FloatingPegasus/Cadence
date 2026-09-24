@@ -131,7 +131,7 @@ export interface TaskItem {
   completed_at: string | null;
 }
 
-export type GoalKind = "ultimate" | "secondary" | "short_term" | "long_term";
+export type GoalKind = "long_term" | "short_term";
 
 export interface UserGoal {
   id: number;
@@ -890,6 +890,17 @@ export function beginDay(date: string): Promise<{ closed: string[] }> {
   return request<{ closed: string[] }>(`/api/days/${date}/begin`, {
     method: "POST",
   });
+}
+
+export function updateAbout(about: string): Promise<{ about: string }> {
+  return request<{ about: string }>("/api/account/about", {
+    method: "PUT",
+    body: JSON.stringify({ about }),
+  });
+}
+
+export function fetchContextPreview(date: string): Promise<{ text: string }> {
+  return request<{ text: string }>(`/api/account/context?date=${date}`);
 }
 
 export function fetchAIPreferences(): Promise<AIPreferences> {

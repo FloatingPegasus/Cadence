@@ -10,17 +10,12 @@ import {
 import { GOAL_KIND_LABELS } from "../time";
 import { useAuth } from "../contexts/AuthContext";
 
-const kinds: GoalKind[] = [
-  "ultimate",
-  "secondary",
-  "long_term",
-  "short_term",
-];
+const kinds: GoalKind[] = ["long_term", "short_term"];
 
 export default function GoalsSettings() {
   const { user } = useAuth();
   const [goals, setGoals] = useState<UserGoal[]>([]);
-  const [kind, setKind] = useState<GoalKind>("ultimate");
+  const [kind, setKind] = useState<GoalKind>("long_term");
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,7 +65,7 @@ export default function GoalsSettings() {
   }
 
   return (
-    <details>
+    <details className="cadence-fold">
       <summary className="text-sm text-neutral-400 hover:text-neutral-200">
         Goals
       </summary>
