@@ -527,10 +527,10 @@ class EmbeddingProviderTests(unittest.TestCase):
                 "excerpt": "exact duplicate",
             },
             {
-                "source": "threads",
+                "source": "tasks",
                 "source_id": 9,
                 "date": "2026-08-01",
-                "title": "Follow-up",
+                "title": "Task",
                 "excerpt": "lexical",
                 "status": "open",
             },

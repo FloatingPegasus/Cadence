@@ -27,13 +27,7 @@ describe("ReentryCard", () => {
         source: "summary",
         excerpt: "The migration and interaction tests stabilized.",
       },
-      open_threads: [
-        {
-          id: 1,
-          origin_date: "2026-07-22",
-          content: "Finish the re-entry view",
-        },
-      ],
+      open_tasks: [{ id: 1, title: "Finish the re-entry view", due_date: null }],
       contexts: [
         {
           id: 1,
@@ -73,13 +67,7 @@ describe("ReentryCard", () => {
     vi.mocked(fetchDayReentry).mockResolvedValue({
       date: "2026-07-23",
       previous_trace: null,
-      open_threads: [
-        {
-          id: 1,
-          origin_date: "2026-07-23",
-          content: "Publish the release",
-        },
-      ],
+      open_tasks: [{ id: 1, title: "Publish the release", due_date: "2026-07-23" }],
       contexts: [],
     });
 
@@ -117,7 +105,7 @@ describe("ReentryCard", () => {
         title: "Ship the note",
         due_date: "2026-07-22",
       },
-      open_threads: [],
+      open_tasks: [],
       contexts: [],
     });
 
@@ -142,7 +130,7 @@ describe("ReentryCard", () => {
     vi.mocked(fetchDayReentry).mockResolvedValue({
       date: "2026-07-23",
       previous_trace: null,
-      open_threads: [],
+      open_tasks: [],
       contexts: [],
     });
 

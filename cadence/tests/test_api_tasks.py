@@ -1,7 +1,25 @@
 if __package__:
-    from .api_test_context import ApiTestCase
+    from .api_test_context import (
+        ApiTestCase,
+        AsyncMock,
+        ContinuityEmbedding,
+        asyncio,
+        patch,
+        select,
+        settings,
+    )
 else:
-    from api_test_context import ApiTestCase
+    from api_test_context import (
+        ApiTestCase,
+        AsyncMock,
+        ContinuityEmbedding,
+        asyncio,
+        patch,
+        select,
+        settings,
+    )
+
+VECTOR = [1.0] + [0.0] * 1023
 
 
 class CadenceTasksApiTests(ApiTestCase):
@@ -117,3 +135,41 @@ class CadenceTasksApiTests(ApiTestCase):
             json={"title": "   "},
         )
         self.assertEqual(response.status_code, 422)
+
+    def test_tasks_join_the_search_index(self) -> None:
+        settings.ai_enabled = True
+
+        async def task_rows():
+            async with self.session_factory() as db:
+                rows = await db.scalars(
+                    select(ContinuityEmbedding).where(
+                        ContinuityEmbedding.source_type == "tasks"
+                    )
+                )
+                return [(row.content, row.is_current) for row in rows]
+
+        with (
+            patch.object(settings, "embedding_enabled", True),
+            patch(
+                "cadence.app.services.embeddings.embed_text",
+                new=AsyncMock(return_value=VECTOR),
+            ),
+        ):
+            task_id = self.client.post(
+                "/api/tasks",
+                headers=self.alpha_headers,
+                json={"title": "Call the bank"},
+            ).json()["id"]
+            indexed = asyncio.run(task_rows())
+            self.client.patch(
+                f"/api/tasks/{task_id}",
+                headers=self.alpha_headers,
+                json={"title": "Call the bank about the card"},
+            )
+            renamed = asyncio.run(task_rows())
+            self.client.delete(f"/api/tasks/{task_id}", headers=self.alpha_headers)
+            removed = asyncio.run(task_rows())
+
+        self.assertEqual(indexed, [("Call the bank", True)])
+        self.assertEqual(renamed, [("Call the bank about the card", True)])
+        self.assertEqual(removed, [])

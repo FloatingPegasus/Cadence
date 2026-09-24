@@ -250,16 +250,16 @@ export default function MonthlyContinuity({
             </div>
           )}
 
-          {data.open_threads.length > 0 && (
+          {data.open_tasks.length > 0 && (
             <div className="mt-14">
-              <h3 className="text-sm text-neutral-400">Follow-ups</h3>
+              <h3 className="text-sm text-neutral-400">Open tasks</h3>
               <ul className="mt-5 space-y-4">
-                {data.open_threads.slice(0, 5).map((thread) => (
+                {data.open_tasks.slice(0, 5).map((task) => (
                   <li
-                    key={thread.id}
+                    key={task.id}
                     className="text-sm leading-6 text-neutral-500"
                   >
-                    {thread.content}
+                    {task.title}
                   </li>
                 ))}
               </ul>

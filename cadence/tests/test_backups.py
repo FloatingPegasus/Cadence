@@ -33,7 +33,6 @@ TABLE_LISTING = "\n".join(
     "\n123; 0 0 INDEX public ix_days_daily_note_trgm cadence"
     "\n123; 0 0 INDEX public ix_conversation_entries_content_trgm cadence"
     "\n123; 0 0 INDEX public ix_summary_artifacts_content_trgm cadence"
-    "\n123; 0 0 INDEX public ix_carry_forward_items_content_trgm cadence"
     "\n123; 0 0 INDEX public ix_weekly_reflections_content_trgm cadence"
 )
 

@@ -22,26 +22,16 @@ class CadenceContinuityApiTests(ApiTestCase):
             headers=self.alpha_headers,
             json={"habit_id": 1, "date": "2026-07-21", "value": "1"},
         )
-        self.client.post(
-            "/api/days/2026-07-18/carry-forward",
-            headers=self.alpha_headers,
-            json={"content": "Keep the database contract visible"},
-        )
+        self.task_created_on("2026-07-18", "Keep the database contract visible")
         for index in range(24):
-            self.client.post(
-                "/api/days/2026-07-19/carry-forward",
-                headers=self.alpha_headers,
-                json={"content": f"Bounded weekly thread {index}"},
-            )
+            self.task_created_on("2026-07-19", f"Bounded weekly task {index}")
         self.client.put(
             "/api/days/2026-07-22",
             headers=self.beta_headers,
             json={"daily_note": "Private beta trace"},
         )
-        self.client.post(
-            "/api/days/2026-07-19/carry-forward",
-            headers=self.beta_headers,
-            json={"content": "Private beta weekly thread"},
+        self.task_created_on(
+            "2026-07-19", "Private beta weekly task", headers=self.beta_headers
         )
 
         response = self.client.get(
@@ -57,10 +47,13 @@ class CadenceContinuityApiTests(ApiTestCase):
         self.assertEqual(payload["totals"]["active_days"], 1)
         self.assertEqual(payload["totals"]["closed_days"], 1)
         self.assertEqual(payload["totals"]["habit_completions"], 1)
-        self.assertEqual(len(payload["open_threads"]), 20)
+        self.assertEqual(len(payload["open_tasks"]), 20)
+        self.assertEqual(
+            payload["open_tasks"][0]["title"], "Keep the database contract visible"
+        )
         serialized = str(payload)
         self.assertNotIn("Private beta trace", serialized)
-        self.assertNotIn("Private beta weekly thread", serialized)
+        self.assertNotIn("Private beta weekly task", serialized)
 
     def test_weekly_reflection_is_canonical_editable_and_source_traceable(
         self,
@@ -214,20 +207,14 @@ class CadenceContinuityApiTests(ApiTestCase):
             headers=self.alpha_headers,
             json={"content": "The opening week crossed into July."},
         )
-        self.client.post(
-            "/api/days/2026-06-30/carry-forward",
-            headers=self.alpha_headers,
-            json={"content": "Alpha thread visible in July"},
-        )
+        self.task_created_on("2026-06-30", "Alpha task visible in July")
         self.client.put(
             "/api/days/2026-07-10",
             headers=self.beta_headers,
             json={"daily_note": "Private beta monthly trace"},
         )
-        self.client.post(
-            "/api/days/2026-06-30/carry-forward",
-            headers=self.beta_headers,
-            json={"content": "Private beta monthly thread"},
+        self.task_created_on(
+            "2026-06-30", "Private beta monthly task", headers=self.beta_headers
         )
 
         response = self.client.get(
@@ -252,6 +239,10 @@ class CadenceContinuityApiTests(ApiTestCase):
         self.assertEqual(
             month["weekly_reflections"][0]["week_start"],
             "2026-06-29",
+        )
+        self.assertEqual(
+            [task["title"] for task in month["open_tasks"]],
+            ["Alpha task visible in July"],
         )
         self.assertNotIn("Private beta", str(month))
 
@@ -325,11 +316,8 @@ class CadenceContinuityApiTests(ApiTestCase):
             headers=self.alpha_headers,
             json={"context_ids": [project["id"]]},
         )
-        self.client.post(
-            "/api/days/2026-06-28/carry-forward",
-            headers=self.alpha_headers,
-            json={"content": "Resume the context-month contract"},
-        )
+        self.task_created_on("2026-06-28", "Resume the context-month contract")
+        self.task_created_on("2026-06-29", "Made on a day outside the area")
         self.client.put(
             "/api/days/2026-07-05",
             headers=self.alpha_headers,
@@ -390,8 +378,8 @@ class CadenceContinuityApiTests(ApiTestCase):
             "2026-06-28",
         )
         self.assertEqual(
-            context_month["open_threads"][0]["content"],
-            "Resume the context-month contract",
+            [task["title"] for task in context_month["open_tasks"]],
+            ["Resume the context-month contract"],
         )
         self.assertEqual(forbidden.status_code, 404)
 
@@ -504,11 +492,6 @@ class CadenceContinuityApiTests(ApiTestCase):
             headers=self.alpha_headers,
             json={"content": "Portable manual summary"},
         )
-        self.client.post(
-            "/api/days/2026-07-24/carry-forward",
-            headers=self.alpha_headers,
-            json={"content": "Portable open thread"},
-        )
         self.client.put(
             "/api/continuity/weeks/2026-07-24/reflection",
             headers=self.alpha_headers,
@@ -548,7 +531,7 @@ class CadenceContinuityApiTests(ApiTestCase):
         exported = response.json()
         resources = exported["resources"]
         self.assertEqual(exported["format"], "cadence-export")
-        self.assertEqual(exported["schema_version"], 5)
+        self.assertEqual(exported["schema_version"], 6)
         self.assertEqual(exported["account"]["username"], "alpha")
         self.assertEqual(
             [habit["name"] for habit in resources["habits"]],
@@ -588,11 +571,7 @@ class CadenceContinuityApiTests(ApiTestCase):
             headers=self.alpha_headers,
             json={"content": "Continuity retrieval is now source traceable"},
         )
-        self.client.post(
-            "/api/days/2026-07-21/carry-forward",
-            headers=self.alpha_headers,
-            json={"content": "Review continuity search limits"},
-        )
+        self.task_created_on("2026-07-21", "Review continuity search limits")
         self.client.put(
             "/api/days/2026-07-22",
             headers=self.beta_headers,
@@ -614,7 +593,14 @@ class CadenceContinuityApiTests(ApiTestCase):
         payload = response.json()
         self.assertEqual(
             {result["source"] for result in payload["results"]},
-            {"notes", "conversation", "summaries", "threads"},
+            {"notes", "conversation", "summaries", "tasks"},
+        )
+        task = next(
+            result for result in payload["results"] if result["source"] == "tasks"
+        )
+        self.assertEqual(
+            (task["title"], task["date"], task["status"]),
+            ("Task", "2026-07-21", "open"),
         )
         self.assertNotIn("Private continuity result", str(payload))
 
@@ -785,11 +771,8 @@ class CadenceContinuityApiTests(ApiTestCase):
             headers=self.alpha_headers,
             json={"context_ids": [project["id"]]},
         )
-        self.client.post(
-            "/api/days/2026-07-21/carry-forward",
-            headers=self.alpha_headers,
-            json={"content": "Finish the context reentry view"},
-        )
+        self.task_created_on("2026-07-21", "Finish the context reentry view")
+        self.task_created_on("2026-07-22", "Index the reentry notes")
 
         self.client.put(
             "/api/days/2026-07-22",
@@ -812,8 +795,8 @@ class CadenceContinuityApiTests(ApiTestCase):
             ["2026-07-21"],
         )
         self.assertEqual(
-            hub.json()["open_threads"][0]["content"],
-            "Finish the context reentry view",
+            [task["title"] for task in hub.json()["open_tasks"]],
+            ["Finish the context reentry view"],
         )
         self.assertNotIn("database indexing", str(hub.json()))
 
@@ -890,20 +873,14 @@ class CadenceContinuityApiTests(ApiTestCase):
         )
 
         for day_number in range(19, 23):
-            self.client.post(
-                f"/api/days/2026-07-{day_number}/carry-forward",
-                headers=self.alpha_headers,
-                json={"content": f"Alpha thread {day_number}"},
-            )
+            self.task_created_on(f"2026-07-{day_number}", f"Alpha task {day_number}")
         self.client.put(
             "/api/days/2026-07-22",
             headers=self.beta_headers,
             json={"daily_note": "Private beta trace"},
         )
-        self.client.post(
-            "/api/days/2026-07-22/carry-forward",
-            headers=self.beta_headers,
-            json={"content": "Private beta thread"},
+        self.task_created_on(
+            "2026-07-22", "Private beta task", headers=self.beta_headers
         )
 
         response = self.client.get(
@@ -915,12 +892,11 @@ class CadenceContinuityApiTests(ApiTestCase):
         reentry = response.json()
         self.assertEqual(reentry["previous_trace"]["date"], "2026-07-21")
         self.assertEqual(reentry["previous_trace"]["source"], "note")
-        self.assertEqual(len(reentry["open_threads"]), 3)
         self.assertEqual(
-            [item["content"] for item in reentry["open_threads"]],
-            ["Alpha thread 22", "Alpha thread 21", "Alpha thread 20"],
+            [item["title"] for item in reentry["open_tasks"]],
+            ["Alpha task 22", "Alpha task 21", "Alpha task 20"],
         )
-        self.assertNotIn("Private beta thread", str(reentry))
+        self.assertNotIn("Private beta task", str(reentry))
         self.assertEqual(reentry["contexts"][0]["name"], "Cadence")
         self.assertEqual(
             reentry["contexts"][0]["last_activity"]["date"],

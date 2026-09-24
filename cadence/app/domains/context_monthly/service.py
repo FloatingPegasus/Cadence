@@ -4,7 +4,6 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...persistence.models.carry_forward_item import CarryForwardItem
 from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.continuity_context import ContinuityContext
 from ...persistence.models.daily_checkin import DailyCheckin
@@ -12,6 +11,7 @@ from ...persistence.models.day import Day
 from ...persistence.models.day_context import DayContext
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
+from ..tasks import service as tasks_service
 
 
 class ContextMonthNotFoundError(LookupError):
@@ -114,18 +114,8 @@ async def get_context_month(
     )
     prior_row = prior_result.one_or_none()
 
-    thread_result = await db.execute(
-        select(CarryForwardItem, Day.date)
-        .join(Day, Day.id == CarryForwardItem.origin_day_id)
-        .join(DayContext, DayContext.day_id == Day.id)
-        .where(
-            Day.user_id == user_id,
-            DayContext.context_id == context_id,
-            Day.date <= month_end,
-            CarryForwardItem.status == "open",
-        )
-        .order_by(Day.date.desc(), CarryForwardItem.created_at.desc())
-        .limit(20)
+    open_tasks = await tasks_service.open_tasks(
+        db, user_id, month_end, context_id=context_id
     )
 
     days = []
@@ -215,12 +205,5 @@ async def get_context_month(
         "previous_activity": previous_activity,
         "weeks": list(weeks.values()),
         "days": days,
-        "open_threads": [
-            {
-                "id": item.id,
-                "origin_date": origin_date.isoformat(),
-                "content": item.content,
-            }
-            for item, origin_date in thread_result.all()
-        ],
+        "open_tasks": open_tasks,
     }

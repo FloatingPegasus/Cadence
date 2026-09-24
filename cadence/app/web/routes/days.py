@@ -9,7 +9,6 @@ from ...domains.companion import service as companion_service
 from ...domains.days import service as days_service
 from ...domains.habits import service as habits_service
 from ...domains.summaries import service as summaries_service
-from ...domains.carry_forward import service as carry_forward_service
 from ...domains.continuity import service as continuity_service
 from ...config import settings
 from ...services import ai as ai_service
@@ -64,13 +63,6 @@ class SummaryGenerate(BaseModel):
 class DayStatusUpdate(BaseModel):
     status: Literal["open", "closed"]
 
-
-class CarryForwardCreate(BaseModel):
-    content: str = Field(min_length=1, max_length=2_000)
-
-
-class CarryForwardStatusUpdate(BaseModel):
-    status: Literal["open", "completed", "released"]
 
 @router.get("/days")
 async def list_recent_days(
@@ -307,49 +299,4 @@ async def generate_summary(
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="AI provider is temporarily unavailable.",
-        )
-
-
-@router.get("/days/{target_date}/carry-forward")
-async def list_carry_forward(
-    target_date: date,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    return await carry_forward_service.list_for_day(
-        db, user.id, target_date
-    )
-
-
-@router.post(
-    "/days/{target_date}/carry-forward",
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_carry_forward(
-    target_date: date,
-    body: CarryForwardCreate,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    return await carry_forward_service.create_item(
-        db, user.id, target_date, body.content
-    )
-
-
-@router.patch("/days/{target_date}/carry-forward/{item_id}")
-async def update_carry_forward(
-    target_date: date,
-    item_id: int,
-    body: CarryForwardStatusUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    try:
-        return await carry_forward_service.update_status(
-            db, user.id, item_id, body.status
-        )
-    except carry_forward_service.CarryForwardNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Carry-forward item not found",
         )

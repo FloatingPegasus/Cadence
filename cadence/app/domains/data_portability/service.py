@@ -4,7 +4,6 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...persistence.models.carry_forward_item import CarryForwardItem
 from ...persistence.models.continuity_context import ContinuityContext
 from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.daily_checkin import DailyCheckin
@@ -19,7 +18,7 @@ from ...persistence.models.user_goal import UserGoal
 from ...persistence.models.task import Task
 
 EXPORT_FORMAT = "cadence-export"
-EXPORT_SCHEMA_VERSION = 5
+EXPORT_SCHEMA_VERSION = 6
 
 
 def _serialize(value: Any) -> Any:
@@ -99,7 +98,6 @@ async def export_user_data(
     checkins: list[DailyCheckin] = []
     conversations: list[ConversationEntry] = []
     summaries: list[SummaryArtifact] = []
-    carry_forward_items: list[CarryForwardItem] = []
     day_contexts: list[DayContext] = []
     if day_ids:
         checkins = list(
@@ -130,18 +128,6 @@ async def export_user_data(
                     select(SummaryArtifact)
                     .where(SummaryArtifact.day_id.in_(day_ids))
                     .order_by(SummaryArtifact.day_id, SummaryArtifact.kind)
-                )
-            ).all()
-        )
-        carry_forward_items = list(
-            (
-                await db.scalars(
-                    select(CarryForwardItem)
-                    .where(CarryForwardItem.origin_day_id.in_(day_ids))
-                    .order_by(
-                        CarryForwardItem.origin_day_id,
-                        CarryForwardItem.id,
-                    )
                 )
             ).all()
         )
@@ -262,20 +248,6 @@ async def export_user_data(
                     ),
                 )
                 for summary in summaries
-            ],
-            "carry_forward_items": [
-                _record(
-                    item,
-                    (
-                        "id",
-                        "origin_day_id",
-                        "content",
-                        "status",
-                        "created_at",
-                        "resolved_at",
-                    ),
-                )
-                for item in carry_forward_items
             ],
             "weekly_reflections": [
                 _record(

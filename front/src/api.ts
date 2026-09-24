@@ -221,13 +221,10 @@ export interface DailySummary {
   updated_at: string;
 }
 
-export interface CarryForwardItem {
+export interface OpenTask {
   id: number;
-  origin_date: string;
-  content: string;
-  status: "open" | "completed" | "released";
-  created_at: string;
-  resolved_at: string | null;
+  title: string;
+  due_date: string | null;
 }
 
 export interface WeeklyContinuityDay {
@@ -255,11 +252,7 @@ export interface WeeklyContinuity {
     habit_completions: number;
   };
   days: WeeklyContinuityDay[];
-  open_threads: Array<{
-    id: number;
-    origin_date: string;
-    content: string;
-  }>;
+  open_tasks: OpenTask[];
 }
 
 export interface WeeklyReflection {
@@ -329,11 +322,7 @@ export interface MonthlyContinuity {
     last_date: string;
     last_trace_preview: string;
   }>;
-  open_threads: Array<{
-    id: number;
-    origin_date: string;
-    content: string;
-  }>;
+  open_tasks: OpenTask[];
 }
 
 export interface DisciplineMonthlyContinuity {
@@ -447,11 +436,7 @@ export interface ContextMonthlyContinuity {
     habit_completions: number;
     conversation_entries: number;
   }>;
-  open_threads: Array<{
-    id: number;
-    origin_date: string;
-    content: string;
-  }>;
+  open_tasks: OpenTask[];
 }
 
 export type ContinuitySearchSource =
@@ -459,7 +444,7 @@ export type ContinuitySearchSource =
   | "notes"
   | "conversation"
   | "summaries"
-  | "threads"
+  | "tasks"
   | "weekly_reflections";
 
 export interface ContinuitySearchResult {
@@ -491,11 +476,7 @@ export interface ContextContinuity {
     focus_quality: number | null;
     habit_completions: number;
   }>;
-  open_threads: Array<{
-    id: number;
-    origin_date: string;
-    content: string;
-  }>;
+  open_tasks: OpenTask[];
 }
 
 export interface DailyReentry {
@@ -515,11 +496,7 @@ export interface DailyReentry {
     title: string;
     due_date: string;
   } | null;
-  open_threads: Array<{
-    id: number;
-    origin_date: string;
-    content: string;
-  }>;
+  open_tasks: OpenTask[];
   contexts: Array<{
     id: number;
     name: string;
@@ -815,34 +792,6 @@ export function generateSummary(
     method: "POST",
     body: JSON.stringify({ replace_edited: replaceEdited }),
   });
-}
-
-export function fetchCarryForward(date: string): Promise<CarryForwardItem[]> {
-  return request<CarryForwardItem[]>(`/api/days/${date}/carry-forward`);
-}
-
-export function createCarryForward(
-  date: string,
-  content: string,
-): Promise<CarryForwardItem> {
-  return request<CarryForwardItem>(`/api/days/${date}/carry-forward`, {
-    method: "POST",
-    body: JSON.stringify({ content }),
-  });
-}
-
-export function updateCarryForwardStatus(
-  date: string,
-  itemId: number,
-  status: CarryForwardItem["status"],
-): Promise<CarryForwardItem> {
-  return request<CarryForwardItem>(
-    `/api/days/${date}/carry-forward/${itemId}`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ status }),
-    },
-  );
 }
 
 export function fetchWeeklyContinuity(

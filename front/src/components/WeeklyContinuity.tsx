@@ -176,13 +176,13 @@ export default function WeeklyContinuity({
         )}
       </div>
 
-      {week.open_threads.length > 0 && (
+      {week.open_tasks.length > 0 && (
         <div className="mt-14">
-          <h3 className="text-sm text-neutral-400">Follow-ups</h3>
+          <h3 className="text-sm text-neutral-400">Open tasks</h3>
           <ul className="mt-5 space-y-4">
-            {week.open_threads.map((thread) => (
-              <li key={thread.id} className="text-sm leading-6 text-neutral-500">
-                {thread.content}
+            {week.open_tasks.map((task) => (
+              <li key={task.id} className="text-sm leading-6 text-neutral-500">
+                {task.title}
               </li>
             ))}
           </ul>

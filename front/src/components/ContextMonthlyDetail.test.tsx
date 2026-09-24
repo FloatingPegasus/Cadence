@@ -57,7 +57,7 @@ describe("ContextMonthlyDetail", () => {
           conversation_entries: 1,
         },
       ],
-      open_threads: [],
+      open_tasks: [],
     });
 
     render(

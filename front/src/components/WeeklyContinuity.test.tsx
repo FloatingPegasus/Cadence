@@ -36,7 +36,7 @@ function week(weekStart: string, weekEnd: string): WeeklyContinuityData {
       habit_completions: 0,
     },
     days: [],
-    open_threads: [],
+    open_tasks: [],
   };
 }
 

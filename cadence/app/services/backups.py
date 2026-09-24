@@ -20,7 +20,6 @@ REQUIRED_TABLES = {
     "conversation_entries",
     "daily_checkins",
     "habit_logs",
-    "carry_forward_items",
     "contexts",
     "day_contexts",
     "ai_models",
@@ -34,7 +33,6 @@ REQUIRED_INDEXES = {
     "ix_days_daily_note_trgm",
     "ix_conversation_entries_content_trgm",
     "ix_summary_artifacts_content_trgm",
-    "ix_carry_forward_items_content_trgm",
     "ix_weekly_reflections_content_trgm",
 }
 

@@ -153,7 +153,7 @@ async def search(
         "notes",
         "conversation",
         "summaries",
-        "threads",
+        "tasks",
         "weekly_reflections",
     ] = "all",
     start_date: date | None = None,

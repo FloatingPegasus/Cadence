@@ -1,1 +1,0 @@
-"""Carry-forward continuity threads."""

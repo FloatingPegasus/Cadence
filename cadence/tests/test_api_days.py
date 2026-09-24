@@ -91,15 +91,10 @@ class CadenceDaysApiTests(ApiTestCase):
             json={"content": "Closure remained optional and calm."},
         )
         for index in range(6):
-            self.client.post(
-                f"/api/days/2026-07-{18 + index}/carry-forward",
-                headers=self.alpha_headers,
-                json={"content": f"Alpha open thread {index}"},
-            )
-        self.client.post(
-            "/api/days/2026-07-23/carry-forward",
-            headers=self.beta_headers,
-            json={"content": "Private beta thread"},
+            self.task_created_on(f"2026-07-{18 + index}", f"Alpha open task {index}")
+        self.task_created_on("2026-07-24", "Created after this day")
+        self.task_created_on(
+            "2026-07-23", "Private beta task", headers=self.beta_headers
         )
 
         response = self.client.get(
@@ -115,55 +110,11 @@ class CadenceDaysApiTests(ApiTestCase):
         self.assertEqual(preview["capture"]["completed_habits"], 1)
         self.assertEqual(preview["capture"]["checkin_fields"], 2)
         self.assertTrue(preview["summary"]["exists"])
-        self.assertEqual(preview["open_thread_count"], 6)
-        self.assertEqual(len(preview["open_threads"]), 5)
-        self.assertNotIn("Private beta thread", str(preview))
-
-    def test_carry_forward_inherits_until_completed_and_is_user_scoped(self) -> None:
-        created = self.client.post(
-            "/api/days/2026-07-23/carry-forward",
-            headers=self.alpha_headers,
-            json={"content": "Continue the security review"},
-        )
-        self.assertEqual(created.status_code, 201)
-        item_id = created.json()["id"]
-
-        inherited = self.client.get(
-            "/api/days/2026-07-24/carry-forward",
-            headers=self.alpha_headers,
-        )
-        self.assertEqual(
-            [item["content"] for item in inherited.json()],
-            ["Continue the security review"],
-        )
-        self.assertEqual(inherited.json()[0]["origin_date"], "2026-07-23")
-
-        private_to_alpha = self.client.get(
-            "/api/days/2026-07-24/carry-forward",
-            headers=self.beta_headers,
-        )
-        self.assertEqual(private_to_alpha.json(), [])
-
-        forbidden = self.client.patch(
-            f"/api/days/2026-07-24/carry-forward/{item_id}",
-            headers=self.beta_headers,
-            json={"status": "completed"},
-        )
-        self.assertEqual(forbidden.status_code, 404)
-
-        completed = self.client.patch(
-            f"/api/days/2026-07-24/carry-forward/{item_id}",
-            headers=self.alpha_headers,
-            json={"status": "completed"},
-        )
-        self.assertEqual(completed.status_code, 200)
-        self.assertEqual(completed.json()["status"], "completed")
-
-        later_day = self.client.get(
-            "/api/days/2026-07-25/carry-forward",
-            headers=self.alpha_headers,
-        )
-        self.assertEqual(later_day.json(), [])
+        self.assertEqual(preview["open_task_count"], 6)
+        self.assertEqual(len(preview["open_tasks"]), 5)
+        self.assertEqual(preview["open_tasks"][0]["title"], "Alpha open task 5")
+        self.assertNotIn("Created after this day", str(preview))
+        self.assertNotIn("Private beta task", str(preview))
 
     def test_user_cannot_toggle_another_users_habit(self) -> None:
         response = self.client.post(
@@ -434,7 +385,6 @@ class CadenceDaysApiTests(ApiTestCase):
             "/api/days/2026-07-25/checkin",
             "/api/days/2026-07-25/logs",
             "/api/days/2026-07-25/summary",
-            "/api/days/2026-07-25/carry-forward",
         ]
 
         def load(path: str):
@@ -449,7 +399,7 @@ class CadenceDaysApiTests(ApiTestCase):
         )
         for path, response in zip(paths, responses):
             payload = response.json()
-            if path.endswith(("/habits", "/logs", "/carry-forward")):
+            if path.endswith(("/habits", "/logs")):
                 self.assertIsInstance(payload, list, path)
             elif path.endswith("/summary"):
                 self.assertTrue(payload is None or isinstance(payload, dict), path)
@@ -463,8 +413,8 @@ class CadenceDaysApiTests(ApiTestCase):
                         "status",
                         "capture",
                         "summary",
-                        "open_thread_count",
-                        "open_threads",
+                        "open_task_count",
+                        "open_tasks",
                     },
                 )
             elif path.endswith("/context"):
@@ -477,7 +427,7 @@ class CadenceDaysApiTests(ApiTestCase):
                         "previous_trace",
                         "last_hour",
                         "carried_task",
-                        "open_threads",
+                        "open_tasks",
                         "contexts",
                     },
                 )

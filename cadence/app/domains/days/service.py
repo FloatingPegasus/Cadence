@@ -7,11 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...persistence.models.day import Day
 from ...persistence.models.daily_checkin import DailyCheckin
 from ...persistence.models.conversation_entry import ConversationEntry
-from ...persistence.models.carry_forward_item import CarryForwardItem
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...persistence.models.day_context import DayContext
 from ...services import embeddings as embedding_service
+from ..tasks import service as tasks_service
 from ...services.continuity_lock import acquire_continuity_lock
 
 
@@ -100,11 +100,6 @@ def _day_has_content():
                 SummaryArtifact.day_id == Day.id,
                 SummaryArtifact.kind == "daily",
                 func.length(func.trim(SummaryArtifact.content)) > 0,
-            )
-        ),
-        exists(
-            select(CarryForwardItem.id).where(
-                CarryForwardItem.origin_day_id == Day.id
             )
         ),
         exists(select(DayContext.day_id).where(DayContext.day_id == Day.id)),
@@ -205,6 +200,8 @@ async def get_closure_preview(
     day = await db.scalar(
         select(Day).where(Day.user_id == user_id, Day.date == day_date)
     )
+    open_task_count = await tasks_service.count_open_tasks(db, user_id, day_date)
+    open_tasks = await tasks_service.open_tasks(db, user_id, day_date, limit=5)
     if day is None:
         return {
             "date": day_date.isoformat(),
@@ -220,8 +217,8 @@ async def get_closure_preview(
                 "excerpt": "",
                 "is_user_edited": False,
             },
-            "open_thread_count": 0,
-            "open_threads": [],
+            "open_task_count": open_task_count,
+            "open_tasks": open_tasks,
         }
     counts_result = await db.execute(
         select(
@@ -268,23 +265,6 @@ async def get_closure_preview(
         else 0
     )
 
-    thread_result = await db.execute(
-        select(
-            CarryForwardItem,
-            Day.date,
-            func.count().over().label("total_count"),
-        )
-        .join(Day, Day.id == CarryForwardItem.origin_day_id)
-        .where(
-            Day.user_id == user_id,
-            Day.date <= day.date,
-            CarryForwardItem.status == "open",
-        )
-        .order_by(Day.date.desc(), CarryForwardItem.created_at.desc())
-        .limit(5)
-    )
-    thread_rows = thread_result.all()
-
     return {
         "date": day.date.isoformat(),
         "status": day.status,
@@ -307,17 +287,8 @@ async def get_closure_preview(
                 "is_user_edited": False,
             }
         ),
-        "open_thread_count": (
-            thread_rows[0].total_count if thread_rows else 0
-        ),
-        "open_threads": [
-            {
-                "id": item.id,
-                "origin_date": origin_date.isoformat(),
-                "content": item.content,
-            }
-            for item, origin_date, _ in thread_rows
-        ],
+        "open_task_count": open_task_count,
+        "open_tasks": open_tasks,
     }
 
 

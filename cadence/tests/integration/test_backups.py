@@ -104,7 +104,6 @@ class BackupIntegrationTests(unittest.TestCase):
                         "ix_continuity_embeddings_embedding_hnsw",
                         "ix_days_daily_note_trgm",
                         "ix_conversation_entries_content_trgm",
-                        "ix_carry_forward_items_content_trgm",
                         "ix_summary_artifacts_content_trgm",
                         "ix_weekly_reflections_content_trgm",
                     }.issubset(indexes)
@@ -154,7 +153,6 @@ class BackupIntegrationTests(unittest.TestCase):
                 ),
                 "ix_days_daily_note_trgm": "days",
                 "ix_conversation_entries_content_trgm": "conversation_entries",
-                "ix_carry_forward_items_content_trgm": "carry_forward_items",
                 "ix_summary_artifacts_content_trgm": "summary_artifacts",
                 "ix_weekly_reflections_content_trgm": "weekly_reflections",
             }

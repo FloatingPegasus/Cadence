@@ -143,6 +143,12 @@ class PostgresTestCase(unittest.TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         ensure_migrated_schema()
+        test_database = _database_identity(make_url(validated_test_database_url()))
+        if _database_identity(make_url(settings.database_url)) != test_database:
+            raise RuntimeError(
+                "Settings point away from CADENCE_TEST_DATABASE_URL; import the "
+                "test bootstrap before any cadence.app module"
+            )
         cls.engine = create_async_engine(
             settings.database_url,
             poolclass=NullPool,

@@ -6,7 +6,6 @@ from .conversation_entry import ConversationEntry
 from .user import User
 from .ai_model import AIModel
 from .summary_artifact import SummaryArtifact
-from .carry_forward_item import CarryForwardItem
 from .continuity_context import ContinuityContext
 from .day_context import DayContext
 from .weekly_reflection import WeeklyReflection
@@ -27,7 +26,6 @@ __all__ = [
     "User",
     "AIModel",
     "SummaryArtifact",
-    "CarryForwardItem",
     "ContinuityContext",
     "DayContext",
     "WeeklyReflection",
