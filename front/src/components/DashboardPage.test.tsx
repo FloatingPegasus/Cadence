@@ -30,8 +30,16 @@ vi.mock("./Header", () => ({
     </button>
   ),
 }));
-vi.mock("./DailyPanel", () => ({ default: () => <div>Daily workspace</div> }));
-vi.mock("./RecentDays", () => ({ default: () => <div>Recent days</div> }));
+vi.mock("./DailyPanel", () => ({
+  default: ({ onStartFocus }: { onStartFocus: () => void }) => (
+    <div>
+      Daily workspace
+      <button type="button" onClick={onStartFocus}>
+        Start focus
+      </button>
+    </div>
+  ),
+}));
 vi.mock("./HabitGrid", () => ({ default: () => <div>Habit calendar</div> }));
 vi.mock("./MonthNav", () => ({ default: () => <div>Month navigation</div> }));
 vi.mock("./DisciplineContinuity", () => ({ default: () => <div>Discipline detail</div> }));
@@ -46,7 +54,11 @@ vi.mock("./ContinuityExplorer", () => ({
 vi.mock("./SettingsPanel", () => ({ default: () => <div>Settings workspace</div> }));
 vi.mock("./HoursPage", () => ({ default: () => <div>Hours workspace</div> }));
 vi.mock("./TasksPage", () => ({ default: () => <div>Tasks workspace</div> }));
-vi.mock("./FocusPage", () => ({ default: () => <div>Focus workspace</div> }));
+vi.mock("./FocusPage", () => ({
+  default: ({ startSignal }: { startSignal: number }) => (
+    <div>Focus workspace {startSignal}</div>
+  ),
+}));
 
 describe("DashboardPage progressive disclosure", () => {
   it("loads one workspace at a time and defers calendar data", async () => {
@@ -112,12 +124,31 @@ describe("DashboardPage progressive disclosure", () => {
 
     await user.click(screen.getByRole("button", { name: "Focus" }));
     expect(
-      screen.getByText("Focus workspace").closest("[hidden]"),
+      screen.getByText("Focus workspace 0").closest("[hidden]"),
     ).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "History" }));
     expect(fetchMonthData).not.toHaveBeenCalled();
     screen.getByRole("heading", { name: "History" });
     screen.getByText("Nothing here yet.");
+  });
+
+  it("titles Home with the date and starts focus from it", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useAuth).mockReturnValue(authStub({ user: null }));
+
+    render(<DashboardPage />);
+    const title = new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+    screen.getByRole("heading", { name: title });
+    expect(screen.queryByRole("button", { name: "Back to today" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Start focus" }));
+    expect(
+      screen.getByText("Focus workspace 1").closest("[hidden]"),
+    ).toBeNull();
   });
 });

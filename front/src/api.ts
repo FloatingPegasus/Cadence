@@ -185,15 +185,6 @@ export interface LogEntry {
   created_at: string;
 }
 
-export interface RecentDay {
-  id: number;
-  date: string;
-  status: string;
-  note_preview: string;
-  energy_level: number | null;
-  focus_quality: number | null;
-}
-
 export interface AIModelRecord {
   id: number;
   provider: string;
@@ -541,28 +532,6 @@ export interface DailyReentry {
   }>;
 }
 
-export interface DayClosurePreview {
-  date: string;
-  status: "open" | "closed";
-  capture: {
-    has_daily_note: boolean;
-    conversation_entries: number;
-    completed_habits: number;
-    checkin_fields: number;
-  };
-  summary: {
-    exists: boolean;
-    excerpt: string;
-    is_user_edited: boolean;
-  };
-  open_thread_count: number;
-  open_threads: Array<{
-    id: number;
-    origin_date: string;
-    content: string;
-  }>;
-}
-
 export async function fetchHabits(): Promise<Habit[]> {
   return request<Habit[]>("/api/habits");
 }
@@ -757,16 +726,6 @@ export function deleteGoal(goalId: number): Promise<void> {
 
 export function fetchDayReentry(date: string): Promise<DailyReentry> {
   return request<DailyReentry>(`/api/days/${date}/reentry`);
-}
-
-export function fetchClosurePreview(
-  date: string,
-): Promise<DayClosurePreview> {
-  return request<DayClosurePreview>(`/api/days/${date}/closure`);
-}
-
-export function fetchRecentDays(limit = 7): Promise<RecentDay[]> {
-  return request<RecentDay[]>(`/api/days?limit=${limit}`);
 }
 
 export function updateDay(date: string, dailyNote: string): Promise<DayDetail> {

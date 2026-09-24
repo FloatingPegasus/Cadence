@@ -10,7 +10,7 @@ import PomodoroTimer from "../focus/PomodoroTimer";
 import { useStudyScene } from "../focus/scenes";
 import StudyScene from "../focus/StudyScene";
 
-export default function FocusPage() {
+export default function FocusPage({ startSignal = 0 }: { startSignal?: number }) {
   const engine = useRef<LofiEngine | null>(null);
   const { index: sceneIndex, cycle: cycleScene } = useStudyScene();
   const [playing, setPlaying] = useState(false);
@@ -100,6 +100,7 @@ export default function FocusPage() {
           onToggleMusic={() => void toggleMusic()}
           onChangeAmbience={changeAmbience}
           onStatusChange={setTimer}
+          startSignal={startSignal}
         />
       </div>
     </div>

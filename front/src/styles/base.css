@@ -20,6 +20,7 @@
   --v-500: #4f7a4a;
   --done: #4f7a4a;
   --tape: #e6dcc0;
+  --marker: #f2dc86;
   --radius-card: 1.25rem;
   --radius-control: 0.9rem;
   --red-300: #9a2f2a;
@@ -65,6 +66,7 @@ html.dark {
   --v-500: #6d9170;
   --done: #8fad88;
   --tape: #4d5548;
+  --marker: #5e5222;
   --red-300: #f0b4ae;
   --red-400: #e88980;
   --red-900: #5c2a26;
@@ -341,6 +343,110 @@ html.dark .cadence-surface-quiet {
 .cadence-check:focus-visible {
   outline: 2px solid var(--v-400);
   outline-offset: 2px;
+}
+
+.cadence-marker {
+  padding-inline: 0.15em;
+  background: linear-gradient(
+    transparent 55%,
+    var(--marker) 55%,
+    var(--marker) 90%,
+    transparent 90%
+  );
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.cadence-dashed-field {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1.5px dashed color-mix(in srgb, var(--n-600) 55%, var(--n-700));
+  background: transparent;
+  padding: 0.45rem 0.1rem;
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  color: var(--n-100);
+  outline: none;
+}
+
+textarea.cadence-dashed-field {
+  field-sizing: content;
+}
+
+.cadence-dashed-field::placeholder {
+  color: var(--n-600);
+}
+
+.cadence-dashed-field:focus {
+  border-bottom-style: solid;
+  border-bottom-color: var(--v-400);
+}
+
+.cadence-wave {
+  display: block;
+  width: 100%;
+  height: 0.5rem;
+  color: color-mix(in srgb, var(--n-600) 45%, var(--n-700));
+}
+
+.cadence-sketch-item {
+  display: flex;
+  width: 100%;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding-inline: 0.125rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--n-100);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.cadence-sketch-item[aria-checked="true"] > span {
+  color: var(--n-500);
+}
+
+.cadence-sketch-item:focus-visible {
+  border-radius: 0.5rem;
+  outline: 2px solid var(--v-400);
+  outline-offset: 2px;
+}
+
+.cadence-sketch-box {
+  width: 1.625rem;
+  height: 1.625rem;
+  flex-shrink: 0;
+  color: var(--n-500);
+}
+
+.cadence-sketch-tick {
+  stroke: var(--done);
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.cadence-sketch-item[aria-checked="true"] .cadence-sketch-tick {
+  stroke-dashoffset: 0;
+}
+
+.cadence-tab-underline {
+  position: absolute;
+  bottom: -0.3rem;
+  left: -0.25rem;
+  width: calc(100% + 0.5rem);
+  height: 0.4rem;
+  color: var(--v-400);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cadence-sketch-tick {
+    transition: stroke-dashoffset 220ms var(--ease-out);
+  }
 }
 
 .cadence-chip {

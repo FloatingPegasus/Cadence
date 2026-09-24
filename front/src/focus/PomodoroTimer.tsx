@@ -510,6 +510,7 @@ interface PomodoroTimerProps {
   onToggleMusic: () => void;
   onChangeAmbience: (kind: AmbienceKind) => void;
   onStatusChange?: (status: { clock: string; running: boolean }) => void;
+  startSignal?: number;
 }
 
 export default function PomodoroTimer({
@@ -521,6 +522,7 @@ export default function PomodoroTimer({
   onToggleMusic,
   onChangeAmbience,
   onStatusChange,
+  startSignal = 0,
 }: PomodoroTimerProps) {
   const [kind, setKind] = useState<TimerKind>("pomodoro");
   const [mode, setMode] = useState<"work" | "break">("work");
@@ -566,6 +568,10 @@ export default function PomodoroTimer({
   } | null>(null);
 
   sizeRef.current = size;
+
+  useEffect(() => {
+    if (startSignal > 0) setRunning(true);
+  }, [startSignal]);
 
   useEffect(() => {
     if (!running) return;

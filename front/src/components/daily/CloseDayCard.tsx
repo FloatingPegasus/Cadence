@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
   fetchCheckin,
@@ -7,56 +7,46 @@ import {
   updateCheckin,
   updateDay,
   updateDayContexts,
+  updateDayStatus,
   type Checkin,
   type ContinuityContext,
 } from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
 
-interface DailyCaptureCardProps {
+interface CloseDayCardProps {
   date: string;
   contexts: ContinuityContext[];
   onChanged: (hasSource?: boolean) => void;
+  children?: ReactNode;
 }
 
-const checkinFields: Array<{
+interface Scale {
   key: keyof Checkin;
   label: string;
   low: string;
   high: string;
-}> = [
-  {
-    key: "energy_level",
-    label: "Energy",
-    low: "Depleted",
-    high: "Strong",
-  },
-  {
-    key: "focus_quality",
-    label: "Focus",
-    low: "Scattered",
-    high: "Clear",
-  },
-  {
-    key: "recovery_quality",
-    label: "Recovery",
-    low: "Poor",
-    high: "Restored",
-  },
-  {
-    key: "reentry_success",
-    label: "Restarting",
-    low: "Difficult",
-    high: "Easy",
-  },
+}
+
+const mainScales: Scale[] = [
+  { key: "energy_level", label: "Energy", low: "Depleted", high: "Strong" },
+  { key: "focus_quality", label: "Focus", low: "Scattered", high: "Clear" },
+  { key: "sleep_quality", label: "Sleep", low: "Poor", high: "Restful" },
 ];
 
-export default function DailyCaptureCard({
+const moreScales: Scale[] = [
+  { key: "recovery_quality", label: "Recovery", low: "Poor", high: "Restored" },
+  { key: "reentry_success", label: "Restarting", low: "Difficult", high: "Easy" },
+];
+
+export default function CloseDayCard({
   date,
   contexts,
   onChanged,
-}: DailyCaptureCardProps) {
+  children,
+}: CloseDayCardProps) {
   const { user } = useAuth();
   const [note, setNote] = useState("");
+  const [status, setStatus] = useState("open");
   const [checkin, setCheckin] = useState<Checkin>({});
   const [attachedContexts, setAttachedContexts] = useState<
     ContinuityContext[]
@@ -64,6 +54,7 @@ export default function DailyCaptureCard({
   const [selectedContextIds, setSelectedContextIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saveChain = useRef(Promise.resolve());
@@ -84,6 +75,7 @@ export default function DailyCaptureCard({
         if (cancelled) return;
         loadedDate.current = date;
         setNote(day.daily_note);
+        setStatus(day.status);
         setCheckin(values);
         lastNote.current = day.daily_note;
         lastCheckin.current = values;
@@ -158,6 +150,24 @@ export default function DailyCaptureCard({
     return task;
   }
 
+  async function toggleClosed() {
+    const next = status === "closed" ? "open" : "closed";
+    setIsClosing(true);
+    setError(null);
+    try {
+      await saveChain.current.catch(() => undefined);
+      const day = await updateDayStatus(date, next);
+      setStatus(day.status);
+      onChanged(day.status === "closed");
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Could not update the day",
+      );
+    } finally {
+      setIsClosing(false);
+    }
+  }
+
   function setScale(key: keyof Checkin, value: number | null) {
     const next = { ...checkin, [key]: value };
     setCheckin(next);
@@ -191,17 +201,27 @@ export default function DailyCaptureCard({
         !contexts.some((context) => context.id === attached.id),
     ),
   ];
+  const closed = status === "closed";
+
+  function scaleRow({ key, ...scale }: Scale) {
+    return (
+      <ScaleRow
+        key={key}
+        {...scale}
+        value={checkin[key] as number | null | undefined}
+        onChange={(value) => setScale(key, value)}
+      />
+    );
+  }
 
   return (
-    <section
-      aria-labelledby="daily-capture-title"
-    >
-      <div className="mb-4 flex items-baseline justify-between gap-4">
+    <section aria-labelledby="close-day-title">
+      <div className="flex items-baseline justify-between gap-4">
         <h2
-          id="daily-capture-title"
-          className="cadence-kicker"
+          id="close-day-title"
+          className="cadence-mark text-[1.9rem] text-neutral-100"
         >
-          Day note
+          {closed ? "Day closed" : "Close the day"}
         </h2>
         <span className="text-xs text-neutral-600">
           {isSaving ? "Saving" : saved ? "Saved" : ""}
@@ -209,80 +229,34 @@ export default function DailyCaptureCard({
       </div>
 
       {isLoading && loadedDate.current === null ? (
-        <p className="text-sm text-neutral-600">Loading day…</p>
+        <p className="mt-3 text-sm text-neutral-600">Loading day…</p>
       ) : (
         <>
+          <div className="mt-3 grid gap-2">{mainScales.map(scaleRow)}</div>
+
+          <label htmlFor="day-remember" className="sr-only">
+            One thing worth remembering
+          </label>
           <textarea
-            id="daily-note"
-            aria-labelledby="daily-capture-title"
+            id="day-remember"
+            rows={1}
             value={note}
             onChange={(event) => setNote(event.target.value)}
             onBlur={() => {
               if (note === lastNote.current) return;
               void save();
             }}
-            placeholder="Write about today"
-            className="cadence-lines min-h-24 w-full resize-none border-0 bg-transparent p-0 text-base text-neutral-100 outline-none placeholder:text-neutral-600"
+            placeholder="One thing worth remembering"
+            maxLength={20000}
+            className="cadence-dashed-field mt-4 resize-none"
           />
 
-          {contextOptions.length > 0 && (
-            <fieldset className="mt-4">
-              <legend className="text-xs text-neutral-500">Areas</legend>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-                {contextOptions.map((context) => (
-                  <label
-                    key={context.id}
-                    className="flex items-center gap-2 text-xs text-neutral-400"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedContextIds.includes(context.id)}
-                      disabled={context.is_archived}
-                      onChange={() => toggleContext(context.id)}
-                      className="accent-done"
-                    />
-                    <span>
-                      {context.name}
-                      {context.is_archived && " (archived)"}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          )}
-
           <details className="cadence-fold">
             <summary className="text-sm text-neutral-400 transition-colors duration-150 hover:text-neutral-200">
-              Check-in
+              More
             </summary>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2">
-              {checkinFields.map(({ key, label, low, high }) => (
-                <ScaleInput
-                  key={key}
-                  label={label}
-                  low={low}
-                  high={high}
-                  value={checkin[key] as number | null | undefined}
-                  onChange={(value) => setScale(key, value)}
-                />
-              ))}
-            </div>
-          </details>
-
-          <details className="cadence-fold">
-            <summary className="text-sm text-neutral-400 transition-colors duration-150 hover:text-neutral-200">
-              Add more detail
-            </summary>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <ScaleInput
-                  label="Sleep quality"
-                  low="Poor"
-                  high="Restful"
-                  value={checkin.sleep_quality}
-                  onChange={(value) => setScale("sleep_quality", value)}
-                />
-              </div>
+            <div className="mt-3 grid gap-2">{moreScales.map(scaleRow)}</div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
               <label className="text-xs text-neutral-500">
                 Sleep hours
                 <input
@@ -337,7 +311,47 @@ export default function DailyCaptureCard({
                 />
               </label>
             </div>
+            {contextOptions.length > 0 && (
+              <fieldset className="mt-4 mb-2">
+                <legend className="text-xs text-neutral-500">Areas</legend>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                  {contextOptions.map((context) => (
+                    <label
+                      key={context.id}
+                      className="flex items-center gap-2 text-xs text-neutral-400"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedContextIds.includes(context.id)}
+                        disabled={context.is_archived}
+                        onChange={() => toggleContext(context.id)}
+                        className="accent-done"
+                      />
+                      <span>
+                        {context.name}
+                        {context.is_archived && " (archived)"}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
           </details>
+
+          {children}
+
+          <button
+            type="button"
+            onClick={() => void toggleClosed()}
+            disabled={isClosing}
+            className={
+              closed
+                ? "cadence-chip cadence-chip-ghost mt-4"
+                : "cadence-chip cadence-chip-solid mt-4 px-5"
+            }
+          >
+            {closed ? "Reopen" : "Close"}
+          </button>
         </>
       )}
 
@@ -350,23 +364,27 @@ export default function DailyCaptureCard({
   );
 }
 
-function ScaleInput({
+function ScaleRow({
   label,
   low,
   high,
   value,
   onChange,
-}: {
-  label: string;
-  low: string;
-  high: string;
+}: Omit<Scale, "key"> & {
   value: number | null | undefined;
   onChange: (value: number | null) => void;
 }) {
+  const labelId = useId();
   return (
-    <fieldset className="w-fit">
-      <legend className="text-xs text-neutral-500">{label}</legend>
-      <div className="mt-1.5 flex gap-1.5">
+    <div
+      role="group"
+      aria-labelledby={labelId}
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 sm:justify-start"
+    >
+      <span id={labelId} className="text-sm text-neutral-400 sm:w-24">
+        {label}
+      </span>
+      <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map((step) => (
           <button
             key={step}
@@ -386,13 +404,6 @@ function ScaleInput({
           </button>
         ))}
       </div>
-      <div
-        aria-hidden="true"
-        className="mt-1 flex justify-between text-[11px] text-neutral-600"
-      >
-        <span>{low}</span>
-        <span>{high}</span>
-      </div>
-    </fieldset>
+    </div>
   );
 }
