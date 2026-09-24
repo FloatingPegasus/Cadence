@@ -25,6 +25,10 @@ function log(id: number, hour: number | null, content: string): LogEntry {
   };
 }
 
+function result(entry: LogEntry) {
+  return { log: entry, reply: null, notice: null };
+}
+
 function renderPage() {
   render(
     <HoursPage date="2026-07-24" onSelectDate={vi.fn()} onChanged={vi.fn()} />,
@@ -40,7 +44,7 @@ describe("HoursPage", () => {
   it("adds a log to an empty hour when the field is left", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchLogs).mockResolvedValue([]);
-    vi.mocked(addLog).mockResolvedValue(log(1, 9, "Deep work"));
+    vi.mocked(addLog).mockResolvedValue(result(log(1, 9, "Deep work")));
     renderPage();
 
     const field = await screen.findByLabelText("9 AM");
@@ -81,7 +85,7 @@ describe("HoursPage", () => {
   it("adds another log to an hour that already has one", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchLogs).mockResolvedValue([log(1, 10, "Standup")]);
-    vi.mocked(addLog).mockResolvedValue(log(2, 10, "Reviewed a PR"));
+    vi.mocked(addLog).mockResolvedValue(result(log(2, 10, "Reviewed a PR")));
     renderPage();
 
     await user.click(await screen.findByRole("button", { name: "Add to 10 AM" }));

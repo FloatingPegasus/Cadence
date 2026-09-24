@@ -103,8 +103,14 @@ class Settings(BaseSettings):
     ai_provider: str = "nvidia"
     ai_base_url: str = "https://integrate.api.nvidia.com/v1"
     ai_api_key: str = ""
+    ai_model: str = ""
     ai_catalog_refresh_minutes: int = 360
     ai_request_timeout_seconds: float = 45.0
+    ai_daily_reply_limit: int = 40
+    crisis_resources: str = (
+        "You don't have to carry this alone. Free, confidential support: "
+        "findahelpline.com, or Tele-MANAS on 14416 in India."
+    )
     embedding_enabled: bool = False
     embedding_model: str = "nvidia/nv-embedqa-e5-v5"
     embedding_dimensions: int = 1024
@@ -252,6 +258,10 @@ class Settings(BaseSettings):
         if not self.embedding_model.strip():
             raise ValueError("CADENCE_EMBEDDING_MODEL must not be blank")
         self.embedding_model = self.embedding_model.strip()
+        self.ai_model = self.ai_model.strip()
+        self.crisis_resources = self.crisis_resources.strip()
+        if self.ai_daily_reply_limit < 0:
+            raise ValueError("CADENCE_AI_DAILY_REPLY_LIMIT cannot be negative")
         self.redis_url = self.redis_url.strip()
         self.redis_key_prefix = self.redis_key_prefix.strip()
         if not self.redis_key_prefix or len(self.redis_key_prefix) > 64:

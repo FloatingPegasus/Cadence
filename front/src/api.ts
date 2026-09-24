@@ -760,14 +760,21 @@ export function fetchLogs(date: string): Promise<LogEntry[]> {
   return request<LogEntry[]>(`/api/days/${date}/logs`);
 }
 
+export interface LogResult {
+  log: LogEntry;
+  reply: LogEntry | null;
+  notice: string | null;
+}
+
 export function addLog(
   date: string,
   content: string,
   hour: number | null,
-): Promise<LogEntry> {
-  return request<LogEntry>(`/api/days/${date}/logs`, {
+  reply = false,
+): Promise<LogResult> {
+  return request<LogResult>(`/api/days/${date}/logs`, {
     method: "POST",
-    body: JSON.stringify({ content, hour }),
+    body: JSON.stringify({ content, hour, reply }),
   });
 }
 

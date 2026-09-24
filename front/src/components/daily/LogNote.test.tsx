@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { addLog, fetchLogs, type LogEntry } from "../../api";
-import { authStub } from "../../authTest";
+import { authStub, testUser } from "../../authTest";
 import { useAuth } from "../../contexts/AuthContext";
 import LogNote from "./LogNote";
 
@@ -19,6 +19,15 @@ function entry(
   return { id, role, content, hour, created_at: "2026-07-24T09:00:00Z" };
 }
 
+function withAi() {
+  vi.mocked(useAuth).mockReturnValue(
+    authStub({
+      aiEnabled: true,
+      user: { ...testUser, ai_processing_consent: true },
+    }),
+  );
+}
+
 function renderNote(onStartFocus = vi.fn()) {
   render(
     <LogNote
@@ -31,29 +40,78 @@ function renderNote(onStartFocus = vi.fn()) {
   );
 }
 
+function field() {
+  return screen.getByRole("textbox", { name: "What are you doing?" });
+}
+
 describe("LogNote", () => {
   beforeEach(() => {
     vi.mocked(useAuth).mockReturnValue(authStub());
+    vi.mocked(fetchLogs).mockResolvedValue([]);
   });
 
   it("posts a log for the current hour and shows it as the latest", async () => {
     const user = userEvent.setup();
-    vi.mocked(fetchLogs).mockResolvedValue([]);
-    vi.mocked(addLog).mockResolvedValue(entry(1, "Pitch deck, slide 6", 15));
+    vi.mocked(addLog).mockResolvedValue({
+      log: entry(1, "Pitch deck, slide 6", 15),
+      reply: null,
+      notice: null,
+    });
     renderNote();
 
     screen.getByRole("heading", { name: "3 PM" });
-    await user.type(
-      screen.getByRole("textbox", { name: "What are you doing?" }),
-      "Pitch deck, slide 6{Enter}",
-    );
+    await user.type(field(), "Pitch deck, slide 6{Enter}");
 
-    expect(addLog).toHaveBeenCalledWith("2026-07-24", "Pitch deck, slide 6", 15);
+    expect(addLog).toHaveBeenCalledWith(
+      "2026-07-24",
+      "Pitch deck, slide 6",
+      15,
+      false,
+    );
     await screen.findByText("Pitch deck, slide 6");
-    expect(
-      (screen.getByRole("textbox", { name: "What are you doing?" }) as HTMLInputElement)
-        .value,
-    ).toBe("");
+    expect((field() as HTMLInputElement).value).toBe("");
+    expect(screen.queryByRole("button", { name: "Save only" })).toBeNull();
+  });
+
+  it("asks for a reply when AI is on and shows it under the log", async () => {
+    const user = userEvent.setup();
+    withAi();
+    let finish: (value: Awaited<ReturnType<typeof addLog>>) => void = () => {};
+    vi.mocked(addLog).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    renderNote();
+
+    await user.type(field(), "Stuck on the deck{Enter}");
+    expect(addLog).toHaveBeenCalledWith("2026-07-24", "Stuck on the deck", 15, true);
+    screen.getByLabelText("Replying");
+
+    finish({
+      log: entry(1, "Stuck on the deck", 15),
+      reply: entry(2, "Start with slide one.", 15, "assistant"),
+      notice: null,
+    });
+    await screen.findByText("Start with slide one.");
+    expect(screen.queryByLabelText("Replying")).toBeNull();
+  });
+
+  it("saves without a reply and shows any notice", async () => {
+    const user = userEvent.setup();
+    withAi();
+    vi.mocked(addLog).mockResolvedValue({
+      log: entry(1, "Rough night", 15),
+      reply: null,
+      notice: "Call 14416.",
+    });
+    renderNote();
+
+    await user.type(field(), "Rough night");
+    await user.click(screen.getByRole("button", { name: "Save only" }));
+
+    expect(addLog).toHaveBeenCalledWith("2026-07-24", "Rough night", 15, false);
+    expect((await screen.findByRole("status")).textContent).toBe("Call 14416.");
   });
 
   it("shows the latest exchange and opens the day's thread in place", async () => {
@@ -82,7 +140,6 @@ describe("LogNote", () => {
   it("starts focus", async () => {
     const user = userEvent.setup();
     const onStartFocus = vi.fn();
-    vi.mocked(fetchLogs).mockResolvedValue([]);
     renderNote(onStartFocus);
 
     await user.click(screen.getByRole("button", { name: "Start focus" }));

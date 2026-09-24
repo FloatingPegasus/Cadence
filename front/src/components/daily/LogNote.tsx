@@ -27,16 +27,22 @@ export default function LogNote({
   onStartFocus,
   onChanged,
 }: LogNoteProps) {
-  const { user } = useAuth();
+  const { user, aiEnabled } = useAuth();
+  const canReply =
+    aiEnabled && Boolean(user?.ai_processing_consent) && !user?.is_guest;
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [draft, setDraft] = useState("");
   const [showAll, setShowAll] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [pending, setPending] = useState<{ content: string; reply: boolean } | null>(
+    null,
+  );
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setShowAll(false);
+    setNotice(null);
     if (!user) {
       setLogs([]);
       return;
@@ -65,22 +71,35 @@ export default function LogNote({
   const latest = lastUser === -1 ? [] : logs.slice(lastUser);
   const thread = showAll ? logs : latest;
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function save(reply: boolean) {
     const content = draft.trim();
-    if (!content || isSaving) return;
-    setIsSaving(true);
+    if (!content || pending) return;
+    const wantsReply = reply && canReply;
+    setPending({ content, reply: wantsReply });
+    setDraft("");
+    setShowAll(false);
+    setNotice(null);
     setError(null);
     try {
-      const entry = await addLog(date, content, hour);
-      setLogs((current) => [...current, entry]);
-      setDraft("");
+      const result = await addLog(date, content, hour, wantsReply);
+      setLogs((current) => [
+        ...current,
+        result.log,
+        ...(result.reply ? [result.reply] : []),
+      ]);
+      setNotice(result.notice);
       onChanged();
     } catch (caught) {
+      setDraft(content);
       setError(caught instanceof Error ? caught.message : "Could not save the log");
     } finally {
-      setIsSaving(false);
+      setPending(null);
     }
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void save(true);
   }
 
   return (
@@ -110,36 +129,70 @@ export default function LogNote({
           maxLength={20000}
           className="cadence-dashed-field min-w-0 flex-1"
         />
+        {draft.trim() && canReply ? (
+          <button
+            type="button"
+            disabled={pending !== null}
+            onClick={() => void save(false)}
+            className="cadence-chip cadence-chip-ghost text-xs"
+          >
+            Save only
+          </button>
+        ) : null}
         {draft.trim() ? (
           <button
             type="submit"
-            disabled={isSaving}
+            disabled={pending !== null}
             className="cadence-chip cadence-chip-accent text-xs"
           >
             Log
           </button>
         ) : null}
       </form>
-      {thread.length > 0 ? (
-        <ol className="mt-4 grid gap-2" aria-label="Today's logs">
-          {thread.map((entry) =>
-            entry.role === "user" ? (
-              <li key={entry.id} className="text-sm text-neutral-300">
-                <span className="mr-2 text-xs text-neutral-500">
-                  {entryTime(entry)}
-                </span>
-                {entry.content}
+      {pending || thread.length > 0 ? (
+        <ol className="mt-4 grid gap-2" aria-label="Today's logs" aria-live="polite">
+          {pending ? (
+            <>
+              <li className="text-sm text-neutral-500">
+                <span className="mr-2 text-xs">{formatHourLabel(hour)}</span>
+                {pending.content}
               </li>
-            ) : (
-              <li
-                key={entry.id}
-                className="border-l-2 border-violet-400/40 pl-3 text-sm text-neutral-400"
-              >
-                {entry.content}
-              </li>
-            ),
+              {pending.reply ? (
+                <li
+                  aria-label="Replying"
+                  className="cadence-typing border-l-2 border-violet-400/40 pl-3 text-sm text-neutral-500"
+                >
+                  <span />
+                  <span />
+                  <span />
+                </li>
+              ) : null}
+            </>
+          ) : (
+            thread.map((entry) =>
+              entry.role === "user" ? (
+                <li key={entry.id} className="text-sm text-neutral-300">
+                  <span className="mr-2 text-xs text-neutral-500">
+                    {entryTime(entry)}
+                  </span>
+                  {entry.content}
+                </li>
+              ) : (
+                <li
+                  key={entry.id}
+                  className="whitespace-pre-line border-l-2 border-violet-400/40 pl-3 text-sm text-neutral-400"
+                >
+                  {entry.content}
+                </li>
+              ),
+            )
           )}
         </ol>
+      ) : null}
+      {notice ? (
+        <p role="status" className="mt-3 whitespace-pre-line text-sm text-neutral-400">
+          {notice}
+        </p>
       ) : null}
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <button
@@ -152,7 +205,7 @@ export default function LogNote({
           </svg>
           Start focus
         </button>
-        {logs.length > latest.length ? (
+        {!pending && logs.length > latest.length ? (
           <button
             type="button"
             aria-expanded={showAll}

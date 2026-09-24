@@ -114,7 +114,7 @@ export default function HoursPage({
     setSavingKey(key);
     setError(null);
     try {
-      const saved = await addLog(date, content, hour);
+      const { log: saved } = await addLog(date, content, hour);
       setLogs((rows) => [...rows, saved]);
       setDrafts((values) => withoutKey(values, key));
       setAdding(null);
