@@ -182,7 +182,7 @@ class CadenceContinuityApiTests(ApiTestCase):
             json={"context_ids": [project["id"]]},
         )
         self.client.post(
-            "/api/days/2026-07-15/conversation",
+            "/api/days/2026-07-15/logs",
             headers=self.alpha_headers,
             json={"content": "A mid-month raw trace"},
         )
@@ -346,7 +346,7 @@ class CadenceContinuityApiTests(ApiTestCase):
             json={"status": "closed"},
         )
         self.client.post(
-            "/api/days/2026-07-18/conversation",
+            "/api/days/2026-07-18/logs",
             headers=self.alpha_headers,
             json={"content": "Second July project trace"},
         )
@@ -434,7 +434,7 @@ class CadenceContinuityApiTests(ApiTestCase):
             json={"habit_id": 1, "date": "2026-07-18", "value": "1"},
         )
         self.client.post(
-            "/api/days/2026-07-18/conversation",
+            "/api/days/2026-07-18/logs",
             headers=self.alpha_headers,
             json={"content": "Reading thread"},
         )
@@ -490,7 +490,7 @@ class CadenceContinuityApiTests(ApiTestCase):
             json={"energy_level": 4, "notes": "Portable check-in"},
         )
         self.client.post(
-            "/api/days/2026-07-24/conversation",
+            "/api/days/2026-07-24/logs",
             headers=self.alpha_headers,
             json={"content": "Portable quick thread"},
         )
@@ -514,8 +514,8 @@ class CadenceContinuityApiTests(ApiTestCase):
             headers=self.alpha_headers,
             json={"content": "Portable weekly reflection"},
         )
-        self.client.put(
-            "/api/days/2026-07-24/hours",
+        self.client.post(
+            "/api/days/2026-07-24/logs",
             headers=self.alpha_headers,
             json={"hour": 14, "content": "Wrote the hourly logger"},
         )
@@ -548,7 +548,7 @@ class CadenceContinuityApiTests(ApiTestCase):
         exported = response.json()
         resources = exported["resources"]
         self.assertEqual(exported["format"], "cadence-export")
-        self.assertEqual(exported["schema_version"], 4)
+        self.assertEqual(exported["schema_version"], 5)
         self.assertEqual(exported["account"]["username"], "alpha")
         self.assertEqual(
             [habit["name"] for habit in resources["habits"]],
@@ -556,18 +556,17 @@ class CadenceContinuityApiTests(ApiTestCase):
         )
         self.assertEqual(resources["days"][0]["date"], "2026-07-24")
         self.assertEqual(
-            resources["conversation_entries"][0]["content"],
-            "Portable quick thread",
+            [
+                (entry["hour"], entry["content"])
+                for entry in resources["conversation_entries"]
+            ],
+            [(None, "Portable quick thread"), (14, "Wrote the hourly logger")],
         )
         self.assertEqual(
             resources["weekly_reflections"][0]["content"],
             "Portable weekly reflection",
         )
-        self.assertEqual(resources["hour_logs"][0]["hour"], 14)
-        self.assertEqual(
-            resources["hour_logs"][0]["content"],
-            "Wrote the hourly logger",
-        )
+        self.assertNotIn("hour_logs", resources)
         self.assertEqual(resources["goals"][0]["title"], "Stay consistent")
         self.assertEqual(resources["tasks"][0]["title"], "Ship the tasks tab")
         self.assertNotIn("hashed_password", str(exported))
@@ -580,7 +579,7 @@ class CadenceContinuityApiTests(ApiTestCase):
             json={"daily_note": "Continuity search began with a daily note"},
         )
         self.client.post(
-            "/api/days/2026-07-21/conversation",
+            "/api/days/2026-07-21/logs",
             headers=self.alpha_headers,
             json={"content": "The continuity query stayed relational"},
         )
@@ -935,15 +934,20 @@ class CadenceContinuityApiTests(ApiTestCase):
         self.assertIsNone(reentry["carried_task"])
 
     def test_reentry_after_a_gap_is_one_hour_and_one_task(self) -> None:
-        self.client.put(
-            "/api/days/2026-07-21/hours",
+        self.client.post(
+            "/api/days/2026-07-21/logs",
+            headers=self.alpha_headers,
+            json={"hour": 16, "content": "Wrote the migration"},
+        )
+        self.client.post(
+            "/api/days/2026-07-21/logs",
             headers=self.alpha_headers,
             json={"hour": 9, "content": "Morning notes"},
         )
-        self.client.put(
-            "/api/days/2026-07-21/hours",
+        self.client.post(
+            "/api/days/2026-07-22/logs",
             headers=self.alpha_headers,
-            json={"hour": 16, "content": "Wrote the migration"},
+            json={"content": "A log without an hour"},
         )
         self.client.post(
             "/api/tasks",
@@ -974,10 +978,10 @@ class CadenceContinuityApiTests(ApiTestCase):
         self.assertEqual(reentry["carried_task"]["title"], "Ship the note")
         self.assertNotIn("Private task", str(reentry))
 
-        self.client.put(
-            "/api/days/2026-07-23/hours",
+        self.client.post(
+            "/api/days/2026-07-23/logs",
             headers=self.alpha_headers,
-            json={"hour": 10, "content": "Back at it"},
+            json={"content": "Back at it"},
         )
         resumed = self.client.get(
             "/api/days/2026-07-23/reentry",

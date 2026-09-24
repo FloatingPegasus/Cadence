@@ -13,7 +13,6 @@ from ...persistence.models.daily_checkin import DailyCheckin
 from ...persistence.models.day import Day
 from ...persistence.models.day_context import DayContext
 from ...persistence.models.habit_log import HabitLog
-from ...persistence.models.hour_log import HourLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...persistence.models.task import Task
 from ...persistence.models.weekly_reflection import WeeklyReflection
@@ -236,12 +235,13 @@ async def get_day_reentry(
             }
 
     filled_today = await db.scalar(
-        select(HourLog.id)
-        .join(Day, Day.id == HourLog.day_id)
+        select(ConversationEntry.id)
+        .join(Day, Day.id == ConversationEntry.day_id)
         .where(
             Day.user_id == user_id,
             Day.date == target_date,
-            func.length(func.trim(HourLog.content)) > 0,
+            ConversationEntry.role == "user",
+            func.length(func.trim(ConversationEntry.content)) > 0,
         )
         .limit(1)
     )
@@ -250,14 +250,20 @@ async def get_day_reentry(
     if filled_today is None:
         hour_row = (
             await db.execute(
-                select(Day.date, HourLog.hour, HourLog.content)
-                .join(HourLog, HourLog.day_id == Day.id)
+                select(Day.date, ConversationEntry.hour, ConversationEntry.content)
+                .join(ConversationEntry, ConversationEntry.day_id == Day.id)
                 .where(
                     Day.user_id == user_id,
                     Day.date < target_date,
-                    func.length(func.trim(HourLog.content)) > 0,
+                    ConversationEntry.role == "user",
+                    ConversationEntry.hour.is_not(None),
+                    func.length(func.trim(ConversationEntry.content)) > 0,
                 )
-                .order_by(Day.date.desc(), HourLog.hour.desc())
+                .order_by(
+                    Day.date.desc(),
+                    ConversationEntry.hour.desc(),
+                    ConversationEntry.created_at.desc(),
+                )
                 .limit(1)
             )
         ).one_or_none()

@@ -15,7 +15,6 @@ from .continuity_embedding import (
     EMBEDDING_DIMENSIONS,
     ContinuityEmbedding,
 )
-from .hour_log import HourLog
 from .user_goal import GOAL_KINDS, UserGoal
 from .task import Task
 
@@ -35,7 +34,6 @@ __all__ = [
     "ContinuityEmbedding",
     "CONTINUITY_EMBEDDING_DIMENSION",
     "EMBEDDING_DIMENSIONS",
-    "HourLog",
     "GOAL_KINDS",
     "UserGoal",
     "Task",

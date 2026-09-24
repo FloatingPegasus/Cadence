@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import {
-  fetchHourLog,
-  upsertHourLog,
-  type HourSlot,
+  addLog,
+  deleteLog,
+  fetchLogs,
+  updateLog,
+  type LogEntry,
 } from "../api";
 import { formatHourLabel, todayAsLocalDate } from "../time";
 import { useAuth } from "../contexts/AuthContext";
@@ -14,34 +16,44 @@ interface HoursPageProps {
   onChanged: () => void;
 }
 
+const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+
+function logHour(entry: LogEntry): number {
+  return entry.hour ?? new Date(entry.created_at).getHours();
+}
+
+function withoutKey(values: Record<string, string>, key: string) {
+  const next = { ...values };
+  delete next[key];
+  return next;
+}
+
 export default function HoursPage({
   date,
   onSelectDate,
   onChanged,
 }: HoursPageProps) {
   const { user } = useAuth();
-  const [slots, setSlots] = useState<HourSlot[]>([]);
-  const [drafts, setDrafts] = useState<Record<number, string>>({});
-  const [savingHour, setSavingHour] = useState<number | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [adding, setAdding] = useState<number | null>(null);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setError(null);
+    setDrafts({});
+    setAdding(null);
     if (!user) {
-      setSlots([]);
-      setDrafts({});
+      setLogs([]);
       setIsLoading(false);
       return;
     }
-    fetchHourLog(date)
+    fetchLogs(date)
       .then((rows) => {
-        if (cancelled) return;
-        setSlots(rows);
-        setDrafts(
-          Object.fromEntries(rows.map((row) => [row.hour, row.content])),
-        );
+        if (!cancelled) setLogs(rows);
       })
       .catch((caught) => {
         if (cancelled) return;
@@ -59,33 +71,70 @@ export default function HoursPage({
 
   const currentHour = new Date().getHours();
   const isToday = date === todayAsLocalDate();
+  const byHour = new Map<number, LogEntry[]>();
+  for (const entry of logs) {
+    if (entry.role !== "user") continue;
+    const hour = logHour(entry);
+    byHour.set(hour, [...(byHour.get(hour) ?? []), entry]);
+  }
 
-  async function saveHour(hour: number) {
-    const content = (drafts[hour] ?? "").trim();
-    const current = slots.find((slot) => slot.hour === hour)?.content ?? "";
-    if (content === current) return;
-    setSavingHour(hour);
+  async function saveEntry(entry: LogEntry) {
+    const key = String(entry.id);
+    const content = (drafts[key] ?? entry.content).trim();
+    if (savingKey === key || content === entry.content) return;
+    setSavingKey(key);
     setError(null);
     try {
-      const saved = await upsertHourLog(date, hour, content);
-      setSlots((rows) =>
-        rows.map((row) => (row.hour === hour ? saved : row)),
-      );
-      setDrafts((values) => ({ ...values, [hour]: saved.content }));
+      if (content) {
+        const saved = await updateLog(date, entry.id, content);
+        setLogs((rows) => rows.map((row) => (row.id === entry.id ? saved : row)));
+      } else {
+        await deleteLog(date, entry.id);
+        setLogs((rows) => rows.filter((row) => row.id !== entry.id));
+      }
+      setDrafts((values) => withoutKey(values, key));
       onChanged();
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "Could not save the hour",
       );
     } finally {
-      setSavingHour(null);
+      setSavingKey(null);
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>, hour: number) {
-    event.preventDefault();
-    void saveHour(hour);
+  async function addToHour(hour: number) {
+    const key = `new-${hour}`;
+    const content = (drafts[key] ?? "").trim();
+    if (savingKey === key) return;
+    if (!content) {
+      setAdding(null);
+      return;
+    }
+    setSavingKey(key);
+    setError(null);
+    try {
+      const saved = await addLog(date, content, hour);
+      setLogs((rows) => [...rows, saved]);
+      setDrafts((values) => withoutKey(values, key));
+      setAdding(null);
+      onChanged();
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Could not save the hour",
+      );
+    } finally {
+      setSavingKey(null);
+    }
   }
+
+  function submit(event: FormEvent<HTMLFormElement>, save: () => Promise<void>) {
+    event.preventDefault();
+    void save();
+  }
+
+  const fieldClass =
+    "min-h-11 w-full min-w-0 rounded-md border border-transparent bg-transparent px-2 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-700 focus:bg-neutral-950 sm:min-h-0 sm:py-1.5 sm:text-sm";
 
   return (
     <div>
@@ -109,51 +158,108 @@ export default function HoursPage({
         </p>
       )}
       <ol className="cadence-surface mt-6">
-        {(slots.length ? slots : Array.from({ length: 24 }, (_, hour) => ({
-          hour,
-          content: "",
-        }))).map((slot) => {
-          const active = isToday && slot.hour === currentHour;
+        {HOURS.map((hour) => {
+          const active = isToday && hour === currentHour;
+          const label = formatHourLabel(hour);
+          const entries = byHour.get(hour) ?? [];
+          const showNew = entries.length === 0 || adding === hour;
+          const newKey = `new-${hour}`;
+          const busy =
+            savingKey === newKey ||
+            entries.some((entry) => String(entry.id) === savingKey);
           return (
-            <li key={slot.hour} data-hour={slot.hour} className="cadence-hours-row">
-              <form
-                onSubmit={(event) => handleSubmit(event, slot.hour)}
-                aria-busy={savingHour === slot.hour}
+            <li
+              key={hour}
+              data-hour={hour}
+              aria-busy={busy}
+              className="cadence-hours-row"
+            >
+              <div
                 className={
                   active
-                    ? "mx-1 grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3 rounded-xl bg-violet-500/10 px-4 py-2.5 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]"
-                    : "mx-1 grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3 rounded-xl px-4 py-2.5 hover:bg-neutral-950/40 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]"
+                    ? "mx-1 grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-start gap-3 rounded-xl bg-violet-500/10 px-4 py-2.5 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]"
+                    : "mx-1 grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-start gap-3 rounded-xl px-4 py-2.5 hover:bg-neutral-950/40 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]"
                 }
               >
                 <label
-                  htmlFor={`hour-${slot.hour}`}
+                  htmlFor={`hour-${hour}`}
                   className={
                     active
-                      ? "text-xs font-medium text-violet-200"
-                      : "text-xs text-neutral-500"
+                      ? "pt-3 text-xs font-medium text-violet-200 sm:pt-2"
+                      : "pt-3 text-xs text-neutral-500 sm:pt-2"
                   }
                 >
-                  {formatHourLabel(slot.hour)}
+                  {label}
                 </label>
-                <input
-                  id={`hour-${slot.hour}`}
-                  value={drafts[slot.hour] ?? ""}
-                  disabled={isLoading}
-                  onChange={(event) =>
-                    setDrafts((values) => ({
-                      ...values,
-                      [slot.hour]: event.target.value,
-                    }))
-                  }
-                  onBlur={() => void saveHour(slot.hour)}
-                  placeholder={active ? "Now" : ""}
-                  maxLength={2000}
-                  className="min-h-11 min-w-0 rounded-md border border-transparent bg-transparent px-2 py-2 text-base text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-neutral-700 focus:bg-neutral-950 sm:min-h-0 sm:py-1.5 sm:text-sm"
-                />
-                <span className="hidden w-12 text-right text-[11px] text-neutral-600 sm:block">
-                  {savingHour === slot.hour ? "Saving" : ""}
-                </span>
-              </form>
+                <div className="grid min-w-0 gap-1">
+                  {entries.map((entry, index) => (
+                    <form
+                      key={entry.id}
+                      onSubmit={(event) => submit(event, () => saveEntry(entry))}
+                    >
+                      <input
+                        id={index === 0 ? `hour-${hour}` : undefined}
+                        aria-label={index === 0 ? undefined : label}
+                        value={drafts[String(entry.id)] ?? entry.content}
+                        onChange={(event) =>
+                          setDrafts((values) => ({
+                            ...values,
+                            [String(entry.id)]: event.target.value,
+                          }))
+                        }
+                        onBlur={() => void saveEntry(entry)}
+                        maxLength={20000}
+                        className={fieldClass}
+                      />
+                    </form>
+                  ))}
+                  {showNew && (
+                    <form onSubmit={(event) => submit(event, () => addToHour(hour))}>
+                      <input
+                        id={entries.length === 0 ? `hour-${hour}` : undefined}
+                        aria-label={entries.length === 0 ? undefined : label}
+                        value={drafts[newKey] ?? ""}
+                        disabled={isLoading}
+                        autoFocus={adding === hour}
+                        onChange={(event) =>
+                          setDrafts((values) => ({
+                            ...values,
+                            [newKey]: event.target.value,
+                          }))
+                        }
+                        onBlur={() => void addToHour(hour)}
+                        placeholder={active && entries.length === 0 ? "Now" : ""}
+                        maxLength={20000}
+                        className={fieldClass}
+                      />
+                    </form>
+                  )}
+                </div>
+                {showNew ? (
+                  <span className="w-11 sm:w-[2.15rem]" />
+                ) : (
+                  <button
+                    type="button"
+                    aria-label={`Add to ${label}`}
+                    onClick={() => setAdding(hour)}
+                    className="cadence-chip cadence-chip-icon cadence-chip-ghost"
+                  >
+                    <svg
+                      viewBox="0 0 16 16"
+                      className="h-[0.9rem] w-[0.9rem]"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M8 3.5v9M3.5 8h9"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </li>
           );
         })}

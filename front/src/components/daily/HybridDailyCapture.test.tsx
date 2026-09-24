@@ -6,12 +6,9 @@ import * as api from "../../api";
 import { authStub } from "../../authTest";
 import { useAuth } from "../../contexts/AuthContext";
 import DailyCaptureCard from "./DailyCaptureCard";
-import QuickThreadCard from "./QuickThreadCard";
 
 vi.mock("../../api", () => ({
-  addConversationEntry: vi.fn(),
   fetchCheckin: vi.fn(),
-  fetchConversation: vi.fn(),
   fetchDay: vi.fn(),
   fetchDayContexts: vi.fn(),
   updateCheckin: vi.fn(),
@@ -138,39 +135,5 @@ describe("hybrid daily capture", () => {
       focus_quality: 5,
       emotional_state: "tired",
     });
-  });
-
-  it("uses prompts as guidance without changing the saved entry", async () => {
-    const user = userEvent.setup();
-    vi.mocked(api.fetchConversation).mockResolvedValue([]);
-    vi.mocked(api.addConversationEntry).mockResolvedValue({
-      id: 1,
-      role: "user",
-      content: "The migration is finally stable.",
-      created_at: "2026-07-23T12:00:00",
-    });
-
-    render(
-      <QuickThreadCard date="2026-07-23" onChanged={vi.fn()} />,
-    );
-
-    const prompt = await screen.findByRole("button", {
-      name: "What moved forward?",
-    });
-    await user.click(prompt);
-
-    const input = screen.getByRole("textbox", {
-      name: "What moved forward?",
-    });
-    expect(document.activeElement).toBe(input);
-    await user.type(input, "The migration is finally stable.");
-    await user.click(screen.getByRole("button", { name: "Log" }));
-
-    await waitFor(() =>
-      expect(api.addConversationEntry).toHaveBeenCalledWith(
-        "2026-07-23",
-        "The migration is finally stable.",
-      ),
-    );
   });
 });

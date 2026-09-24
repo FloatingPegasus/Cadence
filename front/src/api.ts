@@ -131,11 +131,6 @@ export interface TaskItem {
   completed_at: string | null;
 }
 
-export interface HourSlot {
-  hour: number;
-  content: string;
-}
-
 export type GoalKind = "ultimate" | "secondary" | "short_term" | "long_term";
 
 export interface UserGoal {
@@ -182,10 +177,11 @@ export interface Checkin {
   notes?: string | null;
 }
 
-export interface ConversationEntry {
+export interface LogEntry {
   id: number;
   role: string;
   content: string;
+  hour: number | null;
   created_at: string;
 }
 
@@ -728,21 +724,6 @@ export function fetchDayHabits(date: string): Promise<DailyHabit[]> {
   return request<DailyHabit[]>(`/api/days/${date}/habits`);
 }
 
-export function fetchHourLog(date: string): Promise<HourSlot[]> {
-  return request<HourSlot[]>(`/api/days/${date}/hours`);
-}
-
-export function upsertHourLog(
-  date: string,
-  hour: number,
-  content: string,
-): Promise<HourSlot> {
-  return request<HourSlot>(`/api/days/${date}/hours`, {
-    method: "PUT",
-    body: JSON.stringify({ hour, content }),
-  });
-}
-
 export function fetchGoals(): Promise<UserGoal[]> {
   return request<UserGoal[]>("/api/goals");
 }
@@ -816,18 +797,34 @@ export function updateCheckin(date: string, checkin: Checkin): Promise<Checkin> 
   });
 }
 
-export function fetchConversation(date: string): Promise<ConversationEntry[]> {
-  return request<ConversationEntry[]>(`/api/days/${date}/conversation`);
+export function fetchLogs(date: string): Promise<LogEntry[]> {
+  return request<LogEntry[]>(`/api/days/${date}/logs`);
 }
 
-export function addConversationEntry(
+export function addLog(
   date: string,
   content: string,
-): Promise<ConversationEntry> {
-  return request<ConversationEntry>(`/api/days/${date}/conversation`, {
+  hour: number | null,
+): Promise<LogEntry> {
+  return request<LogEntry>(`/api/days/${date}/logs`, {
     method: "POST",
+    body: JSON.stringify({ content, hour }),
+  });
+}
+
+export function updateLog(
+  date: string,
+  entryId: number,
+  content: string,
+): Promise<LogEntry> {
+  return request<LogEntry>(`/api/days/${date}/logs/${entryId}`, {
+    method: "PATCH",
     body: JSON.stringify({ content }),
   });
+}
+
+export function deleteLog(date: string, entryId: number): Promise<void> {
+  return request(`/api/days/${date}/logs/${entryId}`, { method: "DELETE" });
 }
 
 export function fetchSummary(date: string): Promise<DailySummary | null> {

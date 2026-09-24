@@ -2,14 +2,13 @@ import hashlib
 import json
 from datetime import date
 
-from sqlalchemy import select, update
+from sqlalchemy import and_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from ..days.service import get_or_create_day
 from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.daily_checkin import DailyCheckin
-from ...persistence.models.hour_log import HourLog
 from ...persistence.models.habit import Habit
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.day import Day
@@ -77,9 +76,12 @@ async def build_source_snapshot(
     checkin = await db.scalar(
         select(DailyCheckin).where(DailyCheckin.day_id == day.id)
     )
+    is_hour_log = and_(
+        ConversationEntry.hour.is_not(None), ConversationEntry.role == "user"
+    )
     conversation_result = await db.execute(
         select(ConversationEntry)
-        .where(ConversationEntry.day_id == day.id)
+        .where(ConversationEntry.day_id == day.id, ~is_hour_log)
         .order_by(ConversationEntry.created_at.desc())
         .limit(30)
     )
@@ -91,9 +93,13 @@ async def build_source_snapshot(
         .order_by(Habit.name)
     )
     hour_rows = await db.scalars(
-        select(HourLog)
-        .where(HourLog.day_id == day.id)
-        .order_by(HourLog.hour)
+        select(ConversationEntry)
+        .where(ConversationEntry.day_id == day.id, is_hour_log)
+        .order_by(
+            ConversationEntry.hour,
+            ConversationEntry.created_at,
+            ConversationEntry.id,
+        )
     )
     goal_rows = await db.scalars(
         select(UserGoal)
