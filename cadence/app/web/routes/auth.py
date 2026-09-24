@@ -428,6 +428,7 @@ def _public_user(user: User) -> dict:
         "ai_redaction_enabled": user.ai_redaction_enabled,
         "day_ends_at": user.day_ends_at,
         "auto_close": user.auto_close,
+        "about": user.about,
     }
 
 

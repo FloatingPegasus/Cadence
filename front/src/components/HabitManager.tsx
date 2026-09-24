@@ -49,9 +49,9 @@ export default function HabitManager({
   if (habits.length === 0) return null;
 
   return (
-    <details>
+    <details className="cadence-fold">
       <summary className="text-sm text-neutral-400 hover:text-neutral-200">
-        Manage habits
+        Habits
       </summary>
       <div className="pt-5">
         <div className="space-y-2">

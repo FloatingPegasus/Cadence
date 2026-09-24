@@ -182,6 +182,7 @@ async def export_user_data(
             "is_verified": user.is_verified,
             "ai_processing_consent": user.ai_processing_consent,
             "ai_redaction_enabled": user.ai_redaction_enabled,
+            "about": user.about,
         },
         "resources": {
             "habits": [

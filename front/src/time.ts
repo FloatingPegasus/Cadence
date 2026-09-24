@@ -1,8 +1,6 @@
 import type { GoalKind } from "./api";
 
 export const GOAL_KIND_LABELS: Record<GoalKind, string> = {
-  ultimate: "Ultimate",
-  secondary: "Secondary",
   long_term: "Long term",
   short_term: "Short term",
 };

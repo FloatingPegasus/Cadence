@@ -12,6 +12,7 @@ import {
   request,
   setWriteSessionGate,
   updateAIPreferences,
+  updateAbout as saveAbout,
   updateDaySettings as saveDaySettings,
   type AIPreferences,
   type DaySettings,
@@ -31,6 +32,7 @@ export interface AuthUser {
   ai_redaction_enabled: boolean;
   day_ends_at: number;
   auto_close: boolean;
+  about: string;
 }
 
 interface RegisterResult {
@@ -61,6 +63,7 @@ export interface AuthContextValue {
     redactionEnabled: boolean,
   ) => Promise<AIPreferences>;
   updateDaySettings: (settings: DaySettings) => Promise<void>;
+  updateAbout: (about: string) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -226,6 +229,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((current) => (current ? { ...current, ...saved } : current));
   }
 
+  async function updateAbout(about: string) {
+    const saved = await saveAbout(about);
+    setUser((current) => (current ? { ...current, ...saved } : current));
+  }
+
   async function logout() {
     await request("/api/auth/logout", { method: "POST" });
     userRef.current = null;
@@ -252,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resendVerification,
       updateAIPrivacy,
       updateDaySettings,
+      updateAbout,
       verifyEmail,
       logout,
     }),
