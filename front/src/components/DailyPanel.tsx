@@ -58,9 +58,8 @@ export default function DailyPanel({
     setChosen(null);
   }, [date]);
 
-  const mode = !isToday
-    ? "close"
-    : (chosen ?? (hour < EVENING_HOUR ? "log" : "close"));
+  const evening = hour >= EVENING_HOUR || hour < (user?.day_ends_at ?? 0);
+  const mode = !isToday ? "close" : (chosen ?? (evening ? "close" : "log"));
 
   function sourceChanged(hasSource = true) {
     onChanged();

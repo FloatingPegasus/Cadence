@@ -29,9 +29,11 @@ vi.mock("./daily/CloseDayCard", () => ({
 }));
 vi.mock("./daily/CarryForwardCard", () => ({ default: () => <div>Follow-ups</div> }));
 vi.mock("./daily/DailySummaryCard", () => ({ default: () => <div>Summary editor</div> }));
-vi.mock("../contexts/AuthContext", () => ({
-  useAuth: () => ({ user: { ai_processing_consent: true }, aiEnabled: true }),
+const auth = vi.hoisted(() => ({
+  user: { ai_processing_consent: true, day_ends_at: 0 },
+  aiEnabled: true,
 }));
+vi.mock("../contexts/AuthContext", () => ({ useAuth: () => auth }));
 vi.mock("../api", async () => {
   const actual = await vi.importActual<typeof import("../api")>("../api");
   return { ...actual, generateSummary: vi.fn() };
@@ -62,6 +64,7 @@ function at(hour: number) {
 describe("DailyPanel", () => {
   afterEach(() => {
     vi.useRealTimers();
+    auth.user.day_ends_at = 0;
   });
 
   it("shows the log note by day and switches to closing quietly", async () => {
@@ -86,6 +89,13 @@ describe("DailyPanel", () => {
     renderPanel(todayAsLocalDate());
     screen.getByText("Close form");
     screen.getByRole("button", { name: "Log something" });
+  });
+
+  it("keeps closing mode until the day ends in the small hours", () => {
+    at(2);
+    auth.user.day_ends_at = 4;
+    renderPanel(todayAsLocalDate());
+    screen.getByText("Close form");
   });
 
   it("opens past days in close mode without the switch", () => {

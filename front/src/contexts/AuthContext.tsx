@@ -12,8 +12,11 @@ import {
   request,
   setWriteSessionGate,
   updateAIPreferences,
+  updateDaySettings as saveDaySettings,
   type AIPreferences,
+  type DaySettings,
 } from "../api";
+import { setDayEndsAt } from "../time";
 
 export type AuthDialog = "login" | "claim" | null;
 
@@ -26,6 +29,8 @@ export interface AuthUser {
   is_developer: boolean;
   ai_processing_consent: boolean;
   ai_redaction_enabled: boolean;
+  day_ends_at: number;
+  auto_close: boolean;
 }
 
 interface RegisterResult {
@@ -55,6 +60,7 @@ export interface AuthContextValue {
     processingConsent: boolean,
     redactionEnabled: boolean,
   ) => Promise<AIPreferences>;
+  updateDaySettings: (settings: DaySettings) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -215,12 +221,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return preferences;
   }
 
+  async function updateDaySettings(settings: DaySettings) {
+    const saved = await saveDaySettings(settings);
+    setUser((current) => (current ? { ...current, ...saved } : current));
+  }
+
   async function logout() {
     await request("/api/auth/logout", { method: "POST" });
     userRef.current = null;
     setUser(null);
     setIsLoading(false);
   }
+
+  setDayEndsAt(user?.day_ends_at ?? 0);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -238,6 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       closeAuth,
       resendVerification,
       updateAIPrivacy,
+      updateDaySettings,
       verifyEmail,
       logout,
     }),

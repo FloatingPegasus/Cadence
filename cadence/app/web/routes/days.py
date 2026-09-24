@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,7 @@ from ...domains.habits import service as habits_service
 from ...domains.summaries import service as summaries_service
 from ...domains.carry_forward import service as carry_forward_service
 from ...domains.continuity import service as continuity_service
+from ...config import settings
 from ...services import ai as ai_service
 from ...extensions import get_db
 from .auth import get_current_user
@@ -106,6 +107,30 @@ async def update_day(
     user: User = Depends(get_current_user),
 ):
     return await days_service.update_day(db, user.id, target_date, body.daily_note)
+
+
+@router.post("/days/{target_date}/begin")
+async def begin_day(
+    target_date: date,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not user.auto_close:
+        return {"closed": []}
+    user_id = user.id
+    summarize = (
+        settings.ai_enabled
+        and user.ai_processing_consent
+        and not user.is_guest
+    )
+    closed = await days_service.close_past_days(db, user_id, target_date)
+    recent = [day for day in closed if day >= target_date - timedelta(days=7)]
+    if summarize and recent:
+        background_tasks.add_task(
+            summaries_service.summarize_closed_days, db, user_id, recent
+        )
+    return {"closed": [day.isoformat() for day in closed]}
 
 
 @router.patch("/days/{target_date}/status")

@@ -38,11 +38,11 @@ export default function AIPrivacySettings() {
   return (
     <section aria-labelledby="ai-privacy-title">
       <h2 id="ai-privacy-title" className="cadence-kicker">
-        Automatic summaries
+        Replies and summaries
       </h2>
       <p className="mt-1 max-w-2xl text-xs leading-5 text-neutral-500">
-        Optional summaries use the configured AI service. Only the source
-        material needed for a summary is sent. Manual summaries and all local
+        Replies and summaries use the configured AI service. Only what a reply
+        or summary needs is sent. Logging, manual summaries, and all local
         features work without consent.
       </p>
       <div className="mt-4 space-y-4">
@@ -54,10 +54,10 @@ export default function AIPrivacySettings() {
             className="mt-0.5 accent-done"
           />
           <span>
-            Allow automatic summaries to use today’s notes
+            Let Cadence reply to logs and write summaries
             <span className="mt-1 block text-xs leading-5 text-neutral-600">
-              When enabled, Cadence updates the summary after you save new
-              notes or log a moment.
+              Cadence replies to each log and keeps each day’s summary up to
+              date.
             </span>
           </span>
         </label>
