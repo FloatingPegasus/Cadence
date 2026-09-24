@@ -1099,7 +1099,7 @@ button:disabled {
 
 @media (prefers-reduced-motion: no-preference) {
   .cadence-enter {
-    animation: cadence-enter var(--motion-ui) var(--ease-out) both;
+    animation: cadence-enter var(--motion-ui) var(--ease-out) backwards;
   }
 }
 
