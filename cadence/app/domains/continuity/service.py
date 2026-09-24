@@ -904,6 +904,27 @@ async def _semantic_search(
         return []
 
 
+async def similar_days(
+    db: AsyncSession,
+    user_id: int,
+    text: str,
+    before: date,
+    limit: int,
+) -> list[dict]:
+    if not settings.embedding_enabled:
+        return []
+    return await _semantic_search(
+        db,
+        user_id,
+        text,
+        date(1970, 1, 1),
+        before,
+        "summaries",
+        limit,
+        None,
+    )
+
+
 async def search(
     db: AsyncSession,
     user_id: int,

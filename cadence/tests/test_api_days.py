@@ -53,7 +53,7 @@ class CadenceDaysApiTests(ApiTestCase):
         )
 
         self.assertEqual(created.status_code, 201)
-        self.assertTrue(created.json()["created_at"].endswith("Z"))
+        self.assertTrue(created.json()["log"]["created_at"].endswith("Z"))
         self.assertEqual(listed.status_code, 200)
         self.assertTrue(listed.json()[0]["created_at"].endswith("Z"))
 

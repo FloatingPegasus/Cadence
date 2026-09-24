@@ -112,7 +112,9 @@ See [`.env.example`](../.env.example) for every setting.
 | `CADENCE_FRONTEND_BASE_URL` | Frontend URL used in verification links. |
 | `CADENCE_CORS_ORIGINS` | Explicit comma-separated frontend origins. |
 | `CADENCE_BREVO_API_KEY`, `CADENCE_FROM_EMAIL` | Registration email delivery. |
-| `CADENCE_AI_ENABLED`, `CADENCE_EMBEDDING_ENABLED`, `CADENCE_AI_API_KEY` | Consent-gated NVIDIA summaries and search. |
+| `CADENCE_AI_ENABLED`, `CADENCE_EMBEDDING_ENABLED`, `CADENCE_AI_API_KEY` | Consent-gated summaries, replies to logs, and search. |
+| `CADENCE_AI_MODEL`, `CADENCE_AI_BASE_URL` | Use one model on any OpenAI-compatible endpoint instead of the NVIDIA catalog. |
+| `CADENCE_AI_DAILY_REPLY_LIMIT`, `CADENCE_CRISIS_RESOURCES` | Reply cap per account per 24 hours, and the help line added when a log mentions self-harm. |
 | `CADENCE_AUTH_RATE_LIMIT_BACKEND`, `CADENCE_REDIS_URL` | Shared authentication limits. |
 
 ## Backups

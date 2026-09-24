@@ -414,11 +414,12 @@ async def add_log(
     target_date: date | str,
     content: str,
     hour: int | None,
+    role: str = "user",
 ) -> dict:
     await acquire_continuity_lock(db, user_id)
     day = await get_or_create_day(db, user_id, target_date)
     entry = ConversationEntry(
-        day_id=day.id, role="user", content=content.strip(), hour=hour
+        day_id=day.id, role=role, content=content.strip(), hour=hour
     )
     db.add(entry)
     await db.commit()

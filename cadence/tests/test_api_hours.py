@@ -28,10 +28,10 @@ class CadenceLogsAndGoalsApiTests(ApiTestCase):
         )
 
         self.assertEqual(timed.status_code, 201)
-        self.assertEqual(timed.json()["content"], "Deep work")
-        self.assertEqual(timed.json()["hour"], 9)
-        self.assertEqual(timed.json()["role"], "user")
-        self.assertIsNone(loose.json()["hour"])
+        self.assertEqual(timed.json()["log"]["content"], "Deep work")
+        self.assertEqual(timed.json()["log"]["hour"], 9)
+        self.assertEqual(timed.json()["log"]["role"], "user")
+        self.assertIsNone(loose.json()["log"]["hour"])
         self.assertEqual(
             [(entry["hour"], entry["content"]) for entry in listed.json()],
             [(9, "Deep work"), (None, "Felt scattered after lunch")],
@@ -43,7 +43,7 @@ class CadenceLogsAndGoalsApiTests(ApiTestCase):
             "/api/days/2026-07-24/logs",
             headers=self.alpha_headers,
             json={"hour": 14, "content": "Draft"},
-        ).json()["id"]
+        ).json()["log"]["id"]
 
         stolen = self.client.patch(
             f"/api/days/2026-07-24/logs/{entry_id}",

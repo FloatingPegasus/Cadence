@@ -56,6 +56,11 @@ TASK_PREFERENCE = {
         "google/gemma-4-31b-it",
         "mistralai/mistral-small-4-119b-2603",
     ],
+    "reply": [
+        "moonshotai/kimi-k2.6",
+        "mistralai/mistral-medium-3.5-128b",
+        "z-ai/glm-5.2",
+    ],
 }
 
 NON_CHAT_MARKERS = (
@@ -641,7 +646,11 @@ async def chat_with_fallback(
                     for message in messages
                 ]
                 redaction_applied = True
-        chain = await _fallback_chain_from_engine(engine, task)
+        fixed_model = settings.ai_model
+        if fixed_model:
+            chain = [fixed_model]
+        else:
+            chain = await _fallback_chain_from_engine(engine, task)
         if not chain:
             if client is None:
                 client = httpx.AsyncClient(
@@ -656,8 +665,7 @@ async def chat_with_fallback(
         failures: list[str] = []
         for model_id in chain:
             started = perf_counter()
-            model_state = await _model_snapshot(engine, model_id)
-            if model_state is None:
+            if not fixed_model and await _model_snapshot(engine, model_id) is None:
                 failures.append(model_id)
                 continue
             try:
@@ -676,16 +684,17 @@ async def chat_with_fallback(
                 content = _chat_content(payload)
                 latency_ms = round((perf_counter() - started) * 1000, 2)
                 tested_at = utcnow()
-                await _record_model_state(
-                    engine,
-                    model_id,
-                    health_status="healthy",
-                    last_error=None,
-                    latency_ms=latency_ms,
-                    tested_at=tested_at,
-                )
+                if not fixed_model:
+                    await _record_model_state(
+                        engine,
+                        model_id,
+                        health_status="healthy",
+                        last_error=None,
+                        latency_ms=latency_ms,
+                        tested_at=tested_at,
+                    )
                 return {
-                    "provider": "nvidia",
+                    "provider": settings.ai_provider if fixed_model else "nvidia",
                     "model": model_id,
                     "content": content,
                     "usage": payload.get("usage"),
@@ -713,16 +722,17 @@ async def chat_with_fallback(
                     model_id,
                     last_error,
                 )
-                await _record_model_state(
-                    engine,
-                    model_id,
-                    health_status=(
-                        "rate_limited" if status_code == 429 else "unhealthy"
-                    ),
-                    last_error=last_error,
-                    latency_ms=round((perf_counter() - started) * 1000, 2),
-                    tested_at=utcnow(),
-                )
+                if not fixed_model:
+                    await _record_model_state(
+                        engine,
+                        model_id,
+                        health_status=(
+                            "rate_limited" if status_code == 429 else "unhealthy"
+                        ),
+                        last_error=last_error,
+                        latency_ms=round((perf_counter() - started) * 1000, 2),
+                        tested_at=utcnow(),
+                    )
                 failures.append(model_id)
         raise AIProvidersExhaustedError("AI providers are temporarily unavailable")
     finally:

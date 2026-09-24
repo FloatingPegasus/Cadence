@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...domains.companion import service as companion_service
 from ...domains.days import service as days_service
 from ...domains.habits import service as habits_service
 from ...domains.summaries import service as summaries_service
@@ -48,6 +49,7 @@ class LogContent(BaseModel):
 
 class LogCreate(LogContent):
     hour: int | None = Field(default=None, ge=0, le=23)
+    reply: bool = False
 
 
 class SummaryUpdate(BaseModel):
@@ -186,8 +188,8 @@ async def add_log(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await days_service.add_log(
-        db, user.id, target_date, body.content, body.hour
+    return await companion_service.add_log(
+        db, user, target_date, body.content, body.hour, reply=body.reply
     )
 
 

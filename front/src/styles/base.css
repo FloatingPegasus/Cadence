@@ -443,9 +443,47 @@ textarea.cadence-dashed-field {
   pointer-events: none;
 }
 
+.cadence-typing {
+  display: flex;
+  min-height: 1.5rem;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.cadence-typing > span {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.4;
+}
+
+@keyframes cadence-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 0.85;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .cadence-sketch-tick {
     transition: stroke-dashoffset 220ms var(--ease-out);
+  }
+
+  .cadence-typing > span {
+    animation: cadence-typing 1.2s ease-in-out infinite;
+  }
+
+  .cadence-typing > span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .cadence-typing > span:nth-child(3) {
+    animation-delay: 0.3s;
   }
 }
 
