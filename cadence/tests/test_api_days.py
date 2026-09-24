@@ -43,16 +43,16 @@ class CadenceDaysApiTests(ApiTestCase):
 
     def test_log_entry_times_are_explicit_utc(self) -> None:
         created = self.client.post(
-            "/api/days/2026-07-23/conversation",
+            "/api/days/2026-07-23/logs",
             headers=self.alpha_headers,
             json={"content": "Checked the local time display"},
         )
         listed = self.client.get(
-            "/api/days/2026-07-23/conversation",
+            "/api/days/2026-07-23/logs",
             headers=self.alpha_headers,
         )
 
-        self.assertEqual(created.status_code, 200)
+        self.assertEqual(created.status_code, 201)
         self.assertTrue(created.json()["created_at"].endswith("Z"))
         self.assertEqual(listed.status_code, 200)
         self.assertTrue(listed.json()[0]["created_at"].endswith("Z"))
@@ -72,7 +72,7 @@ class CadenceDaysApiTests(ApiTestCase):
         )
         for content in ("First raw trace", "Second raw trace"):
             self.client.post(
-                "/api/days/2026-07-23/conversation",
+                "/api/days/2026-07-23/logs",
                 headers=self.alpha_headers,
                 json={"content": content},
             )
@@ -375,7 +375,7 @@ class CadenceDaysApiTests(ApiTestCase):
 
         save_and_expect_fresh()
         self.client.post(
-            f"{target}/conversation",
+            f"{target}/logs",
             headers=self.alpha_headers,
             json={"content": "A later raw trace"},
         )
@@ -432,7 +432,7 @@ class CadenceDaysApiTests(ApiTestCase):
             "/api/days/2026-07-25/context",
             "/api/days/2026-07-25/reentry",
             "/api/days/2026-07-25/checkin",
-            "/api/days/2026-07-25/conversation",
+            "/api/days/2026-07-25/logs",
             "/api/days/2026-07-25/summary",
             "/api/days/2026-07-25/carry-forward",
         ]
@@ -449,7 +449,7 @@ class CadenceDaysApiTests(ApiTestCase):
         )
         for path, response in zip(paths, responses):
             payload = response.json()
-            if path.endswith(("/habits", "/conversation", "/carry-forward")):
+            if path.endswith(("/habits", "/logs", "/carry-forward")):
                 self.assertIsInstance(payload, list, path)
             elif path.endswith("/summary"):
                 self.assertTrue(payload is None or isinstance(payload, dict), path)

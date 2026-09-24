@@ -8,7 +8,6 @@ from ...persistence.models.day import Day
 from ...persistence.models.daily_checkin import DailyCheckin
 from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.carry_forward_item import CarryForwardItem
-from ...persistence.models.hour_log import HourLog
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...persistence.models.day_context import DayContext
@@ -90,12 +89,6 @@ async def list_recent_days(
             select(ConversationEntry.id).where(
                 ConversationEntry.day_id == Day.id,
                 func.length(func.trim(ConversationEntry.content)) > 0,
-            )
-        ),
-        exists(
-            select(HourLog.id).where(
-                HourLog.day_id == Day.id,
-                func.length(func.trim(HourLog.content)) > 0,
             )
         ),
         exists(
@@ -392,40 +385,41 @@ async def update_checkin(
     }
 
 
-async def list_conversation(
+def _log_payload(entry: ConversationEntry) -> dict:
+    return {
+        "id": entry.id,
+        "role": entry.role,
+        "content": entry.content,
+        "hour": entry.hour,
+        "created_at": _utc_iso(entry.created_at),
+    }
+
+
+async def list_logs(
     db: AsyncSession, user_id: int, target_date: date | str
 ) -> list[dict]:
     day_date = _coerce_date(target_date)
-    day = await db.scalar(
-        select(Day).where(Day.user_id == user_id, Day.date == day_date)
-    )
-    if day is None:
-        return []
     result = await db.execute(
         select(ConversationEntry)
-        .where(ConversationEntry.day_id == day.id)
-        .order_by(ConversationEntry.created_at)
+        .join(Day, Day.id == ConversationEntry.day_id)
+        .where(Day.user_id == user_id, Day.date == day_date)
+        .order_by(ConversationEntry.created_at, ConversationEntry.id)
     )
-    return [
-        {
-            "id": e.id,
-            "role": e.role,
-            "content": e.content,
-            "created_at": _utc_iso(e.created_at),
-        }
-        for e in result.scalars().all()
-    ]
+    return [_log_payload(entry) for entry in result.scalars().all()]
 
 
-async def add_conversation_entry(
+async def add_log(
     db: AsyncSession,
     user_id: int,
     target_date: date | str,
     content: str,
+    hour: int | None,
 ) -> dict:
     await acquire_continuity_lock(db, user_id)
     day = await get_or_create_day(db, user_id, target_date)
-    entry = ConversationEntry(day_id=day.id, role="user", content=content.strip())
+    entry = ConversationEntry(
+        day_id=day.id, role="user", content=content.strip(), hour=hour
+    )
     db.add(entry)
     await db.commit()
     await db.refresh(entry)
@@ -438,9 +432,68 @@ async def add_conversation_entry(
         source_date=day.date,
         content=entry.content,
     )
-    return {
-        "id": entry.id,
-        "role": entry.role,
-        "content": entry.content,
-        "created_at": _utc_iso(entry.created_at),
-    }
+    return _log_payload(entry)
+
+
+async def _owned_log(
+    db: AsyncSession, user_id: int, target_date: date | str, entry_id: int
+) -> tuple[ConversationEntry, date] | None:
+    row = (
+        await db.execute(
+            select(ConversationEntry, Day.date)
+            .join(Day, Day.id == ConversationEntry.day_id)
+            .where(
+                ConversationEntry.id == entry_id,
+                ConversationEntry.role == "user",
+                Day.user_id == user_id,
+                Day.date == _coerce_date(target_date),
+            )
+        )
+    ).one_or_none()
+    return (row[0], row[1]) if row else None
+
+
+async def update_log(
+    db: AsyncSession,
+    user_id: int,
+    target_date: date | str,
+    entry_id: int,
+    content: str,
+) -> dict | None:
+    await acquire_continuity_lock(db, user_id)
+    owned = await _owned_log(db, user_id, target_date, entry_id)
+    if owned is None:
+        return None
+    entry, day_date = owned
+    entry.content = content.strip()
+    await db.commit()
+    await db.refresh(entry)
+    await embedding_service.sync_source_embedding(
+        db,
+        user_id=user_id,
+        source_type="conversation",
+        source_id=entry.id,
+        day_id=entry.day_id,
+        source_date=day_date,
+        content=entry.content,
+    )
+    return _log_payload(entry)
+
+
+async def delete_log(
+    db: AsyncSession, user_id: int, target_date: date | str, entry_id: int
+) -> bool:
+    await acquire_continuity_lock(db, user_id)
+    owned = await _owned_log(db, user_id, target_date, entry_id)
+    if owned is None:
+        return False
+    await db.delete(owned[0])
+    await db.commit()
+    await embedding_service.sync_source_embedding(
+        db,
+        user_id=user_id,
+        source_type="conversation",
+        source_id=entry_id,
+        content="",
+    )
+    return True

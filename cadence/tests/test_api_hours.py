@@ -1,53 +1,148 @@
+import json
+
 if __package__:
     from .api_test_context import ApiTestCase
 else:
     from api_test_context import ApiTestCase
 
 
-class CadenceHoursAndGoalsApiTests(ApiTestCase):
-    def test_hour_log_is_user_scoped_and_clears_on_empty(self) -> None:
-        saved = self.client.put(
-            "/api/days/2026-07-24/hours",
+class CadenceLogsAndGoalsApiTests(ApiTestCase):
+    def test_logs_are_one_user_scoped_stream_with_optional_hours(self) -> None:
+        timed = self.client.post(
+            "/api/days/2026-07-24/logs",
             headers=self.alpha_headers,
             json={"hour": 9, "content": "  Deep work  "},
         )
+        loose = self.client.post(
+            "/api/days/2026-07-24/logs",
+            headers=self.alpha_headers,
+            json={"content": "Felt scattered after lunch"},
+        )
         listed = self.client.get(
-            "/api/days/2026-07-24/hours",
+            "/api/days/2026-07-24/logs",
             headers=self.alpha_headers,
         )
         other = self.client.get(
-            "/api/days/2026-07-24/hours",
+            "/api/days/2026-07-24/logs",
             headers=self.beta_headers,
         )
 
-        self.assertEqual(saved.status_code, 200)
-        self.assertEqual(saved.json(), {"hour": 9, "content": "Deep work"})
-        self.assertEqual(listed.status_code, 200)
-        slots = listed.json()
-        self.assertEqual(len(slots), 24)
-        self.assertEqual(slots[9], {"hour": 9, "content": "Deep work"})
-        self.assertEqual(slots[8], {"hour": 8, "content": ""})
-        self.assertEqual(other.json()[9]["content"], "")
-
-        cleared = self.client.put(
-            "/api/days/2026-07-24/hours",
-            headers=self.alpha_headers,
-            json={"hour": 9, "content": "   "},
+        self.assertEqual(timed.status_code, 201)
+        self.assertEqual(timed.json()["content"], "Deep work")
+        self.assertEqual(timed.json()["hour"], 9)
+        self.assertEqual(timed.json()["role"], "user")
+        self.assertIsNone(loose.json()["hour"])
+        self.assertEqual(
+            [(entry["hour"], entry["content"]) for entry in listed.json()],
+            [(9, "Deep work"), (None, "Felt scattered after lunch")],
         )
-        self.assertEqual(cleared.json()["content"], "")
-        refreshed = self.client.get(
-            "/api/days/2026-07-24/hours",
+        self.assertEqual(other.json(), [])
+
+    def test_logs_edit_and_delete_only_for_their_owner(self) -> None:
+        entry_id = self.client.post(
+            "/api/days/2026-07-24/logs",
+            headers=self.alpha_headers,
+            json={"hour": 14, "content": "Draft"},
+        ).json()["id"]
+
+        stolen = self.client.patch(
+            f"/api/days/2026-07-24/logs/{entry_id}",
+            headers=self.beta_headers,
+            json={"content": "Hijack"},
+        )
+        wrong_day = self.client.patch(
+            f"/api/days/2026-07-25/logs/{entry_id}",
+            headers=self.alpha_headers,
+            json={"content": "Elsewhere"},
+        )
+        edited = self.client.patch(
+            f"/api/days/2026-07-24/logs/{entry_id}",
+            headers=self.alpha_headers,
+            json={"content": "  Wrote the outline  "},
+        )
+        blank = self.client.patch(
+            f"/api/days/2026-07-24/logs/{entry_id}",
+            headers=self.alpha_headers,
+            json={"content": "   "},
+        )
+        not_theirs = self.client.delete(
+            f"/api/days/2026-07-24/logs/{entry_id}",
+            headers=self.beta_headers,
+        )
+
+        self.assertEqual(stolen.status_code, 404)
+        self.assertEqual(wrong_day.status_code, 404)
+        self.assertEqual(edited.status_code, 200)
+        self.assertEqual(edited.json()["content"], "Wrote the outline")
+        self.assertEqual(edited.json()["hour"], 14)
+        self.assertEqual(blank.status_code, 422)
+        self.assertEqual(not_theirs.status_code, 404)
+
+        deleted = self.client.delete(
+            f"/api/days/2026-07-24/logs/{entry_id}",
             headers=self.alpha_headers,
         )
-        self.assertEqual(refreshed.json()[9]["content"], "")
+        again = self.client.delete(
+            f"/api/days/2026-07-24/logs/{entry_id}",
+            headers=self.alpha_headers,
+        )
+        listed = self.client.get(
+            "/api/days/2026-07-24/logs",
+            headers=self.alpha_headers,
+        )
+        self.assertEqual(deleted.status_code, 204)
+        self.assertEqual(again.status_code, 404)
+        self.assertEqual(listed.json(), [])
 
-    def test_hour_log_rejects_out_of_range_hours(self) -> None:
-        response = self.client.put(
-            "/api/days/2026-07-24/hours",
+    def test_logs_reject_out_of_range_hours_and_blank_content(self) -> None:
+        late = self.client.post(
+            "/api/days/2026-07-24/logs",
             headers=self.alpha_headers,
             json={"hour": 24, "content": "Too late"},
         )
-        self.assertEqual(response.status_code, 422)
+        blank = self.client.post(
+            "/api/days/2026-07-24/logs",
+            headers=self.alpha_headers,
+            json={"hour": 9, "content": "   "},
+        )
+        self.assertEqual(late.status_code, 422)
+        self.assertEqual(blank.status_code, 422)
+
+    def test_summary_sources_keep_hours_apart_from_the_thread(self) -> None:
+        for body in (
+            {"hour": 15, "content": "Reviewed the draft"},
+            {"hour": 9, "content": "Deep work"},
+            {"content": "Needed a walk"},
+        ):
+            self.client.post(
+                "/api/days/2026-07-24/logs",
+                headers=self.alpha_headers,
+                json=body,
+            )
+        self.client.put(
+            "/api/days/2026-07-24/summary",
+            headers=self.alpha_headers,
+            json={"content": "A focused morning."},
+        )
+        exported = self.client.get(
+            "/api/account/export",
+            headers=self.alpha_headers,
+        ).json()
+        snapshot = json.loads(
+            exported["resources"]["summary_artifacts"][0]["source_snapshot"]
+        )
+
+        self.assertEqual(
+            snapshot["hours"],
+            [
+                {"hour": 9, "content": "Deep work"},
+                {"hour": 15, "content": "Reviewed the draft"},
+            ],
+        )
+        self.assertEqual(
+            snapshot["conversation"],
+            [{"role": "user", "content": "Needed a walk"}],
+        )
 
     def test_goals_are_user_scoped_and_kind_checked(self) -> None:
         created = self.client.post(

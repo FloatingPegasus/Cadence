@@ -2,12 +2,11 @@ from datetime import date
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...domains.days import service as days_service
 from ...domains.habits import service as habits_service
-from ...domains.hours import service as hours_service
 from ...domains.summaries import service as summaries_service
 from ...domains.carry_forward import service as carry_forward_service
 from ...domains.continuity import service as continuity_service
@@ -35,8 +34,20 @@ class CheckinUpdate(BaseModel):
     notes: str | None = Field(default=None, max_length=10_000)
 
 
-class ConversationEntryCreate(BaseModel):
+class LogContent(BaseModel):
     content: str = Field(min_length=1, max_length=20_000)
+
+    @field_validator("content")
+    @classmethod
+    def normalize_content(cls, value: str) -> str:
+        content = value.strip()
+        if not content:
+            raise ValueError("Log cannot be blank")
+        return content
+
+
+class LogCreate(LogContent):
+    hour: int | None = Field(default=None, ge=0, le=23)
 
 
 class SummaryUpdate(BaseModel):
@@ -57,12 +68,6 @@ class CarryForwardCreate(BaseModel):
 
 class CarryForwardStatusUpdate(BaseModel):
     status: Literal["open", "completed", "released"]
-
-
-class HourLogUpdate(BaseModel):
-    hour: int = Field(ge=0, le=23)
-    content: str = Field(max_length=2_000)
-
 
 @router.get("/days")
 async def list_recent_days(
@@ -165,25 +170,59 @@ async def update_checkin(
     )
 
 
-@router.get("/days/{target_date}/conversation")
-async def list_conversation(
+@router.get("/days/{target_date}/logs")
+async def list_logs(
     target_date: date,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await days_service.list_conversation(db, user.id, target_date)
+    return await days_service.list_logs(db, user.id, target_date)
 
 
-@router.post("/days/{target_date}/conversation")
-async def add_conversation_entry(
+@router.post("/days/{target_date}/logs", status_code=status.HTTP_201_CREATED)
+async def add_log(
     target_date: date,
-    body: ConversationEntryCreate,
+    body: LogCreate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await days_service.add_conversation_entry(
-        db, user.id, target_date, body.content
+    return await days_service.add_log(
+        db, user.id, target_date, body.content, body.hour
     )
+
+
+@router.patch("/days/{target_date}/logs/{entry_id}")
+async def update_log(
+    target_date: date,
+    entry_id: int,
+    body: LogContent,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    entry = await days_service.update_log(
+        db, user.id, target_date, entry_id, body.content
+    )
+    if entry is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Log not found"
+        )
+    return entry
+
+
+@router.delete(
+    "/days/{target_date}/logs/{entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_log(
+    target_date: date,
+    entry_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not await days_service.delete_log(db, user.id, target_date, entry_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Log not found"
+        )
 
 
 @router.get("/days/{target_date}/summary")
@@ -287,30 +326,3 @@ async def update_carry_forward(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Carry-forward item not found",
         )
-
-
-@router.get("/days/{target_date}/hours")
-async def list_hours(
-    target_date: date,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    return await hours_service.list_hours(db, user.id, target_date)
-
-
-@router.put("/days/{target_date}/hours")
-async def upsert_hour(
-    target_date: date,
-    body: HourLogUpdate,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    try:
-        return await hours_service.upsert_hour(
-            db, user.id, target_date, body.hour, body.content
-        )
-    except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(error),
-        ) from error

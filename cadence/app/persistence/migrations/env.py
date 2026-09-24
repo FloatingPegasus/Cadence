@@ -21,7 +21,6 @@ from cadence.app.persistence.models import (
     DayContext,
     Habit,
     HabitLog,
-    HourLog,
     SummaryArtifact,
     User,
     UserGoal,

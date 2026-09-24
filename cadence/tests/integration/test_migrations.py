@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import bcrypt
+import psycopg
 import unittest
 from datetime import date
 import sys
@@ -53,7 +54,7 @@ class MigrationIntegrationTests(unittest.TestCase):
                         "AND tablename IN ("
                         "'users', 'days', 'continuity_embeddings', "
                         "'summary_artifacts', 'weekly_reflections', "
-                        "'hour_logs', 'user_goals', 'tasks'"
+                        "'conversation_entries', 'user_goals', 'tasks'"
                         ")"
                     )
                 )
@@ -113,6 +114,64 @@ class MigrationIntegrationTests(unittest.TestCase):
                 self._assert_api_round_trip(engine, user_id)
             finally:
                 asyncio.run(engine.dispose())
+
+    def test_hour_logs_move_into_the_log_stream_and_back(self) -> None:
+        with disposable_database() as database:
+            database.run_alembic("upgrade", "0005_task_abandon")
+            url = database.url.set(drivername="postgresql").render_as_string(
+                hide_password=False
+            )
+            with psycopg.connect(url, autocommit=True) as db:
+                user_id = db.execute(
+                    "INSERT INTO users (username, email, hashed_password) "
+                    "VALUES ('hours', 'hours@example.com', 'x') RETURNING id"
+                ).fetchone()[0]
+                day_id = db.execute(
+                    "INSERT INTO days (user_id, date) "
+                    "VALUES (%s, '2026-07-24') RETURNING id",
+                    (user_id,),
+                ).fetchone()[0]
+                db.execute(
+                    "INSERT INTO hour_logs (day_id, hour, content) VALUES "
+                    "(%s, 9, 'Deep work'), (%s, 10, '   ')",
+                    (day_id, day_id),
+                )
+                db.execute(
+                    "INSERT INTO conversation_entries (day_id, role, content) "
+                    "VALUES (%s, 'user', 'Felt calm')",
+                    (day_id,),
+                )
+
+            database.run_alembic("upgrade", "head")
+            with psycopg.connect(url, autocommit=True) as db:
+                logs = db.execute(
+                    "SELECT role, hour, content FROM conversation_entries "
+                    "ORDER BY hour NULLS FIRST"
+                ).fetchall()
+                hour_table = db.execute(
+                    "SELECT to_regclass('hour_logs')"
+                ).fetchone()[0]
+                self.assertEqual(
+                    logs,
+                    [("user", None, "Felt calm"), ("user", 9, "Deep work")],
+                )
+                self.assertIsNone(hour_table)
+                db.execute(
+                    "INSERT INTO conversation_entries (day_id, role, content, hour) "
+                    "VALUES (%s, 'user', 'Then a walk', 9)",
+                    (day_id,),
+                )
+
+            database.run_alembic("downgrade", "0005_task_abandon")
+            with psycopg.connect(url, autocommit=True) as db:
+                hours = db.execute(
+                    "SELECT hour, content FROM hour_logs"
+                ).fetchall()
+                entries = db.execute(
+                    "SELECT content FROM conversation_entries"
+                ).fetchall()
+                self.assertEqual(hours, [(9, "Deep work\nThen a walk")])
+                self.assertEqual(entries, [("Felt calm",)])
 
     def _assert_api_round_trip(self, engine, user_id: int) -> None:
         import cadence.app as app_module

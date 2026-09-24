@@ -15,12 +15,11 @@ from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...persistence.models.user import User
 from ...persistence.models.weekly_reflection import WeeklyReflection
-from ...persistence.models.hour_log import HourLog
 from ...persistence.models.user_goal import UserGoal
 from ...persistence.models.task import Task
 
 EXPORT_FORMAT = "cadence-export"
-EXPORT_SCHEMA_VERSION = 4
+EXPORT_SCHEMA_VERSION = 5
 
 
 def _serialize(value: Any) -> Any:
@@ -102,7 +101,6 @@ async def export_user_data(
     summaries: list[SummaryArtifact] = []
     carry_forward_items: list[CarryForwardItem] = []
     day_contexts: list[DayContext] = []
-    hour_logs: list[HourLog] = []
     if day_ids:
         checkins = list(
             (
@@ -173,15 +171,6 @@ async def export_user_data(
                     )
                 ).all()
             )
-        hour_logs = list(
-            (
-                await db.scalars(
-                    select(HourLog)
-                    .where(HourLog.day_id.in_(day_ids))
-                    .order_by(HourLog.day_id, HourLog.hour)
-                )
-            ).all()
-        )
 
     return {
         "format": EXPORT_FORMAT,
@@ -249,7 +238,7 @@ async def export_user_data(
             "conversation_entries": [
                 _record(
                     entry,
-                    ("id", "day_id", "role", "content", "created_at"),
+                    ("id", "day_id", "role", "content", "hour", "created_at"),
                 )
                 for entry in conversations
             ],
@@ -305,13 +294,6 @@ async def export_user_data(
                     ),
                 )
                 for reflection in weekly_reflections
-            ],
-            "hour_logs": [
-                _record(
-                    log,
-                    ("id", "day_id", "hour", "content", "updated_at"),
-                )
-                for log in hour_logs
             ],
             "goals": [
                 _record(
