@@ -472,7 +472,14 @@ class CadenceDaysApiTests(ApiTestCase):
             elif path.endswith("/reentry"):
                 self.assertEqual(
                     set(payload),
-                    {"date", "previous_trace", "open_threads", "contexts"},
+                    {
+                        "date",
+                        "previous_trace",
+                        "last_hour",
+                        "carried_task",
+                        "open_threads",
+                        "contexts",
+                    },
                 )
         recent = self.client.get(
             "/api/days?limit=7", headers=self.alpha_headers
