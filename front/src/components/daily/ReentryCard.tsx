@@ -71,13 +71,13 @@ export default function ReentryCard({
   const hasContext =
     hasResume ||
     reentry?.previous_trace ||
-    reentry?.open_threads.length ||
+    reentry?.open_tasks.length ||
     reentry?.contexts.some((context) => context.last_activity);
   const relatedAreas =
     reentry?.contexts.filter((context) => context.last_activity) ?? [];
   const sectionCount =
     Number(Boolean(reentry?.previous_trace)) +
-    Number(Boolean(reentry?.open_threads.length)) +
+    Number(Boolean(reentry?.open_tasks.length)) +
     Number(relatedAreas.length > 0);
 
   if (!isLoading && !error && !hasContext) return null;
@@ -164,18 +164,18 @@ export default function ReentryCard({
             </div>
           )}
 
-          {reentry && reentry.open_threads.length > 0 && (
+          {reentry && reentry.open_tasks.length > 0 && (
             <div>
               <h3 className="text-xs font-medium text-neutral-400">
-                Open follow-ups
+                Open tasks
               </h3>
               <ul className="mt-2 space-y-2">
-                {reentry.open_threads.map((thread) => (
+                {reentry.open_tasks.map((task) => (
                   <li
-                    key={thread.id}
+                    key={task.id}
                     className="text-xs leading-5 text-neutral-500"
                   >
-                    {thread.content}
+                    {task.title}
                   </li>
                 ))}
               </ul>

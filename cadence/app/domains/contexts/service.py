@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..days.service import get_or_create_day
 from ...persistence.models.continuity_context import ContinuityContext
-from ...persistence.models.carry_forward_item import CarryForwardItem
 from ...persistence.models.daily_checkin import DailyCheckin
 from ...persistence.models.day import Day
 from ...persistence.models.day_context import DayContext
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...services.continuity_lock import acquire_continuity_lock
+from ..tasks import service as tasks_service
 
 
 class ContextNotFoundError(LookupError):
@@ -231,17 +231,8 @@ async def get_continuity(
         )
         summaries = dict(summary_result.all())
 
-    thread_result = await db.execute(
-        select(CarryForwardItem, Day.date)
-        .join(Day, Day.id == CarryForwardItem.origin_day_id)
-        .join(DayContext, DayContext.day_id == Day.id)
-        .where(
-            Day.user_id == user_id,
-            DayContext.context_id == context_id,
-            CarryForwardItem.status == "open",
-        )
-        .order_by(Day.date.desc(), CarryForwardItem.created_at.desc())
-        .limit(20)
+    open_tasks = await tasks_service.open_tasks(
+        db, user_id, date.max, context_id=context_id
     )
 
     return {
@@ -264,12 +255,5 @@ async def get_continuity(
             }
             for day, checkin in day_rows
         ],
-        "open_threads": [
-            {
-                "id": item.id,
-                "origin_date": origin_date.isoformat(),
-                "content": item.content,
-            }
-            for item, origin_date in thread_result.all()
-        ],
+        "open_tasks": open_tasks,
     }

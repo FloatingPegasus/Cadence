@@ -259,7 +259,7 @@ async def generate_weekly_reflection(
                 "content": (
                     "Create a concise, non-judgmental weekly continuity "
                     "reflection. Identify meaningful movement, friction, "
-                    "context worth resuming, and unresolved threads. "
+                    "context worth resuming, and open tasks. "
                     "Preserve uncertainty. Do not invent facts, score the "
                     "user, diagnose them, or prescribe optimization."
                 ),

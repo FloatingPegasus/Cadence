@@ -1,12 +1,11 @@
 from datetime import date, timedelta
 import logging
 
-from sqlalchemy import and_, func, or_, select, text
+from sqlalchemy import Date, and_, cast, func, or_, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...config import settings
-from ...persistence.models.carry_forward_item import CarryForwardItem
 from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.continuity_context import ContinuityContext
 from ...persistence.models.daily_checkin import DailyCheckin
@@ -19,6 +18,7 @@ from ...persistence.models.weekly_reflection import WeeklyReflection
 from ...persistence.models.continuity_embedding import ContinuityEmbedding
 from ...persistence.models.user import User
 from ...services import embeddings as embedding_service
+from ..tasks import service as tasks_service
 
 
 logger = logging.getLogger("cadence.continuity")
@@ -102,6 +102,12 @@ def _excerpt(content: str, term: str, length: int = 220) -> str:
     )
 
 
+def _task_status(is_completed: bool, is_abandoned: bool) -> str:
+    if is_completed:
+        return "completed"
+    return "abandoned" if is_abandoned else "open"
+
+
 def _preview(content: str | None, length: int) -> str:
     return " ".join((content or "").split())[:length]
 
@@ -147,17 +153,7 @@ async def get_day_reentry(
             "excerpt": summary_preview or _preview(daily_note, 280),
         }
 
-    thread_result = await db.execute(
-        select(CarryForwardItem, Day.date)
-        .join(Day, Day.id == CarryForwardItem.origin_day_id)
-        .where(
-            Day.user_id == user_id,
-            Day.date <= target_date,
-            CarryForwardItem.status == "open",
-        )
-        .order_by(Day.date.desc(), CarryForwardItem.created_at.desc())
-        .limit(3)
-    )
+    open_tasks = await tasks_service.open_tasks(db, user_id, target_date, limit=3)
 
     context_result = await db.execute(
         select(
@@ -298,14 +294,7 @@ async def get_day_reentry(
         "previous_trace": previous_trace,
         "last_hour": last_hour,
         "carried_task": carried_task,
-        "open_threads": [
-            {
-                "id": item.id,
-                "origin_date": origin_date.isoformat(),
-                "content": item.content,
-            }
-            for item, origin_date in thread_result.all()
-        ],
+        "open_tasks": open_tasks,
         "contexts": [
             {
                 "id": context_id,
@@ -390,16 +379,8 @@ async def get_week(
             {"id": context_id, "name": name, "kind": kind}
         )
 
-    thread_result = await db.execute(
-        select(CarryForwardItem, Day.date)
-        .join(Day, Day.id == CarryForwardItem.origin_day_id)
-        .where(
-            Day.user_id == user_id,
-            Day.date <= week_end,
-            CarryForwardItem.status == "open",
-        )
-        .order_by(Day.date, CarryForwardItem.created_at)
-        .limit(20)
+    open_tasks = await tasks_service.open_tasks(
+        db, user_id, week_end, oldest_first=True
     )
 
     days = []
@@ -437,14 +418,7 @@ async def get_week(
             "habit_completions": sum(habit_counts.values()),
         },
         "days": days,
-        "open_threads": [
-            {
-                "id": item.id,
-                "origin_date": origin_date.isoformat(),
-                "content": item.content,
-            }
-            for item, origin_date in thread_result.all()
-        ],
+        "open_tasks": open_tasks,
     }
 
 
@@ -579,33 +553,30 @@ async def _lexical_search(
             for artifact, summary_date in summary_result.all()
         )
 
-    if source in {"all", "threads"}:
-        thread_filters = [
-            Day.user_id == user_id,
-            Day.date >= start_date,
-            Day.date <= end_date,
-            CarryForwardItem.content.ilike(pattern, escape="\\"),
-        ]
-        if context_day_ids is not None:
-            thread_filters.append(Day.id.in_(context_day_ids))
-        thread_result = await db.execute(
-            select(CarryForwardItem, Day.date)
-            .join(Day, Day.id == CarryForwardItem.origin_day_id)
-            .where(*thread_filters)
-            .order_by(Day.date.desc(), CarryForwardItem.created_at.desc())
+    if context_id is None and source in {"all", "tasks"}:
+        created_on = cast(Task.created_at, Date)
+        task_result = await db.scalars(
+            select(Task)
+            .where(
+                Task.user_id == user_id,
+                created_on >= start_date,
+                created_on <= end_date,
+                Task.title.ilike(pattern, escape="\\"),
+            )
+            .order_by(Task.created_at.desc())
             .limit(limit)
         )
         results.extend(
             {
-                "source": "threads",
-                "source_id": item.id,
-                "date": origin_date.isoformat(),
-                "title": "Follow-up",
-                "excerpt": _excerpt(item.content, term),
-                "status": item.status,
-                "_sort_at": item.created_at.isoformat(),
+                "source": "tasks",
+                "source_id": task.id,
+                "date": task.created_at.date().isoformat(),
+                "title": "Task",
+                "excerpt": _excerpt(task.title, term),
+                "status": _task_status(task.is_completed, task.is_abandoned),
+                "_sort_at": task.created_at.isoformat(),
             }
-            for item, origin_date in thread_result.all()
+            for task in task_result
         )
 
     if context_id is None and source in {"all", "weekly_reflections"}:
@@ -657,7 +628,7 @@ _EMBEDDING_SOURCE_TITLES = {
     "notes": "Daily note",
     "conversation": "Conversation entry",
     "summaries": "Daily summary",
-    "threads": "Follow-up",
+    "tasks": "Task",
     "weekly_reflections": "Weekly reflection",
 }
 
@@ -713,15 +684,14 @@ def _current_embedding_source_exists():
             .exists(),
         ),
         and_(
-            ContinuityEmbedding.source_type == "threads",
-            select(CarryForwardItem.id)
-            .join(Day, Day.id == CarryForwardItem.origin_day_id)
+            ContinuityEmbedding.source_type == "tasks",
+            select(Task.id)
             .where(
-                CarryForwardItem.id == ContinuityEmbedding.source_id,
-                Day.user_id == ContinuityEmbedding.user_id,
-                Day.date == ContinuityEmbedding.source_date,
-                func.length(func.trim(CarryForwardItem.content)) > 0,
-                func.trim(CarryForwardItem.content) == embedding_content,
+                Task.id == ContinuityEmbedding.source_id,
+                Task.user_id == ContinuityEmbedding.user_id,
+                cast(Task.created_at, Date) == ContinuityEmbedding.source_date,
+                func.length(func.trim(Task.title)) > 0,
+                func.trim(Task.title) == embedding_content,
             )
             .exists(),
         ),
@@ -848,22 +818,23 @@ async def _semantic_search(
         )
         rows = result.all()
 
-        thread_ids = [
+        task_ids = [
             embedding.source_id
             for embedding, _ in rows
-            if embedding.source_type == "threads"
+            if embedding.source_type == "tasks"
         ]
-        thread_statuses: dict[int, str] = {}
-        if thread_ids:
-            thread_result = await db.execute(
-                select(CarryForwardItem.id, CarryForwardItem.status)
-                .join(Day, Day.id == CarryForwardItem.origin_day_id)
-                .where(
-                    CarryForwardItem.id.in_(thread_ids),
-                    Day.user_id == user_id,
+        task_statuses: dict[int, str] = {}
+        if task_ids:
+            task_result = await db.execute(
+                select(Task.id, Task.is_completed, Task.is_abandoned).where(
+                    Task.id.in_(task_ids),
+                    Task.user_id == user_id,
                 )
             )
-            thread_statuses = dict(thread_result.all())
+            task_statuses = {
+                task_id: _task_status(completed, abandoned)
+                for task_id, completed, abandoned in task_result.all()
+            }
 
         semantic_results: list[dict] = []
         for embedding, rank in rows:
@@ -886,8 +857,8 @@ async def _semantic_search(
                     else ""
                 ),
             }
-            if embedding.source_type == "threads":
-                status = thread_statuses.get(embedding.source_id)
+            if embedding.source_type == "tasks":
+                status = task_statuses.get(embedding.source_id)
                 if status is None:
                     continue
                 result_item["status"] = status

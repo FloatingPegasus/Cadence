@@ -4,7 +4,6 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...persistence.models.carry_forward_item import CarryForwardItem
 from ...persistence.models.conversation_entry import ConversationEntry
 from ...persistence.models.continuity_context import ContinuityContext
 from ...persistence.models.daily_checkin import DailyCheckin
@@ -13,6 +12,7 @@ from ...persistence.models.day_context import DayContext
 from ...persistence.models.habit_log import HabitLog
 from ...persistence.models.summary_artifact import SummaryArtifact
 from ...persistence.models.weekly_reflection import WeeklyReflection
+from ..tasks import service as tasks_service
 
 
 def _month_bounds(target_month: str) -> tuple[date, date]:
@@ -114,17 +114,7 @@ async def get_month(
     )
     reflections = list(reflection_result.scalars())
 
-    thread_result = await db.execute(
-        select(CarryForwardItem, Day.date)
-        .join(Day, Day.id == CarryForwardItem.origin_day_id)
-        .where(
-            Day.user_id == user_id,
-            Day.date <= month_end,
-            CarryForwardItem.status == "open",
-        )
-        .order_by(Day.date.desc(), CarryForwardItem.created_at.desc())
-        .limit(20)
-    )
+    open_tasks = await tasks_service.open_tasks(db, user_id, month_end)
 
     checkin_fields = (
         "sleep_hours",
@@ -239,12 +229,5 @@ async def get_month(
             for reflection in reflections
         ],
         "contexts": context_movement,
-        "open_threads": [
-            {
-                "id": item.id,
-                "origin_date": origin_date.isoformat(),
-                "content": item.content,
-            }
-            for item, origin_date in thread_result.all()
-        ],
+        "open_tasks": open_tasks,
     }

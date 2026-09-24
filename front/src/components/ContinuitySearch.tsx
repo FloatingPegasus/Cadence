@@ -21,7 +21,7 @@ const sourceOptions: Array<{
   { value: "notes", label: "Daily notes" },
   { value: "conversation", label: "Log entries" },
   { value: "summaries", label: "Summaries" },
-  { value: "threads", label: "Follow-ups" },
+  { value: "tasks", label: "Tasks" },
   { value: "weekly_reflections", label: "Weekly reviews" },
 ];
 

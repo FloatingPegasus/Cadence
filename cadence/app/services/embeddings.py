@@ -35,7 +35,6 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from ..config import settings
-from ..persistence.models.carry_forward_item import CarryForwardItem
 from ..persistence.models.continuity_embedding import (
     CONTINUITY_EMBEDDING_DIMENSION,
     ContinuityEmbedding,
@@ -43,6 +42,7 @@ from ..persistence.models.continuity_embedding import (
 from ..persistence.models.conversation_entry import ConversationEntry
 from ..persistence.models.day import Day
 from ..persistence.models.summary_artifact import SummaryArtifact
+from ..persistence.models.task import Task
 from ..persistence.models.user import User
 from ..persistence.models.weekly_reflection import WeeklyReflection
 from . import ai as ai_service
@@ -246,13 +246,11 @@ def _source_current_exists(
             Day.user_id == user_id,
             func.trim(SummaryArtifact.content) == content,
         ).exists()
-    if source_type == "threads":
-        return select(CarryForwardItem.id).join(
-            Day, Day.id == CarryForwardItem.origin_day_id
-        ).where(
-            CarryForwardItem.id == source_id,
-            Day.user_id == user_id,
-            func.trim(CarryForwardItem.content) == content,
+    if source_type == "tasks":
+        return select(Task.id).where(
+            Task.id == source_id,
+            Task.user_id == user_id,
+            func.trim(Task.title) == content,
         ).exists()
     if source_type == "weekly_reflections":
         return select(WeeklyReflection.id).where(
@@ -290,12 +288,10 @@ def _source_owner_exists(
             SummaryArtifact.id == source_id,
             Day.user_id == user_id,
         ).exists()
-    if source_type == "threads":
-        return select(CarryForwardItem.id).join(
-            Day, Day.id == CarryForwardItem.origin_day_id
-        ).where(
-            CarryForwardItem.id == source_id,
-            Day.user_id == user_id,
+    if source_type == "tasks":
+        return select(Task.id).where(
+            Task.id == source_id,
+            Task.user_id == user_id,
         ).exists()
     if source_type == "weekly_reflections":
         return select(WeeklyReflection.id).where(
@@ -1028,42 +1024,39 @@ async def backfill_embeddings(
             add_summary,
         )
 
-        thread_filters = []
+        task_filters = []
         if user_id is not None:
-            thread_filters.append(Day.user_id == user_id)
-        thread_statement = (
-            select(CarryForwardItem, Day, ContinuityEmbedding)
-            .join(Day, Day.id == CarryForwardItem.origin_day_id)
+            task_filters.append(Task.user_id == user_id)
+        task_statement = (
+            select(Task, ContinuityEmbedding)
             .outerjoin(
                 ContinuityEmbedding,
                 and_(
-                    ContinuityEmbedding.user_id == Day.user_id,
-                    ContinuityEmbedding.source_type == "threads",
-                    ContinuityEmbedding.source_id == CarryForwardItem.id,
+                    ContinuityEmbedding.user_id == Task.user_id,
+                    ContinuityEmbedding.source_type == "tasks",
+                    ContinuityEmbedding.source_id == Task.id,
                 ),
             )
-            .where(*thread_filters)
+            .where(*task_filters)
         )
 
-        def add_thread(row) -> None:
-            item, day, existing = row
+        def add_task(row) -> None:
+            task, existing = row
             add_candidate(
                 existing=existing,
-                source_type="threads",
-                content=item.content,
-                source_user_id=day.user_id,
-                source_id=item.id,
-                day_id=day.id,
-                source_date=day.date,
+                source_type="tasks",
+                content=task.title,
+                source_user_id=task.user_id,
+                source_id=task.id,
+                day_id=None,
+                source_date=task.created_at.date(),
             )
 
         await scan_rows(
-            thread_statement.where(
-                _sql_needs_backfill(CarryForwardItem.content)
-            ),
-            CarryForwardItem.id,
+            task_statement.where(_sql_needs_backfill(Task.title)),
+            Task.id,
             lambda row: row[0].id,
-            add_thread,
+            add_task,
         )
 
         reflection_filters = []
@@ -1134,12 +1127,10 @@ async def backfill_embeddings(
             )
         if remaining() > 0:
             await scan_rows(
-                thread_statement.where(
-                    _sql_hash_check(CarryForwardItem.content)
-                ),
-                CarryForwardItem.id,
+                task_statement.where(_sql_hash_check(Task.title)),
+                Task.id,
                 lambda row: row[0].id,
-                add_thread,
+                add_task,
             )
         if remaining() > 0:
             await scan_rows(

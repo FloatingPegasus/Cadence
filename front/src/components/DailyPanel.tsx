@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { generateSummary, type ContinuityContext } from "../api";
 import { useAuth } from "../contexts/AuthContext";
 import { todayAsLocalDate } from "../time";
-import CarryForwardCard from "./daily/CarryForwardCard";
 import CloseDayCard from "./daily/CloseDayCard";
 import DailySummaryCard from "./daily/DailySummaryCard";
 import LogNote from "./daily/LogNote";
@@ -99,7 +98,6 @@ export default function DailyPanel({
                   onChanged={onChanged}
                 />
               ) : null}
-              <CarryForwardCard date={date} onChanged={onChanged} />
             </CloseDayCard>
           )}
         </div>

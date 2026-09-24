@@ -51,7 +51,7 @@ function month(
       : [],
     weekly_reflections: [],
     contexts: [],
-    open_threads: [],
+    open_tasks: [],
   };
 }
 

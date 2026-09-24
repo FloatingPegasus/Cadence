@@ -203,6 +203,70 @@ class MigrationIntegrationTests(unittest.TestCase):
             )
             self.assertEqual(about, "")
 
+    def test_follow_ups_become_tasks(self) -> None:
+        with disposable_database() as database:
+            database.run_alembic("upgrade", "0008_about_you")
+            url = database.url.set(drivername="postgresql").render_as_string(
+                hide_password=False
+            )
+            with psycopg.connect(url, autocommit=True) as db:
+                user_id = db.execute(
+                    "INSERT INTO users (username, email, hashed_password) "
+                    "VALUES ('follow', 'follow@example.com', 'x') RETURNING id"
+                ).fetchone()[0]
+                day_id = db.execute(
+                    "INSERT INTO days (user_id, date) "
+                    "VALUES (%s, '2026-07-20') RETURNING id",
+                    (user_id,),
+                ).fetchone()[0]
+                db.execute(
+                    "INSERT INTO carry_forward_items "
+                    "(origin_day_id, content, status, created_at, resolved_at) VALUES "
+                    "(%s, ' Call the bank ', 'open', '2026-07-20 10:00', NULL), "
+                    "(%s, 'Send the draft', 'completed', '2026-07-20 11:00', "
+                    "'2026-07-21 09:00'), "
+                    "(%s, 'Old idea', 'released', '2026-07-20 12:00', "
+                    "'2026-07-22 09:00'), "
+                    "(%s, %s, 'open', '2026-07-20 13:00', NULL)",
+                    (day_id, day_id, day_id, day_id, "x" * 250),
+                )
+
+            database.run_alembic("upgrade", "head")
+            with psycopg.connect(url, autocommit=True) as db:
+                tasks = db.execute(
+                    "SELECT title, due_date, is_completed, is_abandoned, "
+                    "completed_at::text, created_at::text FROM tasks ORDER BY id"
+                ).fetchall()
+                table = db.execute(
+                    "SELECT to_regclass('carry_forward_items')"
+                ).fetchone()[0]
+            self.assertEqual(
+                tasks[:3],
+                [
+                    ("Call the bank", None, False, False, None, "2026-07-20 10:00:00"),
+                    (
+                        "Send the draft",
+                        None,
+                        True,
+                        False,
+                        "2026-07-21 09:00:00",
+                        "2026-07-20 11:00:00",
+                    ),
+                    ("Old idea", None, False, True, None, "2026-07-20 12:00:00"),
+                ],
+            )
+            self.assertEqual(len(tasks[3][0]), 200)
+            self.assertTrue(tasks[3][0].endswith("…"))
+            self.assertIsNone(table)
+
+            database.run_alembic("downgrade", "0008_about_you")
+            with psycopg.connect(url, autocommit=True) as db:
+                restored = db.execute(
+                    "SELECT count(*) FROM carry_forward_items"
+                ).fetchone()[0]
+                kept = db.execute("SELECT count(*) FROM tasks").fetchone()[0]
+            self.assertEqual((restored, kept), (0, 4))
+
     def _assert_api_round_trip(self, engine, user_id: int) -> None:
         import cadence.app as app_module
 

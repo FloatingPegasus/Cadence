@@ -12,7 +12,6 @@ from sqlalchemy.engine import make_url
 from cadence.app.extensions import Base, sync_engine
 from cadence.app.persistence.models import (
     AIModel,
-    CarryForwardItem,
     ContinuityContext,
     ContinuityEmbedding,
     ConversationEntry,

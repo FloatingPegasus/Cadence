@@ -182,18 +182,18 @@ export default function ContextMonthlyDetail({
             </div>
           </div>
 
-          {data.open_threads.length > 0 && (
+          {data.open_tasks.length > 0 && (
             <div className="mt-5 border-t border-neutral-800 pt-4">
               <h4 className="text-xs font-medium text-neutral-400">
-                Open follow-ups
+                Open tasks
               </h4>
               <ul className="mt-2 space-y-1">
-                {data.open_threads.slice(0, 5).map((thread) => (
+                {data.open_tasks.slice(0, 5).map((task) => (
                   <li
-                    key={thread.id}
+                    key={task.id}
                     className="text-xs leading-5 text-neutral-500"
                   >
-                    {thread.content}
+                    {task.title}
                   </li>
                 ))}
               </ul>

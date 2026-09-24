@@ -143,22 +143,24 @@ export default function ContextHub({
 
           <div>
             <h3 className="text-xs font-medium text-neutral-400">
-              Open follow-ups
+              Open tasks
             </h3>
-            {continuity.open_threads.length === 0 ? (
+            {continuity.open_tasks.length === 0 ? (
               <p className="mt-3 text-xs leading-5 text-neutral-600">
-                No open follow-ups from this area.
+                No open tasks from this area.
               </p>
             ) : (
               <ul className="mt-3 space-y-3">
-                {continuity.open_threads.map((thread) => (
-                  <li key={thread.id}>
+                {continuity.open_tasks.map((task) => (
+                  <li key={task.id}>
                     <p className="text-xs leading-5 text-neutral-400">
-                      {thread.content}
+                      {task.title}
                     </p>
-                    <p className="mt-1 text-[11px] text-neutral-600">
-                      From {formatDate(thread.origin_date)}
-                    </p>
+                    {task.due_date ? (
+                      <p className="mt-1 text-[11px] text-neutral-600">
+                        Due {formatDate(task.due_date)}
+                      </p>
+                    ) : null}
                   </li>
                 ))}
               </ul>

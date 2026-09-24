@@ -27,7 +27,6 @@ vi.mock("./daily/CloseDayCard", () => ({
     </>
   ),
 }));
-vi.mock("./daily/CarryForwardCard", () => ({ default: () => <div>Follow-ups</div> }));
 vi.mock("./daily/DailySummaryCard", () => ({ default: () => <div>Summary editor</div> }));
 const auth = vi.hoisted(() => ({
   user: { ai_processing_consent: true, day_ends_at: 0 },
@@ -79,7 +78,6 @@ describe("DailyPanel", () => {
     await user.click(screen.getByRole("button", { name: "Close the day" }));
     screen.getByText("Close form");
     screen.getByText("Summary editor");
-    screen.getByText("Follow-ups");
     await user.click(screen.getByRole("button", { name: "Log something" }));
     screen.getByText("Log note");
   });

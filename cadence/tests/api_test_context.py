@@ -32,6 +32,7 @@ from cadence.app import app
 from cadence.app.config import settings
 from cadence.app.extensions import configure_pgvector_async_engine
 from cadence.app.persistence.models.ai_model import AIModel
+from cadence.app.persistence.models.continuity_embedding import ContinuityEmbedding
 from cadence.app.persistence.models.conversation_entry import ConversationEntry
 from cadence.app.persistence.models.habit import Habit
 from cadence.app.persistence.models.user import User
@@ -57,3 +58,23 @@ class ApiTestCase(PostgresTestCase):
     def assert_invalid_month(self, path: str) -> None:
         response = self.client.get(path, headers=self.alpha_headers)
         self.assertEqual(response.status_code, 422)
+
+    def task_created_on(
+        self, created: str, title: str, headers=None, **fields
+    ) -> int:
+        task_id = self.client.post(
+            "/api/tasks",
+            headers=headers or self.alpha_headers,
+            json={"title": title, **fields},
+        ).json()["id"]
+
+        async def backdate() -> None:
+            async with self.session_factory() as db:
+                await db.execute(
+                    text("UPDATE tasks SET created_at = :created WHERE id = :id"),
+                    {"created": f"{created} 09:00:00", "id": task_id},
+                )
+                await db.commit()
+
+        asyncio.run(backdate())
+        return task_id
