@@ -23,6 +23,7 @@ __pycache__/
 .ruff_cache/
 
 # Runtime data and build output
+backups/
 cadence/data/*
 !cadence/data/.gitkeep
 front/node_modules/
