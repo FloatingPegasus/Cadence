@@ -1,12 +1,14 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   fetchSummary,
   updateSummary,
   type DailySummary,
 } from "../../api";
+import { authStub, testUser } from "../../authTest";
+import { useAuth } from "../../contexts/AuthContext";
 import DailySummaryCard from "./DailySummaryCard";
 
 vi.mock("../../api", () => ({
@@ -14,11 +16,16 @@ vi.mock("../../api", () => ({
   generateSummary: vi.fn(),
   updateSummary: vi.fn(),
 }));
-vi.mock("../../contexts/AuthContext", () => ({
-  useAuth: () => ({
-    user: { ai_processing_consent: true },
-  }),
-}));
+vi.mock("../../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
+
+beforeEach(() => {
+  vi.mocked(useAuth).mockReturnValue(
+    authStub({
+      user: { ...testUser, ai_processing_consent: true },
+      aiEnabled: true,
+    }),
+  );
+});
 
 function summary(isStale: boolean): DailySummary {
   return {
@@ -116,5 +123,30 @@ describe("DailySummaryCard", () => {
     await screen.findByText("Generated automatically");
     screen.getByRole("button", { name: "Generate review" });
     expect(screen.queryByText(/NVIDIA|nvidia/)).toBeNull();
+  });
+
+  it("offers only a manual review when the server has AI off", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useAuth).mockReturnValue(authStub({ aiEnabled: false }));
+    vi.mocked(fetchSummary).mockResolvedValue(null);
+
+    render(
+      <DailySummaryCard
+        date="2026-07-23"
+        refreshKey={0}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    const summaryToggle = await screen.findByText("Daily review");
+    const details = summaryToggle.closest("details");
+    if (details) details.open = true;
+    const save = await screen.findByRole("button", { name: "Save review" });
+    expect(screen.queryByRole("button", { name: "Generate review" })).toBeNull();
+    expect(screen.queryByText(/Enable AI/)).toBeNull();
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+
+    await user.type(screen.getByLabelText("Summary"), "Shipped the release.");
+    expect((save as HTMLButtonElement).disabled).toBe(false);
   });
 });

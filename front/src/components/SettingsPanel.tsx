@@ -23,7 +23,7 @@ export default function SettingsPanel({
   onHabitsChanged,
   onContextsChanged,
 }: SettingsPanelProps) {
-  const { user } = useAuth();
+  const { user, aiEnabled } = useAuth();
   const claimed = Boolean(user && !user.is_guest);
 
   return (
@@ -43,7 +43,7 @@ export default function SettingsPanel({
         <div className="cadence-surface">
           <ContextManager contexts={contexts} onChanged={onContextsChanged} />
         </div>
-        {claimed ? (
+        {claimed && aiEnabled ? (
           <div className="cadence-surface">
             <AIPrivacySettings />
           </div>

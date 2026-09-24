@@ -41,6 +41,7 @@ export interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   allowGuests: boolean;
+  aiEnabled: boolean;
   authDialog: AuthDialog;
   login: (identifier: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<RegisterResult>;
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [allowGuests, setAllowGuests] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(false);
   const [authDialog, setAuthDialog] = useState<AuthDialog>(null);
   const userRef = useRef<AuthUser | null>(null);
   const allowGuestsRef = useRef(false);
@@ -105,9 +107,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     Promise.all([
       request<AuthUser>("/api/auth/me", { method: "GET" }).catch(() => null),
-      request<{ allow_guests: boolean }>("/api/auth/options", {
-        method: "GET",
-      }).catch(() => ({ allow_guests: false })),
+      request<{ allow_guests: boolean; ai_enabled: boolean }>(
+        "/api/auth/options",
+        { method: "GET" },
+      ).catch(() => ({ allow_guests: false, ai_enabled: false })),
     ])
       .then(([session, options]) => {
         if (cancelled) return;
@@ -115,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userRef.current = session;
         setAllowGuests(options.allow_guests);
         allowGuestsRef.current = options.allow_guests;
+        setAiEnabled(options.ai_enabled);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -223,6 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isLoading,
       allowGuests,
+      aiEnabled,
       authDialog,
       login,
       register,
@@ -240,6 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isLoading,
       allowGuests,
+      aiEnabled,
       authDialog,
       ensureSession,
       openLogin,

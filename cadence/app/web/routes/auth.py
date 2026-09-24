@@ -452,7 +452,10 @@ def _establish_session(
 
 @router.get("/auth/options")
 async def auth_options():
-    return {"allow_guests": settings.allow_guests}
+    return {
+        "allow_guests": settings.allow_guests,
+        "ai_enabled": settings.ai_enabled,
+    }
 
 
 @router.get("/auth/me")

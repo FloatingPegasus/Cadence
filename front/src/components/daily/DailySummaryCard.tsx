@@ -19,7 +19,7 @@ export default function DailySummaryCard({
   refreshKey,
   onChanged,
 }: DailySummaryCardProps) {
-  const { user } = useAuth();
+  const { user, aiEnabled } = useAuth();
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -103,6 +103,9 @@ export default function DailySummaryCard({
     }
   }
 
+  const needsSave =
+    content !== (summary?.content ?? "") || summary?.is_stale === true;
+
   return (
     <details className="py-2">
       <summary
@@ -113,27 +116,29 @@ export default function DailySummaryCard({
       </summary>
 
       <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          onClick={generate}
-          disabled={
-            isLoading || isBusy || !user?.ai_processing_consent
-          }
-          className="cadence-chip cadence-chip-accent sm:text-xs"
-        >
-          Generate review
-        </button>
+        {aiEnabled ? (
+          <button
+            type="button"
+            onClick={generate}
+            disabled={
+              isLoading || isBusy || !user?.ai_processing_consent
+            }
+            className="cadence-chip cadence-chip-accent sm:text-xs"
+          >
+            Generate review
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={save}
-          disabled={isLoading || isBusy}
-          className="cadence-chip cadence-chip-solid sm:text-xs"
+          disabled={isLoading || isBusy || !needsSave}
+          className={`cadence-chip sm:text-xs ${needsSave ? "cadence-chip-solid" : "cadence-chip-ghost"}`}
         >
           Save review
         </button>
       </div>
 
-      {!user?.ai_processing_consent && (
+      {aiEnabled && !user?.ai_processing_consent && (
         <p className="mt-3 text-xs text-neutral-600">
           Automatic summaries are off. Enable AI in Settings if you want
           Cadence to create one from today’s notes.
@@ -160,8 +165,9 @@ export default function DailySummaryCard({
           role="status"
           className="mt-2 rounded-lg border border-amber-900 bg-amber-950/30 px-3 py-2 text-xs leading-5 text-amber-300"
         >
-          Source entries changed after this summary was saved. Save edits to
-          make it current, or generate a new draft.
+          {aiEnabled
+            ? "Source entries changed after this summary was saved. Save edits to make it current, or generate a new draft."
+            : "Source entries changed after this summary was saved. Save edits to make it current."}
         </p>
       )}
       {summary && (

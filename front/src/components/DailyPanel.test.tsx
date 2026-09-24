@@ -21,7 +21,7 @@ vi.mock("./daily/CarryForwardCard", () => ({ default: () => <div>Follow-ups</div
 vi.mock("./daily/DailySummaryCard", () => ({ default: () => <div>Summary editor</div> }));
 vi.mock("./daily/DayClosureCard", () => ({ default: () => <div>Day closure</div> }));
 vi.mock("../contexts/AuthContext", () => ({
-  useAuth: () => ({ user: { ai_processing_consent: true } }),
+  useAuth: () => ({ user: { ai_processing_consent: true }, aiEnabled: true }),
 }));
 vi.mock("../api", async () => {
   const actual = await vi.importActual<typeof import("../api")>("../api");

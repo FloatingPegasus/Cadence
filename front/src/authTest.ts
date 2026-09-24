@@ -20,6 +20,7 @@ export function authStub(
     user: testUser,
     isLoading: false,
     allowGuests: false,
+    aiEnabled: false,
     authDialog: null,
     login: vi.fn(),
     register: vi.fn(),
