@@ -5,7 +5,6 @@ export type DashboardView =
   | "tasks"
   | "hours"
   | "focus"
-  | "calendar"
   | "continuity"
   | "settings";
 
@@ -19,9 +18,7 @@ const views: Array<{ id: DashboardView; label: string }> = [
   { id: "tasks", label: "Tasks" },
   { id: "hours", label: "Hours" },
   { id: "focus", label: "Focus" },
-  { id: "calendar", label: "Calendar" },
   { id: "continuity", label: "History" },
-  { id: "settings", label: "Settings" },
 ];
 
 export default function DashboardNav({
@@ -48,7 +45,7 @@ export default function DashboardNav({
 
   return (
     <nav aria-label="Primary" className="cadence-rail mb-6 sm:mb-10">
-      <div className="grid grid-cols-4 gap-x-2 pb-1 sm:flex sm:gap-7 sm:overflow-x-auto sm:pb-3">
+      <div className="grid grid-cols-5 gap-x-1 pb-1 sm:flex sm:gap-7 sm:pb-3">
         {views.map((item) => (
           <button
             key={item.id}

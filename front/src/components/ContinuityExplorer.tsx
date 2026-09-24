@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 
 import type { ContinuityContext } from "../api";
 import ContextHub from "./ContextHub";
@@ -8,7 +8,13 @@ import WeeklyContinuity from "./WeeklyContinuity";
 import ContinuityPatterns from "./ContinuityPatterns";
 import ViewPane from "./ViewPane";
 
-type ExplorerView = "contexts" | "search" | "week" | "month" | "patterns";
+type ExplorerView =
+  | "calendar"
+  | "contexts"
+  | "search"
+  | "week"
+  | "month"
+  | "patterns";
 
 interface ContinuityExplorerProps {
   contexts: ContinuityContext[];
@@ -16,9 +22,10 @@ interface ContinuityExplorerProps {
   selectedDate: string | null;
   onSelectDate: (date: string) => void;
   refreshKey: number;
+  calendar?: ReactNode;
 }
 
-const views: Array<{ id: ExplorerView; label: string }> = [
+const baseViews: Array<{ id: ExplorerView; label: string }> = [
   { id: "contexts", label: "Areas" },
   { id: "search", label: "Search" },
   { id: "week", label: "Week" },
@@ -32,10 +39,15 @@ export default function ContinuityExplorer({
   selectedDate,
   onSelectDate,
   refreshKey,
+  calendar,
 }: ContinuityExplorerProps) {
-  const [view, setView] = useState<ExplorerView>("week");
+  const views = calendar
+    ? [{ id: "calendar" as const, label: "Calendar" }, ...baseViews]
+    : baseViews;
+  const initialView: ExplorerView = calendar ? "calendar" : "week";
+  const [view, setView] = useState<ExplorerView>(initialView);
   const [opened, setOpened] = useState<Set<ExplorerView>>(
-    () => new Set(["week"]),
+    () => new Set([initialView]),
   );
 
   function openView(nextView: ExplorerView) {
@@ -111,6 +123,9 @@ export default function ContinuityExplorer({
         aria-labelledby={`continuity-tab-${view}`}
         className="cadence-surface mt-8 sm:mt-12"
       >
+        {calendar && opened.has("calendar") && (
+          <ViewPane active={view === "calendar"}>{calendar}</ViewPane>
+        )}
         {opened.has("contexts") && (
           <ViewPane active={view === "contexts"}>
             <ContextHub

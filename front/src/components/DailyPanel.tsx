@@ -34,11 +34,11 @@ export default function DailyPanel({
   onChanged,
   onHabitsChanged,
 }: DailyPanelProps) {
-  const { user } = useAuth();
+  const { user, aiEnabled } = useAuth();
 
   function sourceChanged(hasSource = true) {
     onChanged();
-    if (!hasSource || !user?.ai_processing_consent) return;
+    if (!hasSource || !aiEnabled || !user?.ai_processing_consent) return;
     void generateSummary(date).catch(() => {});
   }
 

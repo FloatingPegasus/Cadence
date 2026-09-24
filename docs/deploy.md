@@ -285,20 +285,20 @@ Use **Resend verification email** on the login page.
 
 ## 8. Weekly backups
 
-On the VM, as the user that can run docker:
+On the VM, as the user that can run docker. The checkout is usually owned by root, so create `backups/` for that user first or the job fails before it starts:
 
 ```sh
 cd /opt/cadence
-chmod +x scripts/backup-cron.sh
-mkdir -p backups/host
+sudo install -d -o "$USER" -g "$USER" -m 700 backups
 (crontab -l 2>/dev/null; echo "15 3 * * 0 /opt/cadence/scripts/backup-cron.sh >> /opt/cadence/backups/cron.log 2>&1") | crontab -
 crontab -l
 ```
 
-Manual test:
+Manual test, exactly as cron runs it:
 
 ```sh
-/opt/cadence/scripts/backup-cron.sh
+/opt/cadence/scripts/backup-cron.sh >> /opt/cadence/backups/cron.log 2>&1
+tail -3 /opt/cadence/backups/cron.log
 ls -la /opt/cadence/backups/host/
 ```
 

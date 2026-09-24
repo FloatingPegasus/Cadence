@@ -4,7 +4,32 @@ import { useAuth } from "../contexts/AuthContext";
 import ThemeToggle from "./ThemeToggle";
 import LoginPage from "./LoginPage";
 
-function Header() {
+function SettingsMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[1.05rem] w-[1.05rem]"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M4 8h8.5M17.5 8H20M4 16h2.5M11.5 16H20"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <circle cx="15" cy="8" r="2.3" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="9" cy="16" r="2.3" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+interface HeaderProps {
+  settingsOpen: boolean;
+  onOpenSettings: () => void;
+}
+
+function Header({ settingsOpen, onOpenSettings }: HeaderProps) {
   const { user, authDialog, openLogin, openClaim, closeAuth } = useAuth();
   const headingId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -38,6 +63,19 @@ function Header() {
       </h1>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <ThemeToggle />
+        <button
+          type="button"
+          aria-label="Settings"
+          aria-current={settingsOpen ? "page" : undefined}
+          onClick={onOpenSettings}
+          className={
+            settingsOpen
+              ? "cadence-chip cadence-chip-icon text-neutral-100"
+              : "cadence-chip cadence-chip-icon cadence-chip-ghost"
+          }
+        >
+          <SettingsMark />
+        </button>
         {user?.is_guest ? (
           <button type="button" onClick={openClaim} className="cadence-chip cadence-chip-solid">
             Keep this

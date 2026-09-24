@@ -100,16 +100,11 @@ export function presentLivePip(frame: PipFrame): boolean {
   const session = live;
   if (!session) return false;
   const { video } = session;
-  try {
-    void video.play();
-  } catch {
-    // Playback can already be running.
-  }
   if (typeof video.webkitSetPresentationMode === "function") {
     try {
       video.webkitSetPresentationMode("picture-in-picture");
     } catch {
-      // Fall through to the standard call where it exists.
+      return false;
     }
     startMotion();
     if (inPip(video)) {

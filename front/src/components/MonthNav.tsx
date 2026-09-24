@@ -27,9 +27,9 @@ function MonthNav({ month, onChange }: MonthNavProps) {
       >
         ←
       </button>
-      <h1 className="cadence-title min-w-0 flex-1 text-center text-xl font-medium text-neutral-100 sm:w-44 sm:flex-none sm:text-2xl">
+      <h2 className="cadence-title min-w-0 flex-1 text-center text-xl font-medium text-neutral-100 sm:w-44 sm:flex-none sm:text-2xl">
         {label}
-      </h1>
+      </h2>
       <button
         type="button"
         aria-label="Next month"

@@ -41,6 +41,8 @@ else:
         urlparse,
     )
 
+from cadence.app.services.rate_limit import auth_rate_limiter
+
 
 class CadenceAuthApiTests(ApiTestCase):
 
@@ -416,9 +418,11 @@ class CadenceAuthApiTests(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         send_email.assert_called_once()
 
-    def test_auth_options_reports_guest_flag(self) -> None:
+    def test_auth_options_reports_guest_and_ai_flags(self) -> None:
+        settings.ai_enabled = False
         enabled = self.client.get("/api/auth/options")
         settings.allow_guests = False
+        settings.ai_enabled = True
         try:
             disabled = self.client.get("/api/auth/options")
         finally:
@@ -426,8 +430,10 @@ class CadenceAuthApiTests(ApiTestCase):
 
         self.assertEqual(enabled.status_code, 200)
         self.assertTrue(enabled.json()["allow_guests"])
+        self.assertFalse(enabled.json()["ai_enabled"])
         self.assertEqual(disabled.status_code, 200)
         self.assertFalse(disabled.json()["allow_guests"])
+        self.assertTrue(disabled.json()["ai_enabled"])
 
     def test_guest_session_is_disabled_when_the_flag_is_off(self) -> None:
         settings.allow_guests = False
@@ -441,6 +447,33 @@ class CadenceAuthApiTests(ApiTestCase):
             response.json()["detail"],
             "Guest sessions are disabled",
         )
+
+    def test_guest_limit_is_per_visitor_not_shared(self) -> None:
+        original_limit = settings.auth_guest_rate_limit
+        original_test_mode = settings.test_mode
+        settings.test_mode = False
+        settings.auth_guest_rate_limit = 2
+        auth_rate_limiter.clear()
+        try:
+            strangers = [
+                TestClient(app, client=(f"198.51.100.{index}", 50000))
+                .post("/api/auth/guest")
+                .status_code
+                for index in range(1, 4)
+            ]
+            same_visitor = [
+                TestClient(app, client=("203.0.113.9", 50000))
+                .post("/api/auth/guest")
+                .status_code
+                for _ in range(3)
+            ]
+        finally:
+            settings.test_mode = original_test_mode
+            settings.auth_guest_rate_limit = original_limit
+            auth_rate_limiter.clear()
+
+        self.assertEqual(strangers, [200, 200, 200])
+        self.assertEqual(same_visitor, [200, 200, 429])
 
     def test_guest_session_can_write_then_claim_without_leaving(self) -> None:
         guest = self.client.post("/api/auth/guest")

@@ -9,10 +9,10 @@ import Header from "./Header";
 
 vi.mock("../contexts/AuthContext", () => ({ useAuth: vi.fn() }));
 
-function renderHeader() {
+function renderHeader(onOpenSettings = vi.fn()) {
   return render(
     <ThemeProvider>
-      <Header />
+      <Header settingsOpen={false} onOpenSettings={onOpenSettings} />
     </ThemeProvider>,
   );
 }
@@ -27,6 +27,15 @@ describe("Header", () => {
     expect(screen.getByRole("button", { name: "Dark" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Log out" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Log in" })).toBeNull();
+  });
+
+  it("opens settings from the header", async () => {
+    const user = userEvent.setup();
+    const onOpenSettings = vi.fn();
+    vi.mocked(useAuth).mockReturnValue(authStub());
+    renderHeader(onOpenSettings);
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    expect(onOpenSettings).toHaveBeenCalledOnce();
   });
 
   it("offers log in with no session", () => {

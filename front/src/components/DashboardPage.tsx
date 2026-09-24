@@ -86,7 +86,7 @@ export default function DashboardPage() {
   }, [user?.id, contextVersion]);
 
   useEffect(() => {
-    if (!user || !opened.has("calendar")) return;
+    if (!user || !opened.has("continuity")) return;
     fetchMonthData(month)
       .then(setData)
       .catch((caught) => {
@@ -97,7 +97,7 @@ export default function DashboardPage() {
   }, [user?.id, month, habitVersion, opened]);
 
   useEffect(() => {
-    if (!user || !(opened.has("tasks") || opened.has("calendar"))) return;
+    if (!user || !(opened.has("tasks") || opened.has("continuity"))) return;
     fetchTasks()
       .then(setTasks)
       .catch((caught) => {
@@ -195,7 +195,7 @@ export default function DashboardPage() {
       nextOpened.add(next);
       return nextOpened;
     });
-    if (next !== "calendar") setDayDialogOpen(false);
+    if (next !== "continuity") setDayDialogOpen(false);
   }
 
   function openDay(date: string) {
@@ -206,7 +206,10 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-8 sm:py-16">
-      <Header />
+      <Header
+        settingsOpen={view === "settings"}
+        onOpenSettings={() => openView("settings")}
+      />
       <DashboardNav view={view} onChange={openView} />
       {actionError && (
         <div className="mb-6 rounded-lg border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
@@ -278,23 +281,49 @@ export default function DashboardPage() {
           <FocusPage />
         </ViewPane>
       )}
-      {opened.has("calendar") && (
-        <ViewPane active={view === "calendar"}>
-          <MonthNav month={month} onChange={setMonth} />
-          {data ? (
-            <div className="cadence-surface">
-              <HabitGrid
-                habits={data.habits}
-                days={data.days}
-                month={data.month}
-                lookup={data.lookup}
-                selectedDate={selectedDate}
-                onSelectDate={openDateDialog}
-                onSelectHabit={setSelectedHabitId}
-              />
+      {opened.has("continuity") && (
+        <ViewPane active={view === "continuity"}>
+          {user ? (
+            <ContinuityExplorer
+              contexts={contexts}
+              anchorDate={selectedDate ?? todayAsLocalDate()}
+              selectedDate={selectedDate}
+              onSelectDate={openDay}
+              refreshKey={continuityVersion}
+              calendar={
+                <>
+                  <MonthNav month={month} onChange={setMonth} />
+                  {data ? (
+                    <HabitGrid
+                      habits={data.habits}
+                      days={data.days}
+                      month={data.month}
+                      lookup={data.lookup}
+                      selectedDate={selectedDate}
+                      onSelectDate={openDateDialog}
+                      onSelectHabit={setSelectedHabitId}
+                    />
+                  ) : null}
+                  {selectedHabitId !== null && data && (
+                    <DisciplineContinuity
+                      disciplineId={selectedHabitId}
+                      month={data.month}
+                      selectedDate={selectedDate}
+                      onSelectDate={openDay}
+                      refreshKey={continuityVersion}
+                      onClose={() => setSelectedHabitId(null)}
+                    />
+                  )}
+                </>
+              }
+            />
+          ) : (
+            <div>
+              <h1 className="cadence-title text-2xl font-medium text-neutral-100">
+                History
+              </h1>
+              <p className="mt-8 text-sm text-neutral-500">Nothing here yet.</p>
             </div>
-          ) : user ? null : (
-            <p className="mt-4 text-center text-sm text-neutral-500">Nothing here yet.</p>
           )}
           {dayDialogOpen && selectedDate && data && (
             <DayHabitsDialog
@@ -311,36 +340,6 @@ export default function DashboardPage() {
               onOpenDay={() => openDay(selectedDate)}
               onClose={() => setDayDialogOpen(false)}
             />
-          )}
-          {selectedHabitId !== null && data && (
-            <DisciplineContinuity
-              disciplineId={selectedHabitId}
-              month={data.month}
-              selectedDate={selectedDate}
-              onSelectDate={openDay}
-              refreshKey={continuityVersion}
-              onClose={() => setSelectedHabitId(null)}
-            />
-          )}
-        </ViewPane>
-      )}
-      {opened.has("continuity") && (
-        <ViewPane active={view === "continuity"}>
-          {user ? (
-            <ContinuityExplorer
-              contexts={contexts}
-              anchorDate={selectedDate ?? todayAsLocalDate()}
-              selectedDate={selectedDate}
-              onSelectDate={openDay}
-              refreshKey={continuityVersion}
-            />
-          ) : (
-            <div>
-              <h1 className="cadence-title text-2xl font-medium text-neutral-100">
-                History
-              </h1>
-              <p className="mt-8 text-sm text-neutral-500">Nothing here yet.</p>
-            </div>
           )}
         </ViewPane>
       )}
